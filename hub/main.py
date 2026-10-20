@@ -69,6 +69,16 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Auralink cabin hub", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def revalidate_static(request, call_next):
+    """Browsers must check for a newer screen file every time (cheap: unchanged files answer 304),
+    so phones and the crew tablet never run an old stylesheet after an update."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api") and "cache-control" not in response.headers:
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 lexicon = Lexicon()
 templates = Templates()
 cabin = Cabin(lexicon)
@@ -107,6 +117,7 @@ def card_for_crew(card: Card) -> dict:
         for c in card.candidates
     ]
     data["lang"] = cabin.seats[card.seat].lang
+    data["pictures"] = cabin.seats[card.seat].pictures
     return data
 
 
@@ -299,6 +310,7 @@ async def handle_passenger(seat: str, msg: dict) -> None:
     if kind == "hello":
         s.lang = msg.get("lang", s.lang)
         s.senior = bool(msg.get("senior", s.senior))
+        s.pictures = bool(msg.get("pictures", s.pictures))
 
     elif kind == "text":
         await interpret_and_reply(seat, msg.get("text", ""))

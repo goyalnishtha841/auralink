@@ -39,6 +39,9 @@
     .pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); } .pill.dim { color: var(--muted); } .pill.violet { color: #c4a6ff; }
     .brief-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .muted-btn { background: transparent; }
+    .what .icon .ic { width: 26px; height: 26px; color: var(--info); }
+    .guess { display: inline-flex; align-items: center; gap: 4px; }
+    .guess .icon .ic { width: 18px; height: 18px; }
   </style>
 </head>
 <body>
@@ -79,6 +82,7 @@
 <script type="module">
 import { connect, el, loadConfig } from "./common.js";
 import { pictogram } from "./pictograms.js";
+import { icon } from "./icons.js";
 
 const $ = (id) => document.getElementById(id);
 const config = await loadConfig();
@@ -130,12 +134,13 @@ $("exitStart").addEventListener("click", () => socket.send({ type: "exit_check" 
 function cardView(c) {
   const [ja, en, tone] = STATUS[c.status];
   const what = c.intent
-    ? [el("span", { class: "icon" }, c.icon), el("strong", {}, c.crew_ja), el("span", { class: "muted" }, c.label_en)]
-    : [el("strong", {}, "推定 Best guesses:"), ...c.guesses.map((g) => el("span", {}, `${g.icon} ${g.label_ja} (${g.score.toFixed(2)})`))];
+    ? [icon(c.intent), el("strong", {}, c.crew_ja), el("span", { class: "muted" }, c.label_en)]
+    : [el("strong", {}, "推定 Best guesses:"), ...c.guesses.map((g) => el("span", { class: "guess" }, icon(g.intent), `${g.label_ja} (${g.score.toFixed(2)})`))];
   return el("div", { class: `item ${c.urgent ? "is-urgent" : ""}` },
     el("span", { class: "who" }, c.seat),
     el("div", { class: "body" },
-      el("div", { class: "what" }, ...what, el("span", { class: `pill ${tone}` }, `${ja} · ${en}`)),
+      el("div", { class: "what" }, ...what, el("span", { class: `pill ${tone}` }, `${ja} · ${en}`),
+        c.pictures ? el("span", { class: "pill violet", title: "This passenger uses picture-only mode: answer with gestures or go to the seat" }, "絵のみ · Pictures only") : null),
       c.heard ? el("span", { class: "muted" }, `“${c.heard}” · ${c.lang}`) : null,
       el("div", { class: "acts" },
         c.status !== "acknowledged"

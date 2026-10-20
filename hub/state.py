@@ -36,6 +36,7 @@ class Seat(BaseModel):
     id: str
     lang: str = "en"
     senior: bool = False
+    pictures: bool = False   # picture-only mode: crew should answer visually or in person
     connected: bool = False
     failed_attempts: int = 0
 

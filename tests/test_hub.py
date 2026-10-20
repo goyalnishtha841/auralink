@@ -175,3 +175,15 @@ def test_demo_kit_endpoints():
     assert svg.status_code == 200 and svg.headers["content-type"].startswith("image/svg+xml")
     assert b"<svg" in svg.content
     assert client.get("/api/qr", params={"data": "x" * 301}).status_code == 422
+
+
+def test_picture_mode_reaches_crew_card():
+    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+            shared.websocket_connect("/ws/passenger/32D") as pax:
+        pax.send_json({"type": "hello", "lang": "en", "pictures": True})
+        pax.send_json({"type": "icon", "intent": "water"})
+        assert pax.receive_json()["type"] == "status"
+        state = crew_state(crew)
+        while not state["cards"]:
+            state = crew_state(crew)
+        assert state["cards"][0]["pictures"] is True and state["cards"][0]["intent"] == "water"
