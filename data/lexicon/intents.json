@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "stopwords": [
+    "a",
+    "an",
+    "the",
+    "and",
+    "or",
+    "i",
+    "me",
+    "my",
+    "some",
+    "want",
+    "need",
+    "can",
+    "get",
+    "give",
+    "is",
+    "it",
+    "to",
+    "of",
+    "for",
+    "madam",
+    "sir",
+    "excuse",
+    "sorry",
+    "yes",
+    "no",
+    "ok",
+    "thoda",
+    "thodi",
+    "mujhe",
+    "chahiye",
+    "dijiye",
+    "do",
+    "hai",
+    "ka",
+    "ki",
+    "ke",
+    "aur",
+    "ek",
+    "zara",
+    "bhai",
+    "ji",
+    "please",
+    "have",
+    "there",
+    "am",
+    "are",
+    "you",
+    "your",
+    "where",
+    "what",
+    "one",
+    "cup",
+    "this",
+    "that",
+    "with",
+    "chahi",
+    "chahie",
+    "chaahiye",
+    "chahye",
+    "chaiye",
+    "kaha",
+    "kahan",
+    "kahaan",
+    "hain",
+    "mein",
+    "mujhi",
+    "mujhko",
+    "ik",
+    "dijie",
+    "de",
+    "dena",
+    "thora",
+    "thoura",
+    "thura",
+    "ko",
+    "se",
+    "bhi",
+    "nahi",
+    "kya",
+    "मुझे",
+    "चाहिए",
+    "है",
+    "एक",
+    "दीजिए",
+    "कहाँ",
+    "कहा",
+    "में",
+    "और",
+    "थोड़ा",
+    "थोड़ी",
+    "सिर",
+    "क्या",
+    "chahe",
+    "chaahe",
+    "chahte",
+    "chahta",
+    "chahti",
+    "chahiyee",
+    "chaye"
+  ],
+  "intents": [
+    {
+      "id": "water",
+      "icon": "💧",
+      "label": {
+        "en": "Water",
+        "hi": "पानी",
+        "ja": "お水"
+      },
+      "variants": {
+        "en": [
+          "water",
+          "wotter",
+          "vater",
+          "watter",
+          "warm water"
+        ],
+        "hi": [
+          "paani",
+          "pani",
+          "jal",
+          "पानी"
+        ]
+      },
+      "crew_ja": "お水をご希望です",
+      "prior": {
+        "meal": 1.1,
+        "post_meal": 1.2
+      }
+    },
+    {
+      "id": "tea",
+      "icon": "🍵",
+      "label": {
+        "en": "Tea or coffee",
+        "hi": "चाय या कॉफ़ी",
+        "ja": "お茶・コーヒー"
+      },
+      "variants": {
+        "en": [
+          "tea",
+          "coffee",
+          "kaafi",
+          "hot drink"
+        ],
+        "hi": [
+          "chai",
+          "chay",
+          "चाय",
+          "कॉफ़ी"
+        ]
+      },
+      "crew_ja": "お茶またはコーヒーをご希望です",
+      "prior": {
+        "post_meal": 1.2,
+        "boarding": 0.7
+      }
+    },
+    {
+      "id": "blanket",
+      "icon": "🛏️",
+      "label": {
+        "en": "Blanket",
+        "hi": "कंबल",
+        "ja": "毛布"
+      },
+      "variants": {
+        "en": [
+          "blanket",
+          "blenket",
+          "blankit",
+          "cold"
+        ],
+        "hi": [
+          "kambal",
+          "kambel",
+          "kammal",
+          "thand",
+          "कंबल"
+        ]
+      },
+      "crew_ja": "毛布をご希望です",
+      "prior": {
+        "cruise": 1.1
+      }
+    },
+    {
+      "id": "pillow",
+      "icon": "🛌",
+      "label": {
+        "en": "Pillow",
+        "hi": "तकिया",
+        "ja": "枕"
+      },
+      "variants": {
+        "en": [
+          "pillow",
+          "pilow",
+          "cushion"
+        ],
+        "hi": [
+          "takiya",
+          "takia",
+          "तकिया"
+        ]
+      },
+      "crew_ja": "枕をご希望です",
+      "prior": {
+        "cruise": 1.1
+      }
+    },
+    {
+      "id": "toilet",
+      "icon": "🚻",
+      "label": {
+        "en": "Toilet",
+        "hi": "शौचालय",
+        "ja": "お手洗い"
+      },
+      "variants": {
+        "en": [
+          "toilet",
+          "washroom",
+          "bathroom",
+          "lavatory",
+          "restroom",
+          "loo"
+        ],
+        "hi": [
+          "sauchalay",
+          "shauchalay",
+          "bathroom kahan",
+          "शौचालय"
+        ]
+      },
+      "crew_ja": "お手洗いの場所をお尋ねです",
+      "prior": {
+        "descent": 0.6
+      }
+    },
+    {
+      "id": "meal",
+      "icon": "🍛",
+      "label": {
+        "en": "Food",
+        "hi": "खाना",
+        "ja": "お食事"
+      },
+      "variants": {
+        "en": [
+          "food",
+          "meal",
+          "hungry",
+          "veg",
+          "vegetarian",
+          "snack"
+        ],
+        "hi": [
+          "khana",
+          "khaana",
+          "bhook",
+          "shakahari",
+          "खाना"
+        ]
+      },
+      "crew_ja": "お食事についてのご依頼です",
+      "prior": {
+        "meal": 1.3,
+        "post_meal": 0.8,
+        "descent": 0.6
+      }
+    },
+    {
+      "id": "medical",
+      "icon": "🩺",
+      "urgent": true,
+      "label": {
+        "en": "I feel unwell",
+        "hi": "तबीयत ठीक नहीं",
+        "ja": "体調不良"
+      },
+      "variants": {
+        "en": [
+          "medicine",
+          "doctor",
+          "pain",
+          "chest pain",
+          "unwell",
+          "sick",
+          "breathe",
+          "dizzy",
+          "vomit"
+        ],
+        "hi": [
+          "dawai",
+          "dawa",
+          "dard",
+          "chakkar",
+          "ulti",
+          "tabiyat",
+          "दवाई",
+          "दर्द"
+        ]
+      },
+      "crew_ja": "【至急】体調不良のお客様です",
+      "prior": {}
+    },
+    {
+      "id": "call_crew",
+      "icon": "🙋",
+      "label": {
+        "en": "Call crew",
+        "hi": "क्रू को बुलाएँ",
+        "ja": "乗務員の呼び出し"
+      },
+      "variants": {
+        "en": [
+          "help",
+          "please come",
+          "attendant",
+          "crew",
+          "hostess"
+        ],
+        "hi": [
+          "madad",
+          "sahayata",
+          "suniye",
+          "मदद"
+        ]
+      },
+      "crew_ja": "乗務員をお呼びです",
+      "prior": {}
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "_note": "Pre-approved, human-reviewed text only. Japanese and Hindi are drafts: Member B must have each line checked by a native speaker before the demo.",
+  "replies": [
+    {"id": "coming",         "en": "Coming right away.",                          "hi": "अभी लेकर आ रहे हैं।",                         "ja": "ただいまお持ちいたします。"},
+    {"id": "on_my_way",      "en": "A crew member is coming to your seat.",       "hi": "हम अभी आपकी सीट पर आ रहे हैं।",                "ja": "ただいまお席に伺います。"},
+    {"id": "after_seatbelt", "en": "We will bring it when the seatbelt sign is off.", "hi": "सीट बेल्ट का संकेत बंद होने के बाद ले आएँगे।", "ja": "シートベルト着用サイン消灯後にお持ちいたします。"},
+    {"id": "please_wait",    "en": "Please wait a moment.",                       "hi": "कृपया थोड़ा इंतज़ार करें।",                     "ja": "少々お待ちくださいませ。"}
+  ],
+  "status": {
+    "sent":         {"en": "Sent to crew",                        "hi": "क्रू को भेज दिया गया"},
+    "acknowledged": {"en": "Crew has seen your request",          "hi": "क्रू ने आपका अनुरोध देख लिया है"},
+    "needs_human":  {"en": "A crew member is coming to help you", "hi": "एक क्रू सदस्य आपकी मदद के लिए आ रहे हैं"},
+    "urgent":       {"en": "Crew alerted. Help is on the way.",   "hi": "क्रू को तुरंत सूचना दी गई। मदद आ रही है।"},
+    "closed":       {"en": "Request completed",                   "hi": "अनुरोध पूरा हुआ"}
+  },
+  "safety": [
+    {
+      "id": "turbulence",
+      "pictogram": "seatbelt",
+      "title":   {"en": "Turbulence ahead", "hi": "आगे झटके आ सकते हैं", "ja": "揺れが予想されます"},
+      "caption": {
+        "en": "Please return to your seat and fasten your seatbelt.",
+        "hi": "कृपया अपनी सीट पर बैठें और सीट बेल्ट बाँध लें।",
+        "ja": "お席にお戻りになり、シートベルトをお締めください。"
+      }
+    },
+    {
+      "id": "landing",
+      "pictogram": "upright",
+      "title":   {"en": "Landing soon", "hi": "जल्द ही लैंडिंग", "ja": "まもなく着陸"},
+      "caption": {
+        "en": "Fasten your seatbelt, put your seat upright and open the window shade.",
+        "hi": "सीट बेल्ट बाँधें, सीट सीधी करें और खिड़की का शेड खोलें।",
+        "ja": "シートベルトをお締めになり、座席の背を元の位置にお戻しください。"
+      }
+    },
+    {
+      "id": "oxygen",
+      "pictogram": "oxygen",
+      "title":   {"en": "Oxygen masks", "hi": "ऑक्सीजन मास्क", "ja": "酸素マスク"},
+      "caption": {
+        "en": "If masks drop, put your own on first, then help others.",
+        "hi": "मास्क गिरें तो पहले अपना मास्क पहनें, फिर दूसरों की मदद करें।",
+        "ja": "マスクが降りてきたら、まずご自身が着用してから、周りの方をお手伝いください。"
+      }
+    }
+  ]
+}

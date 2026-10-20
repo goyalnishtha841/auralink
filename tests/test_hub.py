@@ -1,0 +1,105 @@
+"""End-to-end through the real WebSockets: passenger -> hub -> crew."""
+import pytest
+from fastapi.testclient import TestClient
+
+from engine import Lexicon
+from hub import main
+from hub.state import Cabin
+
+
+@pytest.fixture(autouse=True)
+def fresh_cabin(monkeypatch):
+    monkeypatch.setattr(main, "cabin", Cabin(Lexicon()))
+
+
+client = TestClient(main.app)
+
+
+def crew_state(crew):
+    while True:
+        msg = crew.receive_json()
+        if msg["type"] == "state":
+            return msg
+
+
+def test_split_request_reaches_crew_after_confirm():
+    with client.websocket_connect("/ws/crew") as crew, client.websocket_connect("/ws/passenger/34K") as pax:
+        crew_state(crew)
+        pax.send_json({"type": "hello", "lang": "hi"})
+        pax.send_json({"type": "text", "text": "thoda wotter and kambal"})
+        msg = pax.receive_json()
+        assert msg["type"] == "confirm" and msg["rule"] == "split"
+        water, blanket = msg["cards"]
+        assert water["options"][0]["label"] == "पानी"
+
+        pax.send_json({"type": "confirm", "card_id": water["id"], "intent": "water"})
+        status = pax.receive_json()
+        assert status["type"] == "status" and status["message"] == "क्रू को भेज दिया गया"
+
+        state = crew_state(crew)
+        while not state["cards"]:
+            state = crew_state(crew)
+        assert [c["intent"] for c in state["cards"]] == ["water"]
+        assert state["cards"][0]["crew_ja"] == "お水をご希望です"
+
+        crew.send_json({"type": "reply", "card_id": water["id"], "reply_id": "coming"})
+        reply = pax.receive_json()
+        assert reply == {"type": "reply", "card_id": water["id"], "text": "अभी लेकर आ रहे हैं।"}
+
+
+def test_two_failed_rounds_escalate_to_needs_human():
+    with client.websocket_connect("/ws/passenger/30A") as pax:
+        pax.send_json({"type": "text", "text": "hmm"})
+        assert pax.receive_json()["type"] == "grid"
+        pax.send_json({"type": "text", "text": "uh"})
+        msg = pax.receive_json()
+        assert msg["type"] == "status" and msg["card"]["status"] == "needs_human"
+
+
+def test_safety_heatmap():
+    with client.websocket_connect("/ws/crew") as crew, client.websocket_connect("/ws/passenger/31C") as pax:
+        crew.send_json({"type": "broadcast", "template_id": "turbulence"})
+        safety = pax.receive_json()
+        assert safety["type"] == "safety"
+        pax.send_json({"type": "safety", "understood": False})
+        state = crew_state(crew)
+        while state["heatmap"]["31C"] != "explain_again":
+            state = crew_state(crew)
+        assert state["heatmap"]["30A"] == "offline"
+
+
+def test_bad_card_id_does_not_drop_socket():
+    with client.websocket_connect("/ws/passenger/32D") as pax:
+        pax.send_json({"type": "confirm", "card_id": "nope", "intent": "water"})
+        assert pax.receive_json()["type"] == "error"
+        pax.send_json({"type": "text", "text": "blanket"})
+        assert pax.receive_json()["type"] == "confirm"
+
+
+def _clip_pcm(name: str) -> bytes:
+    import wave
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "data" / "recordings" / "synthetic" / f"{name}.wav"
+    if not path.exists():
+        pytest.skip("run scripts/asr_spike.py once to generate the synthetic clips")
+    with wave.open(str(path), "rb") as w:
+        return w.readframes(w.getnframes())
+
+
+def test_voice_request_end_to_end():
+    pytest.importorskip("faster_whisper")
+    with client.websocket_connect("/ws/passenger/33H") as pax:
+        pax.send_bytes(_clip_pcm("rishi_water_blanket"))  # "Madam, thoda wotter and kambal please"
+        assert pax.receive_json()["type"] == "thinking"
+        msg = pax.receive_json()
+        assert msg["type"] == "confirm"
+        assert [c["options"][0]["intent"] for c in msg["cards"]] == ["water", "blanket"]
+
+
+def test_silence_goes_to_icon_grid():
+    pytest.importorskip("faster_whisper")
+    with client.websocket_connect("/ws/passenger/33J") as pax:
+        pax.send_bytes(bytes(16_000 * 2))  # one second of silence
+        assert pax.receive_json()["type"] == "thinking"
+        assert pax.receive_json() == {"type": "grid", "reason": "empty"}

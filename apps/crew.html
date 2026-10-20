@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Crew</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <span class="dot" id="dot" title="Connection"></span>
+    <h1>客室乗務員パネル <span class="muted">Crew panel</span></h1>
+    <label class="row muted">飛行フェーズ Phase <select id="phase"></select></label>
+  </header>
+  <main>
+    <div class="panel">
+      <h2>リクエスト Requests</h2>
+      <div class="list" id="cards"><p class="muted">No open requests</p></div>
+    </div>
+    <div class="panel">
+      <h2>安全案内 Safety briefing</h2>
+      <div class="row" id="briefings"></div>
+      <div class="seatmap" id="seatmap"></div>
+      <p class="muted">Green: understood · Red: asked to explain again · Amber: no answer yet · Faded: no device</p>
+    </div>
+  </main>
+
+<script type="module">
+import { connect, el, loadConfig } from "./common.js";
+
+const $ = (id) => document.getElementById(id);
+const config = await loadConfig();
+const STATUS = {
+  urgent_unconfirmed: ["至急・未確認", "Urgent, unconfirmed"],
+  confirmed: ["確認済み", "Confirmed"],
+  needs_human: ["要対応", "Needs human help"],
+  acknowledged: ["対応中", "Acknowledged"],
+};
+
+const socket = connect("/ws/crew", render, (on) => $("dot").classList.toggle("on", on));
+
+$("phase").replaceChildren(...config.phases.map((p) => el("option", { value: p }, p)));
+$("phase").addEventListener("change", (e) => socket.send({ type: "phase", phase: e.target.value }));
+$("briefings").replaceChildren(...config.safety.map((s) =>
+  el("button", { onclick: () => socket.send({ type: "broadcast", template_id: s.id }) }, `${s.title.ja} · ${s.title.en}`)));
+
+function cardView(c) {
+  const [ja, en] = STATUS[c.status];
+  const head = c.intent
+    ? [el("span", { class: "icon" }, c.icon), el("strong", {}, c.crew_ja), el("span", { class: "muted" }, c.label_en)]
+    : [el("strong", {}, "推定 Best guesses: "),
+       ...c.guesses.map((g) => el("span", {}, `${g.icon} ${g.label_ja} (${g.score.toFixed(2)})`))];
+  return el("div", { class: `item ${c.urgent ? "is-urgent" : ""}` },
+    el("strong", {}, c.seat), ...head,
+    el("span", { class: `pill ${c.urgent ? "urgent" : ""}` }, `${ja} · ${en}`),
+    c.heard ? el("span", { class: "muted" }, `“${c.heard}” · ${c.lang}`) : null,
+    el("span", { class: "grow" }),
+    c.status !== "acknowledged"
+      ? el("button", { class: "primary", onclick: () => socket.send({ type: "ack", card_id: c.id }) }, "了解 Acknowledge")
+      : null,
+    ...config.replies.map((r) => el("button", { title: r.en, onclick: () => socket.send({ type: "reply", card_id: c.id, reply_id: r.id }) }, r.ja)),
+    el("button", { onclick: () => socket.send({ type: "close", card_id: c.id }) }, "完了 Done"));
+}
+
+function seatmap(heat) {
+  const rows = [...new Set(config.seats.map((s) => s.slice(0, -1)))];
+  const cells = [];
+  for (const row of rows) {
+    cells.push(el("span", { class: "muted" }, row));
+    for (const [i, letter] of [..."ABCDEGHJK"].entries()) {
+      if (i === 3 || i === 6) cells.push(el("span"));
+      const id = row + letter;
+      cells.push(el("span", { class: `seat ${heat[id]}`, title: `${id}: ${heat[id]}` }, letter));
+    }
+  }
+  $("seatmap").replaceChildren(...cells);
+}
+
+function render(msg) {
+  if (msg.type !== "state") return;
+  $("phase").value = msg.phase;
+  $("cards").replaceChildren(...(msg.cards.length ? msg.cards.map(cardView) : [el("p", { class: "muted" }, "No open requests")]));
+  seatmap(msg.heatmap);
+}
+</script>
+</body>
+</html>

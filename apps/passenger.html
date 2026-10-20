@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Passenger</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <span class="dot" id="dot" title="Connection"></span>
+    <h1 id="title">How can we help?</h1>
+    <span class="muted" id="seat"></span>
+    <select id="lang" aria-label="Language">
+      <option value="en">English</option>
+      <option value="hi">हिन्दी</option>
+    </select>
+    <label class="row muted"><input type="checkbox" id="senior"> <span id="seniorLabel">Large mode</span></label>
+  </header>
+  <main>
+    <div class="panel">
+      <h2 id="typeHint">Type or say what you need</h2>
+      <button type="button" class="mic" id="mic"><span class="icon">🎤</span> <span id="micLabel">Tap to speak</span></button>
+      <p class="muted" id="micNote" hidden></p>
+      <form class="row" id="form">
+        <input class="grow" id="text" autocomplete="off" placeholder="thoda wotter and kambal">
+        <button class="primary" id="send" type="submit">Send</button>
+      </form>
+    </div>
+    <div class="panel">
+      <h2 id="orTap">Or tap a picture</h2>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="panel">
+      <h2 id="requestsLabel">Your requests</h2>
+      <div class="list" id="requests"></div>
+    </div>
+  </main>
+  <div id="overlay"></div>
+
+<script type="module">
+import { Recorder, connect, el, loadConfig } from "./common.js";
+
+const STRINGS = {
+  en: { title: "How can we help?", typeHint: "Type or say what you need", send: "Send", orTap: "Or tap a picture",
+        requestsLabel: "Your requests", seniorLabel: "Large mode", confirmQ: "Did you mean this?",
+        pickOne: "Which one did you mean?", yes: "Yes", no: "No", none: "None of these",
+        together: "Let's find it together. Tap what you need.", understood: "I understood",
+        explain: "Explain again", ok: "OK", seat: "Seat", speak: "Tap to speak", stop: "Listening… tap when done",
+        thinking: "Understanding…", micOff: "Voice needs a secure (https) connection. Please type or tap a picture.",
+        micDenied: "Microphone not allowed. Please type or tap a picture." },
+  hi: { title: "हम आपकी कैसे मदद करें?", typeHint: "जो चाहिए, लिखें या बोलें", send: "भेजें",
+        orTap: "या तस्वीर पर टैप करें", requestsLabel: "आपके अनुरोध", seniorLabel: "बड़ा मोड",
+        confirmQ: "क्या आपका मतलब यह था?", pickOne: "आपका मतलब कौन-सा था?", yes: "हाँ", no: "नहीं",
+        none: "इनमें से कोई नहीं", together: "चलिए साथ में ढूँढते हैं। जो चाहिए उस पर टैप करें।",
+        understood: "मैं समझ गया/गई", explain: "फिर से समझाइए", ok: "ठीक है", seat: "सीट",
+        speak: "बोलने के लिए टैप करें", stop: "सुन रहे हैं… बोलकर टैप करें", thinking: "समझ रहे हैं…",
+        micOff: "आवाज़ के लिए सुरक्षित (https) कनेक्शन चाहिए। कृपया लिखें या तस्वीर पर टैप करें।",
+        micDenied: "माइक की अनुमति नहीं है। कृपया लिखें या तस्वीर पर टैप करें।" },
+};
+
+const params = new URLSearchParams(location.search);
+const seat = params.get("seat") || "34K";
+const $ = (id) => document.getElementById(id);
+let lang = params.get("lang") || "en";
+let senior = params.get("senior") === "1";
+let config;
+const requests = new Map();  // card id -> {label, icon, message}
+
+const t = (k) => STRINGS[lang][k] ?? STRINGS.en[k];
+const socket = connect(`/ws/passenger/${seat}`, onMessage, (on) => {
+  $("dot").classList.toggle("on", on);
+  if (on) socket.send({ type: "hello", lang, senior });
+});
+
+function applyStrings() {
+  document.documentElement.lang = lang;
+  for (const id of ["title", "typeHint", "send", "orTap", "requestsLabel", "seniorLabel"]) $(id).textContent = t(id);
+  setMic(micState);
+  $("seat").textContent = `${t("seat")} ${seat}`;
+  document.body.classList.toggle("big", senior);
+  renderGrid($("grid"), (intent) => socket.send({ type: "icon", intent }));
+}
+
+function renderGrid(container, onPick, ids) {
+  container.replaceChildren(...config.intents
+    .filter((i) => !ids || ids.includes(i.id))
+    .map((i) => el("button", { class: "tile", onclick: () => onPick(i.id) },
+      el("span", { class: "icon" }, i.icon), i.label[lang] || i.label.en)));
+}
+
+function sheet(...children) {
+  const o = el("div", { class: "overlay" }, el("div", { class: `sheet ${senior ? "big" : ""}` }, ...children));
+  $("overlay").replaceChildren(o);
+}
+const closeSheet = () => $("overlay").replaceChildren();
+
+// One card at a time; split utterances queue the rest.
+let pending = [];
+function showNextConfirm() {
+  const card = pending.shift();
+  if (!card) return closeSheet();
+  if (card.confident) {
+    const o = card.options[0];
+    sheet(el("h2", {}, t("confirmQ")),
+      el("div", { class: "tile" }, el("span", { class: "icon" }, o.icon), o.label),
+      el("div", { class: "row" },
+        el("button", { class: "primary grow", onclick: () => { socket.send({ type: "confirm", card_id: card.id, intent: o.intent }); showNextConfirm(); } }, t("yes")),
+        el("button", { class: "grow", onclick: () => socket.send({ type: "reject", card_id: card.id }) }, t("no"))));
+  } else {
+    sheet(el("h2", {}, t("pickOne")),
+      el("div", { class: "grid" }, card.options.slice(0, 2).map((o) => el("button", { class: "tile", onclick: () => {
+        socket.send({ type: "confirm", card_id: card.id, intent: o.intent }); showNextConfirm(); } },
+        el("span", { class: "icon" }, o.icon), o.label))),
+      el("button", { onclick: () => socket.send({ type: "reject", card_id: card.id }) }, t("none")));
+  }
+}
+
+function showGrid(cardId) {
+  const grid = el("div", { class: "grid" });
+  renderGrid(grid, (intent) => {
+    socket.send(cardId ? { type: "icon", card_id: cardId, intent } : { type: "icon", intent });
+    showNextConfirm();
+  });
+  sheet(el("h2", {}, t("together")), grid);
+}
+
+function renderRequests() {
+  $("requests").replaceChildren(...[...requests.values()].reverse().map((r) =>
+    el("div", { class: `item ${r.urgent ? "is-urgent" : ""}` },
+      el("span", { class: "icon" }, r.icon), el("strong", {}, r.label),
+      el("span", { class: "muted grow" }, r.message))));
+}
+
+// microphone: idle -> recording -> thinking -> idle
+let micState = "idle";
+let recorder = null;
+function setMic(state) {
+  micState = state;
+  $("mic").classList.toggle("recording", state === "recording");
+  $("mic").disabled = state === "thinking" || state === "off";
+  $("micLabel").textContent = t({ idle: "speak", recording: "stop", thinking: "thinking", off: "speak" }[state]);
+}
+function micNote(key) { $("micNote").textContent = t(key); $("micNote").hidden = false; }
+
+async function toggleMic() {
+  if (micState === "idle") {
+    recorder = new Recorder();
+    try {
+      await recorder.start(8, () => micState === "recording" && toggleMic());
+      setMic("recording");
+    } catch {
+      micNote("micDenied");
+    }
+  } else if (micState === "recording") {
+    setMic("thinking");
+    socket.sendBinary(await recorder.stop());
+  }
+}
+
+function onMessage(msg) {
+  if (["confirm", "grid", "status", "error"].includes(msg.type) && micState === "thinking") setMic("idle");
+  if (msg.type === "thinking") setMic("thinking");
+  else if (msg.type === "confirm") { pending = msg.cards; showNextConfirm(); }
+  else if (msg.type === "grid") showGrid(msg.card_id);
+  else if (msg.type === "status") {
+    const c = msg.card;
+    const shown = c.intent || c.options[0] || { icon: "🙋", label: "" };
+    requests.set(c.id, { icon: shown.icon, label: shown.label, message: msg.message, urgent: c.urgent });
+    if (c.status === "needs_human") closeSheet();
+    renderRequests();
+  } else if (msg.type === "reply") {
+    const r = requests.get(msg.card_id);
+    if (r) { r.message = msg.text; renderRequests(); }
+  } else if (msg.type === "notice") {
+    $("title").textContent = msg.message;
+    setTimeout(() => ($("title").textContent = t("title")), 6000);
+  } else if (msg.type === "safety") {
+    const s = msg.template;
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    const answer = (understood) => { socket.send({ type: "safety", understood }); closeSheet(); };
+    sheet(el("h2", {}, s.title), el("div", { class: "tile" }, el("span", { class: "icon" }, "🪑"), s.caption),
+      lang !== "en" ? el("p", { class: "muted" }, s.caption_en) : null,
+      el("div", { class: "row" },
+        el("button", { class: "primary grow", onclick: () => answer(true) }, t("understood")),
+        el("button", { class: "grow", onclick: () => answer(false) }, t("explain"))));
+  }
+}
+
+$("mic").addEventListener("click", toggleMic);
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const text = $("text").value.trim();
+  if (!text) return;
+  socket.send({ type: "text", text });
+  $("text").value = "";
+});
+$("lang").addEventListener("change", (e) => { lang = e.target.value; applyStrings(); socket.send({ type: "hello", lang, senior }); });
+$("senior").addEventListener("change", (e) => { senior = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior }); });
+
+config = await loadConfig();
+if (!Recorder.supported()) { micState = "off"; micNote("micOff"); }
+$("lang").value = lang;
+$("senior").checked = senior;
+applyStrings();
+</script>
+</body>
+</html>

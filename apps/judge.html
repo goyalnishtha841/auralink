@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Under the hood</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <span class="dot" id="dot" title="Connection"></span>
+    <h1>Under the hood</h1>
+    <span class="muted">Every interpretation, live. Members A and D grow this into the glass-box view.</span>
+  </header>
+  <main id="log"><p class="muted">Waiting for a passenger request…</p></main>
+
+<script type="module">
+import { connect, el } from "./common.js";
+
+const $ = (id) => document.getElementById(id);
+let first = true;
+
+connect("/ws/judge", (msg) => {
+  if (msg.type !== "result") return;
+  const r = msg.result;
+  if (first) { $("log").replaceChildren(); first = false; }
+  const cards = r.cards.map((c, i) => el("div", { class: "item" },
+    el("strong", {}, `Card ${i + 1}: “${c.span}”`),
+    el("span", { class: `pill ${c.urgent ? "urgent" : ""}` }, c.urgent ? `${c.status} · urgent` : c.status),
+    el("div", { style: "width:100%", class: "list" }, c.candidates.map((x) => el("div", { class: "row" },
+      el("span", { style: "width:90px" }, x.intent),
+      el("div", { class: "grow" }, el("div", { class: "bar", style: `width:${Math.min(100, x.score * 100)}%` })),
+      el("span", { class: "muted", style: "width:220px" }, `${x.score.toFixed(2)} · heard “${x.heard}” ≈ “${x.matched}”`))))));
+  $("log").prepend(el("div", { class: "panel" },
+    el("div", { class: "row" },
+      el("strong", { class: "grow" }, `Seat ${r.seat} · phase ${msg.phase}`),
+      el("span", { class: "pill" }, `rule: ${r.rule}`),
+      el("span", { class: "muted" }, Object.entries(r.latency_ms).map(([k, v]) => `${k} ${v} ms`).join(" · "))),
+    el("div", { class: "muted" }, "n-best: ", r.nbest.map((h) => `“${h.text}” (${h.conf})`).join(" | ")),
+    cards.length ? cards : el("p", { class: "muted" }, "No intent above t1. Passenger is shown the icon grid."),
+  ));
+}, (on) => $("dot").classList.toggle("on", on));
+</script>
+</body>
+</html>
