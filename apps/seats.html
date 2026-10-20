@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Seat QR cards</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 1100px; }
+    .controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+    .controls label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+    .warn { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--warn); color: var(--warn); }
+    .ok { color: var(--ok); }
+    .sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; }
+    /* the cards themselves are always light: they are printed and stuck on seats */
+    .seatcard { background: #fff; color: #10131c; border-radius: 16px; padding: 18px; display: grid;
+                grid-template-columns: minmax(0, 1fr) 132px; gap: 16px; align-items: center; border: 2px solid #10131c; break-inside: avoid; }
+    .seatcard.exit { border-color: #c27a00; }
+    .seatcard .no { font: 800 44px/1 "Outfit", system-ui, sans-serif; letter-spacing: -.02em; }
+    .seatcard .exit-tag { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 6px; background: #ffb547; color: #1d1300; font: 700 11px system-ui; letter-spacing: .04em; }
+    .seatcard .lines { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 14px; line-height: 1.3; }
+    .seatcard .lines span:first-child { font-weight: 700; }
+    .seatcard .foot { grid-column: 1 / -1; display: flex; justify-content: space-between; font: 11px ui-monospace, Menlo, monospace; color: #5a6476; border-top: 1px dashed #c9ced8; padding-top: 8px; }
+    .seatcard img { width: 132px; height: 132px; image-rendering: pixelated; }
+    .brand { display: flex; align-items: center; gap: 6px; font: 700 13px "Outfit", system-ui, sans-serif; }
+    .brand svg { width: 18px; height: 18px; fill: none; stroke-width: 2.6; stroke-linecap: round; }
+    @media print {
+      header, .controls, .warn, .no-print { display: none !important; }
+      body { background: #fff !important; }
+      main { padding: 0; max-width: none; }
+      .sheet-grid { grid-template-columns: 1fr 1fr; gap: 10mm; }
+      .panel { border: 0; background: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="dot on"></span>
+    <h1>Seat QR cards <span class="muted">print and stick on the demo seat</span></h1>
+    <a href="./"><button>Home</button></a>
+  </header>
+  <main>
+    <section class="panel no-print">
+      <div class="controls">
+        <label for="rows">Which seats
+          <select id="rows">
+            <option value="demo">Demo seats (34K, 30A, 31C)</option>
+            <option value="exit">Exit row only</option>
+            <option value="all">All 54 seats</option>
+          </select></label>
+        <label for="base">Phones open
+          <input id="base" size="34" spellcheck="false"></label>
+        <button class="primary" id="print">Print cards</button>
+      </div>
+      <div id="status"></div>
+    </section>
+    <section class="panel"><div class="sheet-grid" id="grid"></div></section>
+  </main>
+
+<script type="module">
+import { el, loadConfig } from "./common.js";
+
+const $ = (id) => document.getElementById(id);
+const [config, info] = await Promise.all([loadConfig(), fetch("/api/hub-info").then((r) => r.json())]);
+const exit = new Set(config.exit_seats);
+$("base").value = info.public_url;
+
+const MARK = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 16c3-7 6-7 8 0s5 7 8 0 5-7 8 0" stroke="#0c9e86"/><path d="M4 22h24" stroke="#c27a00"/></svg>';
+
+function seats() {
+  const v = $("rows").value;
+  if (v === "exit") return config.exit_seats;
+  if (v === "all") return config.seats;
+  return ["34K", "30A", "31C"];
+}
+
+function render() {
+  const base = $("base").value.trim().replace(/\/$/, "");
+  const https = base.startsWith("https://");
+  $("status").replaceChildren(https
+    ? el("div", { class: "ok" }, `Phones will open ${base}/passenger.html?seat=…`)
+    : el("div", { class: "warn" }, "This address is http, not https. Phones will open the page but block the microphone; typing and pictures still work. For voice, set up HTTPS (mkcert) and restart the hub."));
+  $("grid").replaceChildren(...seats().map((seat) => {
+    const url = `${base}/passenger.html?seat=${seat}`;
+    const brand = el("span", { class: "brand" }); brand.innerHTML = `${MARK}Auralink`;
+    return el("article", { class: `seatcard ${exit.has(seat) ? "exit" : ""}` },
+      el("div", {},
+        el("div", { class: "no" }, seat),
+        exit.has(seat) ? el("span", { class: "exit-tag" }, "EXIT ROW · 非常口座席") : null,
+        el("div", { class: "lines" },
+          el("span", { lang: "en" }, "Scan to ask the crew"),
+          el("span", { lang: "hi" }, "क्रू से मदद माँगने के लिए स्कैन करें"),
+          el("span", { lang: "ja" }, "スキャンして乗務員にご依頼ください"))),
+      el("img", { src: `/api/qr?data=${encodeURIComponent(url)}`, alt: `QR code for seat ${seat}` }),
+      el("div", { class: "foot" }, brand, el("span", {}, "cabin Wi-Fi · no app · no internet")));
+  }));
+}
+
+$("rows").addEventListener("change", render);
+$("base").addEventListener("change", render);
+$("print").addEventListener("click", () => print());
+render();
+</script>
+</body>
+</html>

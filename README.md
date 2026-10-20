@@ -13,6 +13,11 @@ brew install espeak-ng          # phoneme matcher; apt install espeak-ng on Linu
 scripts/run.sh
 ```
 
+On demo day use `scripts/demo.sh` instead: it runs a pre-flight check (packages, Whisper downloaded,
+eSpeak-NG, HTTPS certificate, free port, a test sentence), prints the address and a QR code for
+phones, then starts the hub. Demo tools: `/seats.html` (printable seat QR cards) and `/noise.html`
+(cabin-noise player with a level meter).
+
 Open <http://localhost:8000> and put **Passenger** and **Crew** side by side. Tap the microphone
 and say "thoda wotter and kambal", or type it.
 

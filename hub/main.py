@@ -20,7 +20,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import recordings
+from . import demo, recordings
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
 from .templates import Templates
@@ -390,4 +390,5 @@ async def judge_ws(ws: WebSocket) -> None:
 
 
 app.include_router(recordings.router)
+app.include_router(demo.router)
 app.mount("/", StaticFiles(directory=ROOT / "apps", html=True), name="apps")

@@ -3,3 +3,4 @@ uvicorn[standard]>=0.29
 pydantic>=2.6
 faster-whisper>=1.1
 phonemizer>=3.2   # needs eSpeak-NG: brew install espeak-ng / apt install espeak-ng
+segno>=1.6        # QR codes for seat cards

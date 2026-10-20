@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Cabin noise</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 720px; }
+    .big { font: 700 22px "Outfit", system-ui, sans-serif; min-height: 72px; border-radius: 999px; }
+    .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .presets button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+    .meter { height: 26px; border-radius: 13px; background: var(--surface-2); overflow: hidden; }
+    .meter i { display: block; height: 100%; width: 0; border-radius: 13px; background: linear-gradient(90deg, var(--info), var(--accent), var(--bad)); transition: width .08s linear; }
+    .readout { display: flex; justify-content: space-between; font: 13px ui-monospace, Menlo, monospace; color: var(--muted); }
+    input[type=range] { width: 100%; accent-color: var(--accent); }
+    ol { margin: 0; padding-left: 1.2em; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="dot" id="dot"></span>
+    <h1>Cabin noise <span class="muted">for the "works in noise" demo</span></h1>
+    <a href="./"><button>Home</button></a>
+  </header>
+  <main>
+    <section class="panel">
+      <button class="primary big" id="play">▶ Play cabin noise</button>
+      <div class="presets" role="group" aria-label="Noise level">
+        <button data-gain="0.25" aria-pressed="false">Quiet cabin</button>
+        <button data-gain="0.55" aria-pressed="true">Cruise</button>
+        <button data-gain="0.9" aria-pressed="false">Loud</button>
+      </div>
+      <label class="muted" for="vol">Volume</label>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.55">
+      <div class="meter" aria-hidden="true"><i id="bar"></i></div>
+      <div class="readout"><span id="db">–</span><span>output level of this page (dBFS)</span></div>
+    </section>
+    <section class="panel">
+      <h2>Use a real cabin recording instead</h2>
+      <input type="file" id="file" accept="audio/*">
+      <p class="muted" id="fileNote">Generated noise is used until you load a file. The file stays on this laptop.</p>
+    </section>
+    <section class="panel">
+      <h2>How to run the noise demo</h2>
+      <ol>
+        <li>Play this page through a speaker next to the passenger phone.</li>
+        <li>Measure the level where the phone is with any sound-meter app, and show the number to the jury. Real cabins are often quoted at roughly 75–85 dB(A) in cruise; treat that as a guide, not a measurement.</li>
+        <li>Speak the request on the passenger screen. Show the result on Under the hood: the silence filter, the guesses, and the match despite the noise.</li>
+      </ol>
+    </section>
+  </main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let ctx = null, out = null, src = null, analyser = null, fileBuffer = null, playing = false;
+
+// Cabin-like noise: deep low-passed brown noise (engines, airflow rumble) + quieter pink-ish hiss
+function makeNoise(ctx, seconds = 6) {
+  const n = ctx.sampleRate * seconds, buf = ctx.createBuffer(2, n, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    let brown = 0, b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < n; i++) {
+      const w = Math.random() * 2 - 1;
+      brown = (brown + 0.02 * w) / 1.02;
+      b0 = 0.99765 * b0 + w * 0.099; b1 = 0.963 * b1 + w * 0.2965; b2 = 0.57 * b2 + w * 1.0526;
+      const pink = (b0 + b1 + b2 + w * 0.1848) * 0.05;
+      d[i] = brown * 3.2 + pink * 0.35;
+    }
+    for (let i = 0; i < 2000; i++) { d[i] *= i / 2000; d[n - 1 - i] *= i / 2000; }   // soft loop seam
+  }
+  return buf;
+}
+
+function start() {
+  ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+  out = ctx.createGain(); out.gain.value = Number($("vol").value);
+  analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
+  src = ctx.createBufferSource(); src.buffer = fileBuffer || makeNoise(ctx); src.loop = true;
+  let node = src;
+  if (!fileBuffer) {
+    const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 900;
+    node.connect(lp); node = lp;
+  }
+  node.connect(out); out.connect(analyser); analyser.connect(ctx.destination);
+  src.start();
+  playing = true;
+  $("play").textContent = "■ Stop";
+  $("dot").classList.add("on");
+  meter();
+}
+
+function stop() {
+  src?.stop(); playing = false;
+  $("play").textContent = "▶ Play cabin noise";
+  $("dot").classList.remove("on");
+  $("bar").style.width = "0"; $("db").textContent = "–";
+}
+
+function meter() {
+  if (!playing) return;
+  const data = new Float32Array(analyser.fftSize);
+  analyser.getFloatTimeDomainData(data);
+  const rms = Math.sqrt(data.reduce((s, v) => s + v * v, 0) / data.length);
+  const db = 20 * Math.log10(Math.max(rms, 1e-6));
+  $("bar").style.width = `${Math.max(0, Math.min(100, (db + 60) / 60 * 100))}%`;
+  $("db").textContent = `${db.toFixed(1)} dBFS`;
+  requestAnimationFrame(meter);
+}
+
+$("play").addEventListener("click", () => (playing ? stop() : start()));
+$("vol").addEventListener("input", (e) => { if (out) out.gain.value = Number(e.target.value); });
+for (const b of document.querySelectorAll(".presets button")) {
+  b.addEventListener("click", () => {
+    $("vol").value = b.dataset.gain;
+    if (out) out.gain.value = Number(b.dataset.gain);
+    document.querySelectorAll(".presets button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+  });
+}
+$("file").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+  try {
+    fileBuffer = await ctx.decodeAudioData(await f.arrayBuffer());
+    $("fileNote").textContent = `Using ${f.name} (${fileBuffer.duration.toFixed(1)} s, looped).`;
+    if (playing) { stop(); start(); }
+  } catch {
+    $("fileNote").textContent = "That file could not be read as audio. Try an mp3, m4a or wav.";
+  }
+});
+</script>
+</body>
+</html>
