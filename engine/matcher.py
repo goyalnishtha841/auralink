@@ -110,6 +110,14 @@ class HybridSimilarity:
     def __call__(self, heard: str, variant: str) -> float:
         return self._sim(heard, variant)
 
+    def explain(self, heard: str, variant: str) -> dict:
+        return {**self.phonetic.explain(heard, variant), "sound": round(self.phonetic(heard, variant), 3),
+                "spelling": round(similarity(heard, variant), 3), "score": round(self(heard, variant), 3)}
+
+
+def is_filler(token: str, lex: Lexicon, sim: Similarity) -> bool:
+    return _is_filler(token, lex, sim)
+
 
 def make_similarity(kind: str) -> Similarity:
     """kind: "text" (spelling), "phonetic_uniform" (plain phoneme distance), "phonetic" (accent costs)
@@ -162,6 +170,27 @@ def _is_filler(token: str, lex: Lexicon, sim: Similarity) -> bool:
         # "madham" sounds like "madam" (filler); "dizzy" sounds like "dijiye" but is itself a request word
         _filler_cache[key] = filler >= FILLER_SOUNDALIKE and filler > request
     return _filler_cache[key]
+
+
+_warmed: set[tuple] = set()
+
+
+def _prepare(hyps: list[Hypothesis], lex: Lexicon, sim: Similarity) -> None:
+    """Phonemise everything this call will compare in two batch calls instead of hundreds of single ones."""
+    if not hasattr(sim, "warm"):
+        return
+    key = (id(sim), lex.version_key)
+    if key not in _warmed:
+        sim.warm([v for i in lex.intents for v in lex.variants(i.id)] + sorted(lex.stopwords))
+        _warmed.add(key)
+    texts = []
+    for h in hyps:
+        toks = tokenize(h.text)
+        for i in range(len(toks)):
+            for n in range(1, MAX_NGRAM + 1):
+                if i + n <= len(toks):
+                    texts += [" ".join(toks[i:i + n]), "".join(toks[i:i + n])]
+    sim.warm(texts)
 
 
 def _all_hits(hyps: list[Hypothesis], ctx: Context, lex: Lexicon, sim: Similarity) -> list[_Hit]:
@@ -235,7 +264,9 @@ def interpret(nbest: list[Hypothesis], ctx: Context, lex: Lexicon, *, t1: float 
         return Result(seat=ctx.seat, nbest=nbest, cards=[], rule="empty", urgent=False,
                       latency_ms={"match": round((time.perf_counter() - t0) * 1000, 2)})
 
-    hits = _all_hits(hyps, ctx, lex, sim or default_similarity())
+    sim = sim or default_similarity()
+    _prepare(hyps, lex, sim)
+    hits = _all_hits(hyps, ctx, lex, sim)
 
     by_intent: dict[str, CardDraft] = {}
     for ranked in _segment(hits, min(t1, URGENT_FLOOR)):

@@ -41,12 +41,15 @@ class Costs:
         self.vowel_groups = [set(g) for g in data.get("vowel_groups", [])]
         self.indel_costs = data.get("indel", {})
         self.pairs: dict[frozenset, float] = {}
+        self.reasons: dict[frozenset, str] = {}
         for g in data.get("groups", []):
             for a in g["phones"]:
                 for b in g["phones"]:
                     if a != b:
                         key = frozenset((a, b))
-                        self.pairs[key] = min(self.pairs.get(key, 1.0), g["cost"])
+                        if g["cost"] < self.pairs.get(key, 1.0):
+                            self.pairs[key] = g["cost"]
+                            self.reasons[key] = g.get("why", "")
 
     @classmethod
     def load(cls, path: Path = COSTS_FILE) -> "Costs":
@@ -68,6 +71,21 @@ class Costs:
                 return self.vowel_group_sub
             return self.vowel_sub
         return self.default_sub
+
+    def reason(self, a: str, b: str | None = None) -> str:
+        """Why a substitution (or, with b=None, an insertion/deletion) is cheap; for the glass-box view."""
+        if self.uniform:
+            return ""
+        if b is None:
+            if a in self.indel_costs:
+                return {"ə": "extra schwa (epenthesis)", "h": "dropped h", "j": "glide y",
+                        "ɪ": "short i", "r": "dropped r (non-rhotic)"}.get(a, "cheap to drop")
+            return "vowel dropped or added" if self.is_vowel(a) else ""
+        if (r := self.reasons.get(frozenset((a, b)))):
+            return r
+        if self.is_vowel(a) and self.is_vowel(b):
+            return "similar vowel" if any(a in g and b in g for g in self.vowel_groups) else "vowel change"
+        return ""
 
     def indel(self, p: str) -> float:
         if self.uniform:
@@ -92,6 +110,50 @@ def weighted_distance(a: tuple[str, ...], b: tuple[str, ...], costs: Costs, free
         prev = cur
         best_end = min(best_end, prev[-1])
     return best_end if free_ends else prev[-1]
+
+
+def align(a: tuple[str, ...], b: tuple[str, ...], costs: Costs, free_ends: bool = False) -> list[dict]:
+    """Cheapest edit path from heard phones a to lexicon phones b, as steps for display.
+
+    op: match | sub | extra (heard but not in the word) | missing (in the word, not heard) | skip (free end)
+    """
+    n, m = len(a), len(b)
+    INF = float("inf")
+    d = [[INF] * (m + 1) for _ in range(n + 1)]
+    back: list[list[str | None]] = [[None] * (m + 1) for _ in range(n + 1)]
+    d[0][0] = 0.0
+    for i in range(1, n + 1):
+        d[i][0], back[i][0] = (0.0, "skip") if free_ends else (d[i - 1][0] + costs.indel(a[i - 1]), "extra")
+    for j in range(1, m + 1):
+        d[0][j], back[0][j] = d[0][j - 1] + costs.indel(b[j - 1]), "missing"
+    for i in range(1, n + 1):
+        for j in range(1, m + 1):
+            options = [(d[i - 1][j - 1] + costs.sub(a[i - 1], b[j - 1]), "diag"),
+                       (d[i - 1][j] + costs.indel(a[i - 1]), "extra"),
+                       (d[i][j - 1] + costs.indel(b[j - 1]), "missing")]
+            d[i][j], back[i][j] = min(options, key=lambda o: o[0])
+    end = min(range(n + 1), key=lambda i: d[i][m]) if free_ends else n
+    steps: list[dict] = [{"op": "skip", "heard": a[k], "word": None, "cost": 0.0, "why": ""} for k in range(end, n)][::-1]
+    i, j = end, m
+    while i > 0 or j > 0:
+        move = back[i][j]
+        if move == "diag":
+            c = costs.sub(a[i - 1], b[j - 1])
+            steps.append({"op": "match" if c == 0 else "sub", "heard": a[i - 1], "word": b[j - 1],
+                          "cost": round(c, 2), "why": costs.reason(a[i - 1], b[j - 1]) if c else ""})
+            i, j = i - 1, j - 1
+        elif move in ("extra", "skip"):
+            c = 0.0 if move == "skip" else costs.indel(a[i - 1])
+            steps.append({"op": move, "heard": a[i - 1], "word": None, "cost": round(c, 2),
+                          "why": "" if move == "skip" else costs.reason(a[i - 1])})
+            i -= 1
+        else:
+            c = costs.indel(b[j - 1])
+            steps.append({"op": "missing", "heard": None, "word": b[j - 1], "cost": round(c, 2),
+                          "why": costs.reason(b[j - 1])})
+            j -= 1
+    steps.reverse()
+    return steps
 
 
 def normalise(raw: str) -> tuple[str, ...]:
@@ -172,6 +234,15 @@ class PhoneticSimilarity:
 
     def __call__(self, heard: str, variant: str) -> float:
         return self._sim(heard, variant)
+
+    def explain(self, heard: str, variant: str) -> dict:
+        """Phones, alignment steps and score behind one comparison, for the glass-box view."""
+        a, b = self.phones(heard), self.phones(variant)
+        inside = (len(a) > len(b) + 2 and len(b) >= self.MIN_SUBSTRING_PHONES
+                  and self.SUBSTRING_PENALTY * (1 - weighted_distance(a, b, self.costs, True) / len(b))
+                  > 1 - weighted_distance(a, b, self.costs) / max(len(a), len(b), 1))
+        return {"heard_phones": list(a), "word_phones": list(b), "inside": inside,
+                "steps": align(a, b, self.costs, free_ends=inside), "score": round(self(heard, variant), 3)}
 
 
 _shared: Phonemizer | None = None

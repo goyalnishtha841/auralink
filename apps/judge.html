@@ -4,42 +4,79 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Auralink · Under the hood</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+JP:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="judge.css">
 </head>
 <body>
-  <header>
-    <span class="dot" id="dot" title="Connection"></span>
-    <h1>Under the hood</h1>
-    <span class="muted">Every interpretation, live. Members A and D grow this into the glass-box view.</span>
+  <header class="top">
+    <a class="brand" href="./" aria-label="Auralink home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 16c3-7 6-7 8 0s5 7 8 0 5-7 8 0" class="bm-wave"/><path d="M4 22h24" class="bm-line"/></svg>
+      <span>Auralink</span><span class="crumb">Under the hood</span>
+    </a>
+    <span class="live" id="live"><i></i><span>Connecting…</span></span>
+    <form class="try" id="try">
+      <label class="sr-only" for="tryText">Try a phrase</label>
+      <input id="tryText" placeholder="Type a phrase, or speak on a passenger screen" autocomplete="off" maxlength="200">
+      <label class="sr-only" for="tryPhase">Flight phase</label>
+      <select id="tryPhase">
+        <option value="boarding">Boarding</option><option value="cruise" selected>Cruise</option>
+        <option value="meal">Meal service</option><option value="post_meal">After meal</option><option value="descent">Descent</option>
+      </select>
+      <button type="submit">Explain</button>
+    </form>
   </header>
-  <main id="log"><p class="muted">Waiting for a passenger request…</p></main>
 
-<script type="module">
-import { connect, el } from "./common.js";
+  <main id="main">
+    <section class="empty" id="empty">
+      <h1>Every decision, in the open.</h1>
+      <p>Speak on a passenger screen or type a phrase above. This screen shows what Auralink heard, which sounds it
+        matched, how it scored them, and why it asked or didn’t.</p>
+      <div class="examples" id="examples">
+        <button>Shawchale kaha hai</button>
+        <button>Madham thora wotar and cumble please</button>
+        <button>I can't breathe</button>
+        <button>शोचाले कहा है</button>
+        <button>Mujhi ik takyaadiji</button>
+      </div>
+    </section>
 
-const $ = (id) => document.getElementById(id);
-let first = true;
+    <div id="view" hidden>
+      <section class="pipeline" aria-label="Pipeline timing">
+        <div class="stage" data-key="vad"><span class="s-name">Silence filter</span><b>–</b></div>
+        <div class="stage" data-key="encode"><span class="s-name">Whisper encoder</span><b>–</b></div>
+        <div class="stage" data-key="decode_en"><span class="s-name">English guesses</span><b>–</b></div>
+        <div class="stage" data-key="decode_hi"><span class="s-name">Hindi guesses</span><b>–</b></div>
+        <div class="stage" data-key="match"><span class="s-name">Phonetic matcher</span><b>–</b></div>
+        <div class="budget" id="budget"></div>
+      </section>
 
-connect("/ws/judge", (msg) => {
-  if (msg.type !== "result") return;
-  const r = msg.result;
-  if (first) { $("log").replaceChildren(); first = false; }
-  const cards = r.cards.map((c, i) => el("div", { class: "item" },
-    el("strong", {}, `Card ${i + 1}: “${c.span}”`),
-    el("span", { class: `pill ${c.urgent ? "urgent" : ""}` }, c.urgent ? `${c.status} · urgent` : c.status),
-    el("div", { style: "width:100%", class: "list" }, c.candidates.map((x) => el("div", { class: "row" },
-      el("span", { style: "width:90px" }, x.intent),
-      el("div", { class: "grow" }, el("div", { class: "bar", style: `width:${Math.min(100, x.score * 100)}%` })),
-      el("span", { class: "muted", style: "width:220px" }, `${x.score.toFixed(2)} · heard “${x.heard}” ≈ “${x.matched}”`))))));
-  $("log").prepend(el("div", { class: "panel" },
-    el("div", { class: "row" },
-      el("strong", { class: "grow" }, `Seat ${r.seat} · phase ${msg.phase}`),
-      el("span", { class: "pill" }, `rule: ${r.rule}`),
-      el("span", { class: "muted" }, Object.entries(r.latency_ms).map(([k, v]) => `${k} ${v} ms`).join(" · "))),
-    el("div", { class: "muted" }, "n-best: ", r.nbest.map((h) => `“${h.text}” (${h.conf})`).join(" | ")),
-    cards.length ? cards : el("p", { class: "muted" }, "No intent above t1. Passenger is shown the icon grid."),
-  ));
-}, (on) => $("dot").classList.toggle("on", on));
-</script>
+      <div class="grid2">
+        <section class="panel">
+          <h2><span class="n">1</span>What was heard</h2>
+          <div id="wave"></div>
+          <ol class="nbest" id="nbest"></ol>
+        </section>
+        <section class="panel">
+          <h2><span class="n">2</span>Words that matter</h2>
+          <p class="hint">Filler words are ignored, matched by sound too, so “madham” counts as “madam”.</p>
+          <div class="tokens" id="tokens"></div>
+          <div class="decision" id="decision"></div>
+        </section>
+      </div>
+
+      <section class="panel">
+        <h2><span class="n">3</span>Requests found, and how each was scored</h2>
+        <div id="cards"></div>
+      </section>
+
+      <section class="panel history">
+        <h2>Recent</h2>
+        <ol id="history"></ol>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="judge.js"></script>
 </body>
 </html>

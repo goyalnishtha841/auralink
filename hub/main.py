@@ -21,6 +21,7 @@ from engine.types import Phase
 from engine.lexicon import ROOT
 
 from . import recordings
+from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
 from .templates import Templates
 
@@ -176,6 +177,17 @@ def interpret_text(body: InterpretIn) -> dict:
     }
 
 
+@app.post("/api/explain")
+def explain_text(body: InterpretIn) -> dict:
+    """Glass-box view of a typed phrase, for judge.html. Stateless, like /api/interpret."""
+    from engine.matcher import default_similarity
+
+    lexicon.reload_if_changed()
+    result = interpret([Hypothesis(text=body.text)], Context(seat="demo", phase=body.phase), lexicon)
+    return {"source": "typed", "seat": None, "phase": body.phase,
+            "explain": explain(result, lexicon, default_similarity(), body.phase)}
+
+
 @app.get("/api/config")
 def config() -> dict:
     lexicon.reload_if_changed()
@@ -226,8 +238,13 @@ async def interpret_and_reply(seat: str, text: str, nbest: list[Hypothesis] | No
     result, cards, escalated = cabin.handle_text(seat, text, nbest)
     if asr:
         result.latency_ms = {**asr["latency_ms"], **result.latency_ms}
-    await _send(judges, {"type": "result", "phase": cabin.phase, "result": result.model_dump(),
-                         "asr_rejected": asr and asr["rejected"]})
+    if judges:
+        from engine.matcher import default_similarity
+
+        why = explain(result, lexicon, default_similarity(), cabin.phase, audio=asr and asr.get("audio"),
+                      speech=asr and asr.get("speech"), rejected=asr and asr["rejected"])
+        await _send(judges, {"type": "result", "seat": seat, "source": "voice" if asr else "text",
+                             "phase": cabin.phase, "result": result.model_dump(), "explain": why})
     if cards:
         await to_seat(seat, {"type": "confirm", "rule": result.rule,
                              "cards": [card_for_passenger(c, s.lang) for c in cards]})
@@ -254,7 +271,8 @@ async def handle_audio(seat: str, pcm: bytes) -> None:
         return
     top = tr.hypotheses[0].text if tr.hypotheses else ""
     await interpret_and_reply(seat, top, tr.hypotheses or [Hypothesis(text="")],
-                              asr={"latency_ms": tr.latency_ms, "rejected": tr.rejected})
+                              asr={"latency_ms": tr.latency_ms, "rejected": tr.rejected,
+                                   "audio": audio, "speech": tr.speech})
     await push_crew()
 
 
