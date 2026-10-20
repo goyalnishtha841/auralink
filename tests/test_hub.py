@@ -103,3 +103,14 @@ def test_silence_goes_to_icon_grid():
         pax.send_bytes(bytes(16_000 * 2))  # one second of silence
         assert pax.receive_json()["type"] == "thinking"
         assert pax.receive_json() == {"type": "grid", "reason": "empty"}
+
+
+def test_interpret_endpoint_is_stateless():
+    r = client.post("/api/interpret", json={"text": "thoda wotter and kambal", "lang": "hi"})
+    body = r.json()
+    assert body["rule"] == "split"
+    assert [c["candidates"][0]["label"] for c in body["cards"]] == ["पानी", "कंबल"]
+    assert body["cards"][1]["crew_ja"] == "毛布をご希望です"
+    assert main.cabin.cards == {}  # nothing reaches the crew
+    assert client.post("/api/interpret", json={"text": "x" * 201}).status_code == 422
+    assert client.post("/api/interpret", json={"text": "tea", "phase": "landed"}).status_code == 422

@@ -13,9 +13,11 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 
-from engine import PHASES, Hypothesis, Lexicon
+from engine import PHASES, Context, Hypothesis, Lexicon, interpret
+from engine.types import Phase
 from engine.lexicon import ROOT
 
 from . import recordings
@@ -132,6 +134,36 @@ async def send_status(card: Card, key: str) -> None:
 
 
 # HTTP
+
+class InterpretIn(BaseModel):
+    text: str = Field(max_length=200)
+    phase: Phase = "cruise"
+    lang: str = Field("en", pattern=r"^(en|hi|ja)$")
+
+
+@app.post("/api/interpret")
+def interpret_text(body: InterpretIn) -> dict:
+    """Stateless matcher call for the landing page's "try it" box. Creates no cards."""
+    lexicon.reload_if_changed()
+    result = interpret([Hypothesis(text=body.text)], Context(seat="demo", phase=body.phase), lexicon)
+    return {
+        "rule": result.rule,
+        "urgent": result.urgent,
+        "latency_ms": result.latency_ms,
+        "cards": [
+            {
+                "span": d.span, "status": d.status, "urgent": d.urgent,
+                "crew_ja": lexicon.get(d.candidates[0].intent).crew_ja,
+                "candidates": [
+                    {"intent": c.intent, "label": lexicon.label(c.intent, body.lang), "score": c.score,
+                     "p": c.p, "heard": c.heard, "matched": c.matched}
+                    for c in d.candidates
+                ],
+            }
+            for d in result.cards
+        ],
+    }
+
 
 @app.get("/api/config")
 def config() -> dict:
