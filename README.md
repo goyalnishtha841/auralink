@@ -9,6 +9,7 @@ instead of guessing, and it checks that passengers actually understood safety in
 ```bash
 uv venv .venv --python 3.12
 uv pip install -p .venv/bin/python -r requirements-dev.txt
+brew install espeak-ng          # phoneme matcher; apt install espeak-ng on Linux
 scripts/run.sh
 ```
 
@@ -94,10 +95,26 @@ urgent_unconfirmed: medical/emergency, shown to crew immediately while the passe
 - **Real:** voice. Silero VAD gate, Whisper encoder once, then English and Hindi decoding with
   5 hypotheses each (`engine/asr.py`). The Hindi pass is blocked from writing Urdu script, and
   repetitive output ("तो तो तो …") is dropped.
-- **Placeholder:** `similarity()` in `engine/matcher.py` compares spellings with a crude sound-alike
-  key. Member A replaces it with phoneme edit distance (eSpeak-NG) and the accent cost matrix.
+- **Real:** the Phonetic Intent Matcher (`engine/phonetic.py`). eSpeak-NG turns words into phonemes
+  (Hindi voice for Devanagari, English for Latin script) and a weighted edit distance compares them
+  using the accent cost matrix in `data/lexicon/phone_costs.json` (v/w, retroflex t/d, ch/च, dropped
+  final r, r/l …). The default `hybrid` matcher averages this with spelling similarity; choose with
+  `AURALINK_MATCHER=hybrid|phonetic|phonetic_uniform|text`. Without eSpeak-NG it falls back to spelling.
 - **Untuned:** `T1 = 0.70` and `T2 = 0.10` are starting values. Member B tunes them on the
   held-out split.
+
+## Evaluation
+
+```bash
+.venv/bin/python scripts/evaluate.py --skip-audio   # text challenge set, seconds
+.venv/bin/python scripts/evaluate.py                # + synthetic audio at clean / 10 / 0 dB
+.venv/bin/python scripts/evaluate.py --real         # + volunteer recordings, test split
+```
+
+Writes [eval/results.md](eval/results.md), `eval/results.json` and `eval/results_chart.svg` (for the
+deck). Compares Baseline A (first result, keywords, no confirmation) with four Auralink matchers.
+The text challenge set was used to develop the matcher, so its numbers are optimistic; the claims
+for the final presentation must come from the held-out volunteer recordings.
 
 ## Speech-to-text spike (2026-10-21)
 

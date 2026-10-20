@@ -49,8 +49,19 @@ def run_asr(audio):
         return asr.transcribe(audio)
 
 
+def warm_matcher() -> None:
+    """Phonemise the lexicon once at startup so the first passenger request is fast."""
+    from engine.matcher import default_similarity
+
+    sim = default_similarity()
+    if hasattr(sim, "warm"):
+        sim.warm([v for i in lexicon.intents for v in lexicon.variants(i.id)] + sorted(lexicon.stopwords))
+    log.info("matcher ready: %s", getattr(sim, "name", "text"))
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    threading.Thread(target=warm_matcher, daemon=True).start()
     if os.environ.get("AURALINK_PRELOAD_ASR") == "1":
         threading.Thread(target=get_asr, daemon=True).start()
     yield

@@ -43,6 +43,7 @@ class Lexicon:
             i.id: sorted({v.lower() for vs in i.variants.values() for v in vs}) for i in data.intents
         }
         self._mtime = mtime
+        self.version_key = (str(self.path), mtime)  # changes whenever the file is reloaded
         return True
 
     def get(self, intent_id: str) -> Intent:
