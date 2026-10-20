@@ -16,11 +16,12 @@
       <option value="hi">हिन्दी</option>
     </select>
     <label class="row muted"><input type="checkbox" id="senior"> <span id="seniorLabel">Large mode</span></label>
+    <label class="row muted"><input type="checkbox" id="pictures"> <span id="picturesLabel">Pictures only</span></label>
   </header>
   <main>
-    <div class="panel">
+    <div class="panel voice-panel">
       <h2 id="typeHint">Type or say what you need</h2>
-      <button type="button" class="mic" id="mic"><span class="icon">🎤</span> <span id="micLabel">Tap to speak</span></button>
+      <button type="button" class="mic" id="mic"><span class="icon" id="micIcon"></span> <span id="micLabel">Tap to speak</span></button>
       <p class="muted" id="micNote" hidden></p>
       <form class="row" id="form">
         <input class="grow" id="text" autocomplete="off" placeholder="thoda wotter and kambal">
@@ -41,6 +42,7 @@
 <script type="module">
 import { Recorder, connect, el, loadConfig } from "./common.js";
 import { pictogram } from "./pictograms.js";
+import { icon } from "./icons.js";
 
 const STRINGS = {
   en: { title: "How can we help?", typeHint: "Type or say what you need", send: "Send", orTap: "Or tap a picture",
@@ -51,7 +53,8 @@ const STRINGS = {
         step: "Step", of: "of", question: "Question", crewComing: "A crew member is coming to explain in person.",
         thanks: "Thank you!", reexplain: "Let's go one step at a time.", speak: "Tap to speak", stop: "Listening… tap when done",
         thinking: "Understanding…", micOff: "Voice needs a secure (https) connection. Please type or tap a picture.",
-        micDenied: "Microphone not allowed. Please type or tap a picture." },
+        micDenied: "Microphone not allowed. Please type or tap a picture.", picturesLabel: "Pictures only",
+        tapNeed: "Tap what you need", sent: "sent", seen: "seen by crew", replied: "crew replied" },
   hi: { title: "हम आपकी कैसे मदद करें?", typeHint: "जो चाहिए, लिखें या बोलें", send: "भेजें",
         orTap: "या तस्वीर पर टैप करें", requestsLabel: "आपके अनुरोध", seniorLabel: "बड़ा मोड",
         confirmQ: "क्या आपका मतलब यह था?", pickOne: "आपका मतलब कौन-सा था?", yes: "हाँ", no: "नहीं",
@@ -61,7 +64,8 @@ const STRINGS = {
         crewComing: "एक क्रू सदस्य आपको खुद समझाने आ रहे हैं।", thanks: "धन्यवाद!", reexplain: "चलिए, एक-एक करके देखते हैं।",
         speak: "बोलने के लिए टैप करें", stop: "सुन रहे हैं… बोलकर टैप करें", thinking: "समझ रहे हैं…",
         micOff: "आवाज़ के लिए सुरक्षित (https) कनेक्शन चाहिए। कृपया लिखें या तस्वीर पर टैप करें।",
-        micDenied: "माइक की अनुमति नहीं है। कृपया लिखें या तस्वीर पर टैप करें।" },
+        micDenied: "माइक की अनुमति नहीं है। कृपया लिखें या तस्वीर पर टैप करें।", picturesLabel: "सिर्फ़ तस्वीरें",
+        tapNeed: "जो चाहिए उस पर टैप करें", sent: "भेजा गया", seen: "क्रू ने देखा", replied: "क्रू का जवाब" },
 };
 
 const params = new URLSearchParams(location.search);
@@ -69,18 +73,30 @@ const seat = params.get("seat") || "34K";
 const $ = (id) => document.getElementById(id);
 let lang = params.get("lang") || "en";
 let senior = params.get("senior") === "1";
+// picture-only mode: for passengers who are deaf or have a speech difficulty (also via ?mode=pictures on the seat QR)
+let pictures = params.get("mode") === "pictures";
 let config;
-const requests = new Map();  // card id -> {label, icon, message}
+const requests = new Map();  // card id -> {intent, label, message, state, urgent}
 
 const t = (k) => STRINGS[lang][k] ?? STRINGS.en[k];
 const socket = connect(`/ws/passenger/${seat}`, onMessage, (on) => {
   $("dot").classList.toggle("on", on);
-  if (on) socket.send({ type: "hello", lang, senior });
+  if (on) socket.send({ type: "hello", lang, senior, pictures });
 });
+
+// every update is also shown and felt, never only heard: a screen flash plus vibration
+function attention() {
+  document.body.classList.remove("flash");
+  void document.body.offsetWidth;  // restart the animation
+  document.body.classList.add("flash");
+  if (navigator.vibrate) navigator.vibrate([180, 90, 180]);
+}
 
 function applyStrings() {
   document.documentElement.lang = lang;
-  for (const id of ["title", "typeHint", "send", "orTap", "requestsLabel", "seniorLabel"]) $(id).textContent = t(id);
+  for (const id of ["title", "typeHint", "send", "orTap", "requestsLabel", "seniorLabel", "picturesLabel"]) $(id).textContent = t(id);
+  if (pictures) $("orTap").textContent = t("tapNeed");
+  document.body.classList.toggle("pictures", pictures);
   setMic(micState);
   $("seat").textContent = `${t("seat")} ${seat}`;
   document.body.classList.toggle("big", senior);
@@ -91,7 +107,7 @@ function renderGrid(container, onPick, ids) {
   container.replaceChildren(...config.intents
     .filter((i) => !ids || ids.includes(i.id))
     .map((i) => el("button", { class: "tile", onclick: () => onPick(i.id) },
-      el("span", { class: "icon" }, i.icon), i.label[lang] || i.label.en)));
+      icon(i.id), i.label[lang] || i.label.en)));
 }
 
 function sheet(...children) {
@@ -108,7 +124,7 @@ function showNextConfirm() {
   if (card.confident) {
     const o = card.options[0];
     sheet(el("h2", {}, t("confirmQ")),
-      el("div", { class: "tile" }, el("span", { class: "icon" }, o.icon), o.label),
+      el("div", { class: "tile" }, icon(o.intent), o.label),
       el("div", { class: "row" },
         el("button", { class: "primary grow", onclick: () => { socket.send({ type: "confirm", card_id: card.id, intent: o.intent }); showNextConfirm(); } }, t("yes")),
         el("button", { class: "grow", onclick: () => socket.send({ type: "reject", card_id: card.id }) }, t("no"))));
@@ -116,7 +132,7 @@ function showNextConfirm() {
     sheet(el("h2", {}, t("pickOne")),
       el("div", { class: "grid" }, card.options.slice(0, 2).map((o) => el("button", { class: "tile", onclick: () => {
         socket.send({ type: "confirm", card_id: card.id, intent: o.intent }); showNextConfirm(); } },
-        el("span", { class: "icon" }, o.icon), o.label))),
+        icon(o.intent), o.label))),
       el("button", { onclick: () => socket.send({ type: "reject", card_id: card.id }) }, t("none")));
   }
 }
@@ -133,7 +149,8 @@ function showGrid(cardId) {
 function renderRequests() {
   $("requests").replaceChildren(...[...requests.values()].reverse().map((r) =>
     el("div", { class: `item ${r.urgent ? "is-urgent" : ""}` },
-      el("span", { class: "icon" }, r.icon), el("strong", {}, r.label),
+      icon(r.intent), el("strong", {}, r.label),
+      el("span", { class: "state", title: t(r.state) }, icon({ sent: "check", seen: "eye", replied: "reply" }[r.state] || "check", t(r.state))),
       el("span", { class: "muted grow" }, r.message))));
 }
 
@@ -170,19 +187,23 @@ function onMessage(msg) {
   else if (msg.type === "grid") showGrid(msg.card_id);
   else if (msg.type === "status") {
     const c = msg.card;
-    const shown = c.intent || c.options[0] || { icon: "🙋", label: "" };
-    requests.set(c.id, { icon: shown.icon, label: shown.label, message: msg.message, urgent: c.urgent });
+    const shown = c.intent || c.options[0] || { intent: "call_crew", label: "" };
+    const state = c.status === "acknowledged" ? "seen" : "sent";
+    requests.set(c.id, { intent: shown.intent, label: shown.label, message: msg.message, urgent: c.urgent, state });
     if (c.status === "needs_human") closeSheet();
+    if (state === "seen" || c.status === "needs_human") attention();
     renderRequests();
   } else if (msg.type === "reply") {
     const r = requests.get(msg.card_id);
-    if (r) { r.message = msg.text; renderRequests(); }
+    if (r) { r.message = msg.text; r.state = "replied"; renderRequests(); attention(); }
   } else if (msg.type === "notice") {
     $("title").textContent = msg.message;
     setTimeout(() => ($("title").textContent = t("title")), 6000);
   } else if (msg.type === "safety") {
+    attention();
     showBriefing(msg.template);
   } else if (msg.type === "exit_check") {
+    attention();
     showExitCheck(msg.check);
   } else if (msg.type === "exit_done") {
     sheet(el("h2", {}, t("thanks")), el("p", {}, msg.message),
@@ -251,13 +272,16 @@ $("form").addEventListener("submit", (e) => {
   socket.send({ type: "text", text });
   $("text").value = "";
 });
-$("lang").addEventListener("change", (e) => { lang = e.target.value; applyStrings(); socket.send({ type: "hello", lang, senior }); });
-$("senior").addEventListener("change", (e) => { senior = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior }); });
+$("lang").addEventListener("change", (e) => { lang = e.target.value; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
+$("pictures").addEventListener("change", (e) => { pictures = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
+$("senior").addEventListener("change", (e) => { senior = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
 
 config = await loadConfig();
 if (!Recorder.supported()) { micState = "off"; micNote("micOff"); }
 $("lang").value = lang;
 $("senior").checked = senior;
+$("pictures").checked = pictures;
+$("micIcon").replaceWith(icon("mic"));
 applyStrings();
 </script>
 </body>

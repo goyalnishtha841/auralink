@@ -87,3 +87,26 @@ pre { margin: 0; font-size: 12px; overflow-x: auto; }
 .safety-simple { margin: 0; font-size: 24px; font-weight: 600; text-align: center; }
 .big .picto-box { width: 112px; } .big .safety-text { font-size: 21px; } .big .safety-simple { font-size: 30px; }
 button.link { background: none; border: 0; color: var(--muted); text-decoration: underline; min-height: 44px; }
+
+/* drawn icons (apps/icons.js) */
+.icon .ic { width: 1em; height: 1em; display: block; }
+.tile .icon { color: var(--info); }
+.tile .icon .ic { width: 36px; height: 36px; }
+.big .tile .icon .ic { width: 54px; height: 54px; }
+.mic .icon .ic { width: 28px; height: 28px; }
+.item .icon .ic { width: 26px; height: 26px; color: var(--info); }
+.item .state .ic { width: 22px; height: 22px; color: var(--ok); }
+
+/* picture-only mode: no microphone, no typing, big pictures, everything visual */
+body.pictures .voice-panel { display: none; }
+body.pictures #grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+body.pictures #grid .tile { padding: 28px 8px; font-size: 20px; font-weight: 600; }
+body.pictures #grid .tile .icon .ic { width: 72px; height: 72px; }
+body.pictures .item .icon .ic { width: 34px; height: 34px; }
+body.pictures .item .state .ic { width: 30px; height: 30px; }
+
+/* attention flash: a thick amber frame pulses twice instead of a sound */
+body.flash::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+                    box-shadow: inset 0 0 0 10px var(--accent); animation: flash 1.6s ease-out forwards; }
+@keyframes flash { 0%, 40% { opacity: 1; } 20%, 60% { opacity: .2; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { body.flash::after { animation: none; opacity: 0; } }
