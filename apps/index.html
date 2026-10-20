@@ -2,25 +2,365 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Auralink</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Auralink · Every passenger, understood</title>
+  <meta name="description" content="Auralink helps airline passengers and cabin crew understand each other across accents, languages and cabin noise. When speech is unclear, it asks instead of guessing.">
+  <meta name="theme-color" content="#060915">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Noto+Sans:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;600&family=Noto+Sans+JP:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="landing.css">
 </head>
 <body>
-  <header><h1>Auralink cabin hub</h1></header>
-  <main>
-    <div class="panel">
-      <h2>Screens</h2>
-      <div class="row">
-        <a href="passenger.html?seat=34K"><button class="primary">Passenger (seat 34K)</button></a>
-        <a href="crew.html"><button>Crew tablet</button></a>
-        <a href="judge.html"><button>Judge view</button></a>
-        <a href="record.html"><button>Record voices</button></a>
-      </div>
-      <p class="muted">Open the passenger and crew screens side by side. In the demo, passengers reach their
-        screen by scanning the seat QR code, which encodes <code>passenger.html?seat=&lt;seat&gt;</code>. <strong>Record voices</strong> is the data-collection
-        page for volunteers (Member B).</p>
+
+<!-- icon sprite (Lucide-style strokes) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M7 15h10"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M2 13a2 2 0 0 0 2-2V7a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0V4a2 2 0 0 1 4 0v13a2 2 0 0 0 4 0v-4a2 2 0 0 1 2-2"/></symbol>
+    <symbol id="i-question" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
+    <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M2 8.8a15 15 0 0 1 4.2-2.6"/><path d="M22 8.8A15 15 0 0 0 10.7 5"/><path d="M5 12.9a10 10 0 0 1 5.2-2.8"/><path d="M19 12.9a10 10 0 0 0-2.3-1.6"/><path d="m2 2 20 20"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><path d="M15 15h2v2h-2zM19 19h2v2h-2zM15 19v2M21 15v2"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.4l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
+    <symbol id="i-ear" viewBox="0 0 24 24"><path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.5 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 4v16M16 4v16"/></symbol>
+    <symbol id="i-replay" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+    <!-- intents -->
+    <symbol id="i-water" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5S12.5 5.5 12 3c-.5 2.5-2 4.9-4 6.5S5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+    <symbol id="i-tea" viewBox="0 0 24 24"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2M10 2v2M14 2v2"/></symbol>
+    <symbol id="i-blanket" viewBox="0 0 24 24"><path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"/></symbol>
+    <symbol id="i-pillow" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9Z"/></symbol>
+    <symbol id="i-toilet" viewBox="0 0 24 24"><path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01"/><path d="M13 4.6v16.1a1 1 0 0 1-1.2 1L5 20V5.6a2 2 0 0 1 1.5-2l4-1A2 2 0 0 1 13 4.6Z"/></symbol>
+    <symbol id="i-meal" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+    <symbol id="i-medical" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/><path d="M3.2 12h6.3l.5-1 2 4.5 2-7 1.5 3.5h5.3"/></symbol>
+    <symbol id="i-call_crew" viewBox="0 0 24 24"><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="Auralink home">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M4 16c3-7 6-7 8 0s5 7 8 0 5-7 8 0" class="bm-wave"/>
+        <path d="M4 22h24" class="bm-line"/>
+      </svg>
+      <span>Auralink</span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#problem">Problem</a>
+      <a href="#solution">How it works</a>
+      <a href="#try">Try it</a>
+      <a href="#safety">Safety</a>
+      <a href="#proof">Results</a>
+    </nav>
+    <a class="btn btn-call btn-sm" href="#launch">Live demo</a>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <canvas class="aurora" id="aurora" aria-hidden="true"></canvas>
+    <div class="hero-scale" aria-hidden="true">
+      <span>What the cabin hears</span>
+      <span>What the crew receives</span>
     </div>
-  </main>
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="flight-strip"><span class="mono">JAL-PS-02</span><span class="dot"></span><span class="mono">DEL</span>
+          <svg class="fs-plane" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h20M16 6l6 6-6 6"/></svg>
+          <span class="mono">HND</span><span class="dot"></span>Accessible cabin communication</p>
+        <h1>
+          <span class="h1-line">Every passenger,</span>
+          <span class="h1-rotor" aria-live="off">
+            <span class="rotor-word is-on" lang="en">understood.</span>
+            <span class="rotor-word" lang="hi">समझा गया।</span>
+            <span class="rotor-word" lang="ja">伝わる。</span>
+            <span class="rotor-word" lang="th">เข้าใจแล้ว</span>
+            <span class="rotor-word" lang="vi">được hiểu.</span>
+            <span class="rotor-word" lang="id">dimengerti.</span>
+          </span>
+        </h1>
+        <p class="lede">Auralink helps passengers and cabin crew understand each other across accents, languages and a
+          loud cabin. When speech is unclear, it <strong>asks the passenger a simple question</strong> instead of guessing.</p>
+        <div class="hero-cta">
+          <a class="btn btn-call" href="#try"><svg><use href="#i-keyboard"/></svg>Try the engine</a>
+          <a class="btn btn-ghost" href="#problem">See the problem<svg><use href="#i-arrow"/></svg></a>
+        </div>
+        <ul class="hero-points">
+          <li><svg><use href="#i-wifi-off"/></svg>Works offline in the cabin</li>
+          <li><svg><use href="#i-qr"/></svg>No app to install</li>
+          <li><svg><use href="#i-globe"/></svg>Hindi, English, Hinglish today</li>
+        </ul>
+      </div>
+
+      <!-- animated passenger -> crew story -->
+      <figure class="story" id="story" aria-label="Example: a passenger asks for water and a blanket">
+        <div class="story-head">
+          <span class="mono">Seat 34K · Hindi · Large text</span>
+          <button class="icon-btn" id="storyToggle" aria-label="Pause animation"><svg><use href="#i-pause"/></svg></button>
+        </div>
+        <div class="story-stage">
+          <div class="st st-hear">
+            <div class="st-label"><svg><use href="#i-mic"/></svg>Passenger says</div>
+            <div class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <p class="st-quote" lang="hi-Latn">“Madam, thoda <mark>wotter</mark> and <mark>kambal</mark>…”</p>
+            <p class="st-asr"><span class="mono">Speech-to-text:</span> “thoda water and <s>camel</s>”</p>
+          </div>
+          <div class="st st-ask">
+            <div class="st-label"><svg><use href="#i-question"/></svg>Auralink checks, in Hindi</div>
+            <p class="st-q" lang="hi">क्या आपका मतलब यह था?</p>
+            <div class="chips">
+              <span class="chip"><svg><use href="#i-water"/></svg><span lang="hi">पानी</span><b>Water</b></span>
+              <span class="chip"><svg><use href="#i-blanket"/></svg><span lang="hi">कंबल</span><b>Blanket</b></span>
+            </div>
+            <div class="tap"><svg><use href="#i-hand"/></svg>हाँ · Yes</div>
+          </div>
+          <div class="st st-crew">
+            <div class="st-label"><svg><use href="#i-tablet"/></svg>Crew tablet, in Japanese</div>
+            <div class="crew-card"><svg><use href="#i-water"/></svg><span lang="ja">お水をご希望です</span><span class="pill ok">34K</span></div>
+            <div class="crew-card"><svg><use href="#i-blanket"/></svg><span lang="ja">毛布をご希望です</span><span class="pill ok">34K</span></div>
+            <p class="st-reply"><span lang="ja">ただいまお持ちいたします。</span> → <span lang="hi">अभी लेकर आ रहे हैं।</span></p>
+          </div>
+        </div>
+        <ol class="story-steps" aria-hidden="true"><li>Hear</li><li>Check</li><li>Deliver</li></ol>
+      </figure>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="section" id="problem">
+    <div class="wrap">
+      <p class="eyebrow">The problem</p>
+      <h2>When speech fails at 35,000 feet, nothing repairs it.</h2>
+      <div class="persona reveal">
+        <div class="persona-avatar" aria-hidden="true">72</div>
+        <p>Mrs. Sharma, 72, is flying Delhi to Tokyo to see her son. She speaks soft Hinglish. The cabin is loud.
+          She asks for <em>“thoda wotter and kambal”</em>. The crew member asks her to repeat, then guesses.
+          After the second try she stops asking. Later a safety announcement plays in fast English.
+          She nods. Nobody knows she did not understand.</p>
+      </div>
+      <div class="fails">
+        <article class="fail reveal">
+          <span class="fail-n mono">01</span>
+          <svg class="fail-icon"><use href="#i-wave"/></svg>
+          <h3>The machine guesses once</h3>
+          <p>Speech-to-text takes its first guess as final, even when it is unsure. “Kambal” becomes “camel”, and the request is lost.</p>
+        </article>
+        <article class="fail reveal">
+          <span class="fail-n mono">02</span>
+          <svg class="fail-icon"><use href="#i-ear"/></svg>
+          <h3>“Please repeat” is the only fix</h3>
+          <p>Saying it again, louder, is hardest for seniors, soft speakers and anyone with hearing or speech difficulty.</p>
+        </article>
+        <article class="fail reveal">
+          <span class="fail-n mono">03</span>
+          <svg class="fail-icon"><use href="#i-alert"/></svg>
+          <h3>A nod is not understanding</h3>
+          <p>Crew cannot tell which passengers actually understood a safety instruction, so they repeat it to everyone.</p>
+        </article>
+      </div>
+      <p class="reframe reveal">The real gap is <strong>repair</strong>: when meaning is lost, in either direction, nothing brings it back.</p>
+    </div>
+  </section>
+
+  <!-- SOLUTION -->
+  <section class="section section-alt" id="solution">
+    <div class="wrap">
+      <p class="eyebrow">How Auralink fixes it</p>
+      <h2>Ask, don’t guess. Then make sure everyone understood.</h2>
+      <ol class="flow">
+        <li class="flow-step reveal">
+          <div class="flow-icon"><svg><use href="#i-mic"/></svg></div>
+          <h3>Say it any way</h3>
+          <p>Speak, tap a picture or type, in Hindi, English or a mix. Scan the seat QR code; there is nothing to install.</p>
+        </li>
+        <li class="flow-step reveal">
+          <div class="flow-icon"><svg><use href="#i-wave"/></svg></div>
+          <h3>Listen for meaning</h3>
+          <p>Auralink compares what it heard with words people really use on board, like <em>paani</em>, <em>kambal</em> and <em>dawai</em>, and considers the moment, for example meal time.</p>
+        </li>
+        <li class="flow-step reveal">
+          <div class="flow-icon flow-icon-call"><svg><use href="#i-question"/></svg></div>
+          <h3>Ask the easiest question</h3>
+          <p>If it is not sure, it shows two big pictures to choose from. If it is still unsure, the crew get a “please help” card with its best guesses.</p>
+        </li>
+        <li class="flow-step reveal">
+          <div class="flow-icon"><svg><use href="#i-tablet"/></svg></div>
+          <h3>One clear card for crew</h3>
+          <p>The crew see the request in polite Japanese and reply with one tap. The passenger reads the reply in their own language.</p>
+        </li>
+      </ol>
+      <div class="urgent-note reveal">
+        <svg><use href="#i-alert"/></svg>
+        <p><strong>Urgent requests skip the queue.</strong> If it sounds like a medical problem, the crew are alerted
+          straight away while the passenger confirms.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRY IT (live engine) -->
+  <section class="section" id="try">
+    <div class="wrap">
+      <p class="eyebrow">Try the real engine</p>
+      <h2>Type a request the way a passenger might say it.</h2>
+      <p class="sub">This box sends your text to the same matcher the cabin hub uses. Nothing reaches any crew.</p>
+      <div class="lab reveal">
+        <form class="lab-input" id="tryForm">
+          <label for="tryText" class="sr-only">Passenger request</label>
+          <input id="tryText" autocomplete="off" maxlength="200" value="thoda wotter and kambal" spellcheck="false">
+          <button class="btn btn-call" type="submit">Understand<svg><use href="#i-arrow"/></svg></button>
+        </form>
+        <div class="lab-examples" role="group" aria-label="Examples">
+          <button data-try="thoda wotter and kambal">thoda wotter and kambal</button>
+          <button data-try="mujhe dawai chahiye">mujhe dawai chahiye</button>
+          <button data-try="Shochale kaha hai">Shochale kaha hai</button>
+          <button data-try="पानी और चाय">पानी और चाय</button>
+          <button data-try="I have chest pain">I have chest pain</button>
+          <button data-try="hmm sorry">hmm sorry</button>
+        </div>
+        <div class="lab-phase" role="radiogroup" aria-label="Flight phase">
+          <span class="mono">Flight phase</span>
+          <button role="radio" aria-checked="false" data-phase="boarding">Boarding</button>
+          <button role="radio" aria-checked="true" data-phase="cruise">Cruise</button>
+          <button role="radio" aria-checked="false" data-phase="meal">Meal service</button>
+          <button role="radio" aria-checked="false" data-phase="post_meal">After meal</button>
+          <button role="radio" aria-checked="false" data-phase="descent">Descent</button>
+        </div>
+        <div class="lab-out" id="tryOut" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAFETY LOOP -->
+  <section class="section section-alt" id="safety">
+    <div class="wrap safety-grid">
+      <div>
+        <p class="eyebrow">The other direction</p>
+        <h2>Know who understood the safety briefing.</h2>
+        <p class="sub">The crew send a pre-approved message. Each passenger sees pictures and a caption in their own
+          language, then taps <strong>I understood</strong> or <strong>Explain again</strong>.</p>
+        <ul class="legend">
+          <li><i class="sw sw-ok"></i>Understood</li>
+          <li><i class="sw sw-wait"></i>No answer yet</li>
+          <li><i class="sw sw-bad"></i>Asked to explain again</li>
+        </ul>
+        <p class="sub">Instead of repeating the announcement to 54 people, the crew walk to the few seats that need help.
+          At boarding, exit-row passengers get a picture check too, supporting the crew’s confirmation that they understand evacuation instructions.</p>
+        <button class="btn btn-ghost" id="seatReplay"><svg><use href="#i-replay"/></svg>Replay</button>
+      </div>
+      <figure class="cabin reveal" aria-label="Cabin seat map: most seats turn green as passengers confirm, two stay red">
+        <div class="cabin-top"><span class="mono">Turbulence briefing</span><span class="mono" id="seatCount">0 / 54 understood</span></div>
+        <div class="seatmap" id="seatmap"></div>
+        <figcaption class="mono">Rows 30–35 · 3-3-3 layout</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- BUILT FOR THE CABIN -->
+  <section class="section" id="cabin">
+    <div class="wrap">
+      <p class="eyebrow">Built for a real cabin</p>
+      <h2>Simple for crew. Reliable at altitude.</h2>
+      <div class="bento">
+        <article class="tile tile-wide reveal">
+          <svg><use href="#i-wifi-off"/></svg>
+          <h3>No internet needed</h3>
+          <p>A laptop-sized hub on board runs the speech engine. Phones connect over the cabin network. If the hub fails, crew simply carry on as they do today.</p>
+        </article>
+        <article class="tile reveal">
+          <svg><use href="#i-qr"/></svg>
+          <h3>Scan and speak</h3>
+          <p>The seat QR code opens Auralink in the browser, already set to that seat.</p>
+        </article>
+        <article class="tile reveal">
+          <svg><use href="#i-globe"/></svg>
+          <h3>New language? Add words</h3>
+          <p>Languages are word lists in a file. No retraining, so Tamil, Thai or Vietnamese can follow quickly.</p>
+        </article>
+        <article class="tile reveal">
+          <svg><use href="#i-bell"/></svg>
+          <h3>One tap for crew</h3>
+          <p>A card, an Acknowledge button and polite replies in Japanese.</p>
+        </article>
+        <article class="tile reveal">
+          <svg><use href="#i-hand"/></svg>
+          <h3>No phone? No problem</h3>
+          <p>A tactile seat panel with four raised buttons, or the in-seat screen, does the same job.</p>
+        </article>
+        <article class="tile tile-wide reveal">
+          <svg><use href="#i-shield"/></svg>
+          <h3>Dignity and privacy first</h3>
+          <p>Large text mode for seniors, a picture-only mode for hearing or speech difficulty, gentle wording like “Let’s find it together”, and speech used only for the request, never stored.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROOF -->
+  <section class="section section-alt" id="proof">
+    <div class="wrap">
+      <p class="eyebrow">Measured, not promised</p>
+      <h2>Our first numbers, on a laptop CPU.</h2>
+      <div class="stats">
+        <div class="stat reveal"><b data-count="0.67" data-suffix=" s">0.67 s</b><span>speech to text, English and Hindi at once</span></div>
+        <div class="stat reveal"><b data-count="1.0" data-prefix="≈ " data-suffix=" s">≈ 1.0 s</b><span>from the end of speech to the confirm screen (target under 2 s)</span></div>
+        <div class="stat reveal"><b data-count="88" data-suffix="%">88%</b><span>of requests understood on synthetic test voices with cabin-like noise</span></div>
+      </div>
+      <p class="note reveal">The 88% comes from computer-generated Indian English and Hindi voices, so treat it as a smoke test.
+        We are now recording real volunteers, including seniors, to measure accuracy, wrong-action rate and recovery properly.</p>
+    </div>
+  </section>
+
+  <!-- LAUNCH -->
+  <section class="section launch" id="launch">
+    <div class="wrap">
+      <p class="eyebrow">Live demo</p>
+      <h2>Open the cabin.</h2>
+      <p class="sub"><span class="status" id="hubStatus"><i></i><span>Checking the hub…</span></span></p>
+      <div class="launch-grid">
+        <a class="launch-card reveal" href="passenger.html?seat=34K">
+          <svg><use href="#i-mic"/></svg><h3>Passenger</h3><p>Seat 34K. Speak, tap or type a request.</p><span class="go">Open<svg><use href="#i-arrow"/></svg></span>
+        </a>
+        <a class="launch-card reveal" href="crew.html">
+          <svg><use href="#i-tablet"/></svg><h3>Crew tablet</h3><p>Request cards, replies and the safety heat map.</p><span class="go">Open<svg><use href="#i-arrow"/></svg></span>
+        </a>
+        <a class="launch-card reveal" href="judge.html">
+          <svg><use href="#i-wave"/></svg><h3>Under the hood</h3><p>Every guess, score and decision, live.</p><span class="go">Open<svg><use href="#i-arrow"/></svg></span>
+        </a>
+        <a class="launch-card reveal" href="record.html">
+          <svg><use href="#i-check"/></svg><h3>Record voices</h3><p>Help us test with your own accent.</p><span class="go">Open<svg><use href="#i-arrow"/></svg></span>
+        </a>
+      </div>
+      <p class="note">Tip: open Passenger and Crew side by side, or Passenger on your phone.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-inner">
+    <div>
+      <a class="brand" href="#top"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 16c3-7 6-7 8 0s5 7 8 0 5-7 8 0" class="bm-wave"/><path d="M4 22h24" class="bm-line"/></svg><span>Auralink</span></a>
+      <p>Auralink does not just hear passengers. It makes sure they are understood, and that they understand.</p>
+    </div>
+    <p class="foot-small">Thapar Japan Hackathon 2026 · Problem statement JAL-PS-02. A prototype communication aid,
+      not a certified safety system. Quality depends on speech recognition; extreme noise or rare speech may still need crew judgement.</p>
+  </div>
+</footer>
+
+<script src="landing.js" type="module"></script>
 </body>
 </html>
