@@ -166,3 +166,12 @@ def test_exit_row_check():
             state = crew_state(crew)
         results = {c["seat"]: c["result"] for c in state["exit_checks"]}
         assert results["30A"] == "pass" and results["30K"] == "talk" and results["30B"] == "pending"
+
+
+def test_demo_kit_endpoints():
+    info = client.get("/api/hub-info").json()
+    assert info["public_url"].startswith("http")
+    svg = client.get("/api/qr", params={"data": "http://192.168.1.5:8000/passenger.html?seat=34K"})
+    assert svg.status_code == 200 and svg.headers["content-type"].startswith("image/svg+xml")
+    assert b"<svg" in svg.content
+    assert client.get("/api/qr", params={"data": "x" * 301}).status_code == 422
