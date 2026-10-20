@@ -1,48 +1,273 @@
 {
   "_note": "Pre-approved, human-reviewed text only. Japanese and Hindi are drafts: Member B must have each line checked by a native speaker before the demo.",
   "replies": [
-    {"id": "coming",         "en": "Coming right away.",                          "hi": "अभी लेकर आ रहे हैं।",                         "ja": "ただいまお持ちいたします。"},
-    {"id": "on_my_way",      "en": "A crew member is coming to your seat.",       "hi": "हम अभी आपकी सीट पर आ रहे हैं।",                "ja": "ただいまお席に伺います。"},
-    {"id": "after_seatbelt", "en": "We will bring it when the seatbelt sign is off.", "hi": "सीट बेल्ट का संकेत बंद होने के बाद ले आएँगे।", "ja": "シートベルト着用サイン消灯後にお持ちいたします。"},
-    {"id": "please_wait",    "en": "Please wait a moment.",                       "hi": "कृपया थोड़ा इंतज़ार करें।",                     "ja": "少々お待ちくださいませ。"}
+    {
+      "id": "coming",
+      "en": "Coming right away.",
+      "hi": "अभी लेकर आ रहे हैं।",
+      "ja": "ただいまお持ちいたします。"
+    },
+    {
+      "id": "on_my_way",
+      "en": "A crew member is coming to your seat.",
+      "hi": "हम अभी आपकी सीट पर आ रहे हैं।",
+      "ja": "ただいまお席に伺います。"
+    },
+    {
+      "id": "after_seatbelt",
+      "en": "We will bring it when the seatbelt sign is off.",
+      "hi": "सीट बेल्ट का संकेत बंद होने के बाद ले आएँगे।",
+      "ja": "シートベルト着用サイン消灯後にお持ちいたします。"
+    },
+    {
+      "id": "please_wait",
+      "en": "Please wait a moment.",
+      "hi": "कृपया थोड़ा इंतज़ार करें।",
+      "ja": "少々お待ちくださいませ。"
+    }
   ],
   "status": {
-    "sent":         {"en": "Sent to crew",                        "hi": "क्रू को भेज दिया गया"},
-    "acknowledged": {"en": "Crew has seen your request",          "hi": "क्रू ने आपका अनुरोध देख लिया है"},
-    "needs_human":  {"en": "A crew member is coming to help you", "hi": "एक क्रू सदस्य आपकी मदद के लिए आ रहे हैं"},
-    "urgent":       {"en": "Crew alerted. Help is on the way.",   "hi": "क्रू को तुरंत सूचना दी गई। मदद आ रही है।"},
-    "closed":       {"en": "Request completed",                   "hi": "अनुरोध पूरा हुआ"}
+    "sent": {
+      "en": "Sent to crew",
+      "hi": "क्रू को भेज दिया गया"
+    },
+    "acknowledged": {
+      "en": "Crew has seen your request",
+      "hi": "क्रू ने आपका अनुरोध देख लिया है"
+    },
+    "needs_human": {
+      "en": "A crew member is coming to help you",
+      "hi": "एक क्रू सदस्य आपकी मदद के लिए आ रहे हैं"
+    },
+    "urgent": {
+      "en": "Crew alerted. Help is on the way.",
+      "hi": "क्रू को तुरंत सूचना दी गई। मदद आ रही है।"
+    },
+    "closed": {
+      "en": "Request completed",
+      "hi": "अनुरोध पूरा हुआ"
+    }
   },
   "safety": [
     {
       "id": "turbulence",
-      "pictogram": "seatbelt",
-      "title":   {"en": "Turbulence ahead", "hi": "आगे झटके आ सकते हैं", "ja": "揺れが予想されます"},
-      "caption": {
-        "en": "Please return to your seat and fasten your seatbelt.",
-        "hi": "कृपया अपनी सीट पर बैठें और सीट बेल्ट बाँध लें।",
-        "ja": "お席にお戻りになり、シートベルトをお締めください。"
-      }
+      "title": {
+        "en": "Turbulence ahead",
+        "hi": "आगे झटके आ सकते हैं",
+        "ja": "揺れが予想されます"
+      },
+      "steps": [
+        {
+          "pictogram": "return_seat",
+          "text": {
+            "en": "Please return to your seat now.",
+            "hi": "कृपया अभी अपनी सीट पर वापस आ जाइए।",
+            "ja": "ただちにお席にお戻りください。"
+          },
+          "simple": {
+            "en": "Go to your seat.",
+            "hi": "अपनी सीट पर बैठिए।",
+            "ja": "お席へどうぞ。"
+          }
+        },
+        {
+          "pictogram": "seatbelt",
+          "text": {
+            "en": "Fasten your seatbelt low and tight across your lap.",
+            "hi": "सीट बेल्ट को गोद पर नीचे और कसकर बाँधिए।",
+            "ja": "シートベルトを腰の低い位置でしっかりお締めください。"
+          },
+          "simple": {
+            "en": "Close the belt. Pull it tight.",
+            "hi": "बेल्ट लगाइए। कसकर खींचिए।",
+            "ja": "ベルトを締めて、引いてください。"
+          }
+        },
+        {
+          "pictogram": "toilet_closed",
+          "text": {
+            "en": "Toilets are closed until the seatbelt sign is off.",
+            "hi": "सीट बेल्ट का संकेत बंद होने तक शौचालय बंद रहेंगे।",
+            "ja": "ベルト着用サインが消えるまでお手洗いはご利用いただけません。"
+          },
+          "simple": {
+            "en": "Toilet: wait for the light to go off.",
+            "hi": "शौचालय: बत्ती बंद होने तक रुकिए।",
+            "ja": "お手洗いはサインが消えるまでお待ちください。"
+          }
+        }
+      ]
     },
     {
       "id": "landing",
-      "pictogram": "upright",
-      "title":   {"en": "Landing soon", "hi": "जल्द ही लैंडिंग", "ja": "まもなく着陸"},
-      "caption": {
-        "en": "Fasten your seatbelt, put your seat upright and open the window shade.",
-        "hi": "सीट बेल्ट बाँधें, सीट सीधी करें और खिड़की का शेड खोलें।",
-        "ja": "シートベルトをお締めになり、座席の背を元の位置にお戻しください。"
-      }
+      "title": {
+        "en": "Landing soon",
+        "hi": "जल्द ही लैंडिंग",
+        "ja": "まもなく着陸"
+      },
+      "steps": [
+        {
+          "pictogram": "seatbelt",
+          "text": {
+            "en": "Fasten your seatbelt.",
+            "hi": "सीट बेल्ट बाँधिए।",
+            "ja": "シートベルトをお締めください。"
+          },
+          "simple": {
+            "en": "Close the belt.",
+            "hi": "बेल्ट लगाइए।",
+            "ja": "ベルトを締めてください。"
+          }
+        },
+        {
+          "pictogram": "upright",
+          "text": {
+            "en": "Put your seat back upright and fold your tray table.",
+            "hi": "सीट सीधी कीजिए और ट्रे टेबल बंद कीजिए।",
+            "ja": "座席の背もたれを元に戻し、テーブルを収納してください。"
+          },
+          "simple": {
+            "en": "Seat straight. Tray closed.",
+            "hi": "सीट सीधी। ट्रे बंद।",
+            "ja": "背もたれを戻し、テーブルを閉じてください。"
+          }
+        },
+        {
+          "pictogram": "window_shade",
+          "text": {
+            "en": "Open your window shade.",
+            "hi": "खिड़की का शेड ऊपर कीजिए।",
+            "ja": "窓のシェードをお開けください。"
+          },
+          "simple": {
+            "en": "Window cover up.",
+            "hi": "खिड़की खोलिए।",
+            "ja": "窓を開けてください。"
+          }
+        }
+      ]
     },
     {
       "id": "oxygen",
-      "pictogram": "oxygen",
-      "title":   {"en": "Oxygen masks", "hi": "ऑक्सीजन मास्क", "ja": "酸素マスク"},
-      "caption": {
-        "en": "If masks drop, put your own on first, then help others.",
-        "hi": "मास्क गिरें तो पहले अपना मास्क पहनें, फिर दूसरों की मदद करें।",
-        "ja": "マスクが降りてきたら、まずご自身が着用してから、周りの方をお手伝いください。"
+      "title": {
+        "en": "Oxygen masks",
+        "hi": "ऑक्सीजन मास्क",
+        "ja": "酸素マスク"
+      },
+      "steps": [
+        {
+          "pictogram": "mask_drop",
+          "text": {
+            "en": "If the cabin loses pressure, masks drop from above.",
+            "hi": "केबिन में हवा का दबाव कम होने पर ऊपर से मास्क गिरेंगे।",
+            "ja": "機内の気圧が下がると、上からマスクが降りてきます。"
+          },
+          "simple": {
+            "en": "A mask falls from above you.",
+            "hi": "ऊपर से मास्क गिरेगा।",
+            "ja": "上からマスクが落ちてきます。"
+          }
+        },
+        {
+          "pictogram": "mask_on",
+          "text": {
+            "en": "Pull the mask down and place it over your nose and mouth.",
+            "hi": "मास्क नीचे खींचकर नाक और मुँह पर लगाइए।",
+            "ja": "マスクを引き寄せ、鼻と口を覆ってください。"
+          },
+          "simple": {
+            "en": "Pull it. Cover nose and mouth.",
+            "hi": "खींचिए। नाक और मुँह ढकिए।",
+            "ja": "引いて、鼻と口に当ててください。"
+          }
+        },
+        {
+          "pictogram": "self_first",
+          "text": {
+            "en": "Put your own mask on first, then help others.",
+            "hi": "पहले अपना मास्क पहनिए, फिर दूसरों की मदद कीजिए।",
+            "ja": "ご自身のマスクを先に着けてから、周りの方をお手伝いください。"
+          },
+          "simple": {
+            "en": "You first. Then help others.",
+            "hi": "पहले आप। फिर दूसरे।",
+            "ja": "まずご自身、それから周りの方へ。"
+          }
+        }
+      ]
+    }
+  ],
+  "exit_row": {
+    "title": {
+      "en": "You are sitting at an emergency exit",
+      "hi": "आप आपातकालीन द्वार के पास बैठे हैं",
+      "ja": "非常口座席にお座りです"
+    },
+    "intro": {
+      "en": "In an emergency, the crew may ask you to help. Please answer three questions.",
+      "hi": "आपात स्थिति में क्रू आपसे मदद माँग सकता है। कृपया तीन सवालों के जवाब दीजिए।",
+      "ja": "緊急時には乗務員がお手伝いをお願いすることがあります。3つの質問にお答えください。"
+    },
+    "questions": [
+      {
+        "id": "open_door",
+        "pictogram": "exit_door",
+        "text": {
+          "en": "Can you open this heavy door and step out first?",
+          "hi": "क्या आप यह भारी दरवाज़ा खोलकर सबसे पहले बाहर निकल सकते हैं?",
+          "ja": "この重い扉を開け、最初に外へ出ることができますか？"
+        }
+      },
+      {
+        "id": "help_others",
+        "pictogram": "help_others",
+        "text": {
+          "en": "Will you help other passengers get out?",
+          "hi": "क्या आप दूसरे यात्रियों को बाहर निकलने में मदद करेंगे?",
+          "ja": "他のお客様の脱出をお手伝いいただけますか？"
+        }
+      },
+      {
+        "id": "follow_crew",
+        "pictogram": "listen_crew",
+        "text": {
+          "en": "Can you understand and follow the crew's instructions?",
+          "hi": "क्या आप क्रू के निर्देश समझकर उनका पालन कर सकते हैं?",
+          "ja": "乗務員の指示を理解し、従うことができますか？"
+        }
+      }
+    ],
+    "answers": {
+      "yes": {
+        "en": "Yes",
+        "hi": "हाँ",
+        "ja": "はい"
+      },
+      "no": {
+        "en": "No",
+        "hi": "नहीं",
+        "ja": "いいえ"
+      },
+      "reseat": {
+        "en": "I would prefer another seat",
+        "hi": "मुझे दूसरी सीट चाहिए",
+        "ja": "別の席を希望します"
+      }
+    },
+    "done": {
+      "pass": {
+        "en": "Thank you. The crew will brief you before take-off.",
+        "hi": "धन्यवाद। उड़ान से पहले क्रू आपको जानकारी देगा।",
+        "ja": "ありがとうございます。離陸前に乗務員がご説明します。"
+      },
+      "talk": {
+        "en": "Thank you. A crew member will come to talk with you.",
+        "hi": "धन्यवाद। एक क्रू सदस्य आपसे बात करने आएगा।",
+        "ja": "ありがとうございます。乗務員がお伺いします。"
       }
     }
+  },
+  "exit_rows": [
+    30
   ]
 }

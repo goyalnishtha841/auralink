@@ -21,6 +21,7 @@ from engine.types import Phase
 from engine.lexicon import ROOT
 
 from . import recordings
+from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
 from .templates import Templates
 
@@ -49,8 +50,19 @@ def run_asr(audio):
         return asr.transcribe(audio)
 
 
+def warm_matcher() -> None:
+    """Phonemise the lexicon once at startup so the first passenger request is fast."""
+    from engine.matcher import default_similarity
+
+    sim = default_similarity()
+    if hasattr(sim, "warm"):
+        sim.warm([v for i in lexicon.intents for v in lexicon.variants(i.id)] + sorted(lexicon.stopwords))
+    log.info("matcher ready: %s", getattr(sim, "name", "text"))
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    threading.Thread(target=warm_matcher, daemon=True).start()
     if os.environ.get("AURALINK_PRELOAD_ASR") == "1":
         threading.Thread(target=get_asr, daemon=True).start()
     yield
@@ -98,14 +110,29 @@ def card_for_crew(card: Card) -> dict:
     return data
 
 
+def exit_seats() -> list[str]:
+    rows = {str(r) for r in templates.exit_rows}
+    return [s for s in SEAT_IDS if s[:-1] in rows]
+
+
 def crew_state() -> dict:
     b = cabin.broadcast
+    briefing = None
+    if b:
+        t = templates.safety[b.template_id]
+        briefing = {
+            "id": b.id, "template_id": b.template_id, "title_ja": t["title"]["ja"], "title_en": t["title"]["en"],
+            "steps": [{"pictogram": st["pictogram"], "ja": st["text"]["ja"], "en": st["simple"]["en"]} for st in t["steps"]],
+            "detail": {seat: a.model_dump() for seat, a in b.responses.items()},
+        }
     return {
         "type": "state",
         "phase": cabin.phase,
         "cards": [card_for_crew(c) for c in cabin.crew_cards()],
         "heatmap": cabin.heatmap(),
-        "broadcast": {"id": b.id, "template_id": b.template_id} if b else None,
+        "broadcast": briefing,
+        "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
+                        for c in cabin.exit_checks.values()],
     }
 
 
@@ -165,6 +192,17 @@ def interpret_text(body: InterpretIn) -> dict:
     }
 
 
+@app.post("/api/explain")
+def explain_text(body: InterpretIn) -> dict:
+    """Glass-box view of a typed phrase, for judge.html. Stateless, like /api/interpret."""
+    from engine.matcher import default_similarity
+
+    lexicon.reload_if_changed()
+    result = interpret([Hypothesis(text=body.text)], Context(seat="demo", phase=body.phase), lexicon)
+    return {"source": "typed", "seat": None, "phase": body.phase,
+            "explain": explain(result, lexicon, default_similarity(), body.phase)}
+
+
 @app.get("/api/config")
 def config() -> dict:
     lexicon.reload_if_changed()
@@ -175,6 +213,7 @@ def config() -> dict:
         "intents": [{"id": i.id, "icon": i.icon, "label": i.label, "urgent": i.urgent} for i in lexicon.intents],
         "replies": templates.data["replies"],
         "safety": [{"id": s["id"], "title": s["title"]} for s in templates.data["safety"]],
+        "exit_seats": exit_seats(),
     }
 
 
@@ -215,8 +254,13 @@ async def interpret_and_reply(seat: str, text: str, nbest: list[Hypothesis] | No
     result, cards, escalated = cabin.handle_text(seat, text, nbest)
     if asr:
         result.latency_ms = {**asr["latency_ms"], **result.latency_ms}
-    await _send(judges, {"type": "result", "phase": cabin.phase, "result": result.model_dump(),
-                         "asr_rejected": asr and asr["rejected"]})
+    if judges:
+        from engine.matcher import default_similarity
+
+        why = explain(result, lexicon, default_similarity(), cabin.phase, audio=asr and asr.get("audio"),
+                      speech=asr and asr.get("speech"), rejected=asr and asr["rejected"])
+        await _send(judges, {"type": "result", "seat": seat, "source": "voice" if asr else "text",
+                             "phase": cabin.phase, "result": result.model_dump(), "explain": why})
     if cards:
         await to_seat(seat, {"type": "confirm", "rule": result.rule,
                              "cards": [card_for_passenger(c, s.lang) for c in cards]})
@@ -243,7 +287,8 @@ async def handle_audio(seat: str, pcm: bytes) -> None:
         return
     top = tr.hypotheses[0].text if tr.hypotheses else ""
     await interpret_and_reply(seat, top, tr.hypotheses or [Hypothesis(text="")],
-                              asr={"latency_ms": tr.latency_ms, "rejected": tr.rejected})
+                              asr={"latency_ms": tr.latency_ms, "rejected": tr.rejected,
+                                   "audio": audio, "speech": tr.speech})
     await push_crew()
 
 
@@ -277,7 +322,13 @@ async def handle_passenger(seat: str, msg: dict) -> None:
             await to_seat(seat, {"type": "grid", "reason": "rejected", "card_id": card.id})
 
     elif kind == "safety":
-        cabin.safety_response(seat, bool(msg.get("understood")))
+        status = msg.get("status") or ("understood" if msg.get("understood") else "reexplaining")
+        cabin.safety_response(seat, status, msg.get("step"))
+
+    elif kind == "exit_answer":
+        check = cabin.exit_answer(seat, msg.get("answers", {}), bool(msg.get("reseat")), templates.exit_question_ids)
+        await to_seat(seat, {"type": "exit_done", "result": check.result,
+                             "message": templates.exit_done(check.result, s.lang)})
 
     await push_crew()
 
@@ -312,10 +363,18 @@ async def handle_crew(msg: dict) -> None:
     elif kind == "phase" and msg.get("phase") in PHASES:
         cabin.phase = msg["phase"]
     elif kind == "broadcast":
+        templates.reload_if_changed()
         b = cabin.start_broadcast(msg["template_id"])
         for seat, sockets in passengers.items():
             view = templates.safety_view(b.template_id, cabin.seats[seat].lang)
             await _send(sockets, {"type": "safety", "broadcast_id": b.id, "template": view})
+    elif kind == "end_broadcast":
+        cabin.broadcast = None
+    elif kind == "exit_check":
+        templates.reload_if_changed()
+        for check in cabin.start_exit_check(exit_seats()):
+            view = templates.exit_view(cabin.seats[check.seat].lang)
+            await _send(passengers[check.seat], {"type": "exit_check", "check": view})
     await push_crew()
 
 

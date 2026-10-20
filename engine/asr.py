@@ -76,6 +76,7 @@ class Transcript:
     hypotheses: list[Hypothesis]
     latency_ms: dict[str, float] = field(default_factory=dict)
     rejected: str | None = None   # why no hypotheses were produced, if any
+    speech: list[tuple[int, int]] = field(default_factory=list)  # VAD speech segments, in samples
 
 
 class WhisperASR:
@@ -116,6 +117,7 @@ class WhisperASR:
         lap("vad")
         if not speech:
             return Transcript([], timing, rejected="no speech detected")
+        segments = [(s["start"], s["end"]) for s in speech]
         audio = audio[speech[0]["start"]:speech[-1]["end"]]
 
         features = self.model.feature_extractor(audio)
@@ -148,6 +150,6 @@ class WhisperASR:
             lap(f"decode_{lang}")
 
         if no_speech > NO_SPEECH_REJECT:
-            return Transcript([], timing, rejected=f"no-speech probability {no_speech:.2f}")
+            return Transcript([], timing, rejected=f"no-speech probability {no_speech:.2f}", speech=segments)
         hyps = sorted(best.values(), key=lambda h: -h.conf)
-        return Transcript(hyps, timing)
+        return Transcript(hyps, timing, speech=segments)

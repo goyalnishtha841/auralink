@@ -61,10 +61,13 @@ def test_safety_heatmap():
         crew.send_json({"type": "broadcast", "template_id": "turbulence"})
         safety = pax.receive_json()
         assert safety["type"] == "safety"
-        pax.send_json({"type": "safety", "understood": False})
+        assert [st["pictogram"] for st in safety["template"]["steps"]] == ["return_seat", "seatbelt", "toilet_closed"]
+        pax.send_json({"type": "safety", "status": "reexplaining"})
+        pax.send_json({"type": "safety", "status": "stuck", "step": 1})
         state = crew_state(crew)
-        while state["heatmap"]["31C"] != "explain_again":
+        while state["heatmap"]["31C"] != "stuck":
             state = crew_state(crew)
+        assert state["broadcast"]["detail"]["31C"]["step"] == 1
         assert state["heatmap"]["30A"] == "offline"
 
 
@@ -114,3 +117,52 @@ def test_interpret_endpoint_is_stateless():
     assert main.cabin.cards == {}  # nothing reaches the crew
     assert client.post("/api/interpret", json={"text": "x" * 201}).status_code == 422
     assert client.post("/api/interpret", json={"text": "tea", "phase": "landed"}).status_code == 422
+
+
+def test_explain_endpoint_shows_the_reasoning():
+    pytest.importorskip("phonemizer")
+    body = client.post("/api/explain", json={"text": "madam thoda wotter and kambal"}).json()["explain"]
+    assert body["rule"] == "split"
+    fillers = [t["text"] for t in body["tokens"] if t["filler"]]
+    assert "madam" in fillers and "thoda" in fillers
+    water = body["cards"][0]["candidates"][0]
+    assert water["intent"] == "water" and water["heard"] == "wotter"
+    if "detail" in water:  # phonetic matcher available
+        assert water["detail"]["heard_phones"][0] == "w"
+        assert {s["op"] for s in water["detail"]["steps"]} <= {"match", "sub", "extra", "missing", "skip"}
+    assert body["thresholds"]["t1"] == 0.7
+
+
+def test_judge_gets_explanation_for_voice():
+    pytest.importorskip("faster_whisper")
+    # one shared event loop for both sockets, as on the real server (separate TestClient portals stall
+    # when one connection's handler sends a large message to the other)
+    with TestClient(main.app) as shared, shared.websocket_connect("/ws/judge") as judge, \
+            shared.websocket_connect("/ws/passenger/33K") as pax:
+        pax.send_bytes(_clip_pcm("rishi_water_blanket"))
+        msg = judge.receive_json()
+        assert msg["source"] == "voice" and msg["seat"] == "33K"
+        wave = msg["explain"]["waveform"]
+        assert len(wave["peaks"]) == 160 and wave["speech"]
+        assert msg["explain"]["stages"]["speech_to_text"] > 0
+
+
+def test_exit_row_check():
+    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+            shared.websocket_connect("/ws/passenger/30A") as ok, shared.websocket_connect("/ws/passenger/30K") as unsure:
+        ok.send_json({"type": "hello", "lang": "hi"})
+        crew.send_json({"type": "exit_check"})
+        q = ok.receive_json()
+        assert q["type"] == "exit_check" and len(q["check"]["questions"]) == 3
+        assert q["check"]["answers"]["yes"] == "हाँ"
+        assert unsure.receive_json()["type"] == "exit_check"
+        ids = [x["id"] for x in q["check"]["questions"]]
+        ok.send_json({"type": "exit_answer", "answers": {i: True for i in ids}})
+        assert ok.receive_json()["result"] == "pass"
+        unsure.send_json({"type": "exit_answer", "answers": {i: True for i in ids}, "reseat": True})
+        assert unsure.receive_json()["result"] == "talk"
+        state = crew_state(crew)
+        while sum(c["result"] != "pending" for c in state["exit_checks"]) < 2:
+            state = crew_state(crew)
+        results = {c["seat"]: c["result"] for c in state["exit_checks"]}
+        assert results["30A"] == "pass" and results["30K"] == "talk" and results["30B"] == "pending"

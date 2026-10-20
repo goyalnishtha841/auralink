@@ -33,10 +33,31 @@ class Templates:
 
     def safety_view(self, template_id: str, lang: str) -> dict:
         t = self.safety[template_id]
+        pick = lambda d: d.get(lang) or d["en"]  # noqa: E731
         return {
             "id": t["id"],
-            "pictogram": t["pictogram"],
-            "title": t["title"].get(lang) or t["title"]["en"],
-            "caption": t["caption"].get(lang) or t["caption"]["en"],
-            "caption_en": t["caption"]["en"],
+            "title": pick(t["title"]),
+            "steps": [{"pictogram": st["pictogram"], "text": pick(st["text"]), "simple": pick(st["simple"]),
+                       "text_en": st["text"]["en"]} for st in t["steps"]],
         }
+
+    def exit_view(self, lang: str) -> dict:
+        e = self.data["exit_row"]
+        pick = lambda d: d.get(lang) or d["en"]  # noqa: E731
+        return {
+            "title": pick(e["title"]), "intro": pick(e["intro"]),
+            "questions": [{"id": q["id"], "pictogram": q["pictogram"], "text": pick(q["text"])} for q in e["questions"]],
+            "answers": {k: pick(v) for k, v in e["answers"].items()},
+        }
+
+    def exit_done(self, result: str, lang: str) -> str:
+        d = self.data["exit_row"]["done"]["pass" if result == "pass" else "talk"]
+        return d.get(lang) or d["en"]
+
+    @property
+    def exit_question_ids(self) -> list[str]:
+        return [q["id"] for q in self.data["exit_row"]["questions"]]
+
+    @property
+    def exit_rows(self) -> list[int]:
+        return self.data.get("exit_rows", [])

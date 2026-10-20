@@ -5,37 +5,118 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Auralink · Crew</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 1280px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+    .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .alarm { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: var(--radius); background: rgba(255, 107, 107, .14);
+             border: 2px solid var(--bad); font-weight: 600; animation: flash 1s ease-in-out 4; }
+    .alarm b { font-size: 20px; }
+    @keyframes flash { 50% { background: rgba(255, 107, 107, .38); } }
+    .item { align-items: flex-start; }
+    .item .who { font: 700 20px "Outfit", system-ui, sans-serif; min-width: 52px; }
+    .item .body { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+    .item .what { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 17px; }
+    .item .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .item .acts button { min-height: 40px; padding: 6px 12px; font-size: 14px; }
+    .counts { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+    .counts span { display: inline-flex; align-items: center; gap: 6px; }
+    .sw { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+    .seatmap { grid-template-columns: 26px repeat(3, minmax(28px, 1fr)) 12px repeat(3, minmax(28px, 1fr)) 12px repeat(3, minmax(28px, 1fr)); }
+    .seat { height: 34px; font-weight: 600; cursor: default; position: relative; }
+    .seat.understood_again { background: var(--ok); color: #03281a; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, .55); }
+    .seat.reexplaining { background: #a87cff; color: #14092b; }
+    .seat.stuck { background: var(--bad); color: #2d0505; animation: seatPulse 1.4s ease-in-out infinite; }
+    .seat.exit::after { content: ""; position: absolute; left: 3px; right: 3px; bottom: 2px; height: 3px; border-radius: 2px; background: var(--accent); }
+    @keyframes seatPulse { 50% { box-shadow: 0 0 0 5px rgba(255, 107, 107, .3); } }
+    .goto { display: flex; flex-direction: column; gap: 8px; }
+    .goto .item { border-color: var(--bad); }
+    .goto .picto-box { width: 52px; padding: 4px; }
+    .exit-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .exit-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); }
+    .exit-item b { font: 700 17px "Outfit", system-ui, sans-serif; }
+    .pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); } .pill.dim { color: var(--muted); } .pill.violet { color: #c4a6ff; }
+    .brief-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .muted-btn { background: transparent; }
+  </style>
 </head>
 <body>
   <header>
     <span class="dot" id="dot" title="Connection"></span>
     <h1>客室乗務員パネル <span class="muted">Crew panel</span></h1>
     <label class="row muted">飛行フェーズ Phase <select id="phase"></select></label>
+    <button id="sound" class="muted-btn" aria-pressed="true" title="Sound for urgent requests">🔔 音 Sound on</button>
   </header>
   <main>
-    <div class="panel">
-      <h2>リクエスト Requests</h2>
-      <div class="list" id="cards"><p class="muted">No open requests</p></div>
-    </div>
-    <div class="panel">
-      <h2>安全案内 Safety briefing</h2>
-      <div class="row" id="briefings"></div>
-      <div class="seatmap" id="seatmap"></div>
-      <p class="muted">Green: understood · Red: asked to explain again · Amber: no answer yet · Faded: no device</p>
+    <div id="alarm"></div>
+    <div class="layout">
+      <div class="col">
+        <section class="panel">
+          <h2>リクエスト Requests</h2>
+          <div class="list" id="cards"></div>
+        </section>
+      </div>
+      <div class="col">
+        <section class="panel">
+          <h2>安全案内 Safety briefing</h2>
+          <div class="row" id="briefings"></div>
+          <div class="brief-title" id="briefTitle"></div>
+          <div class="counts" id="counts"></div>
+          <div class="seatmap" id="seatmap"></div>
+          <div class="goto" id="goto"></div>
+        </section>
+        <section class="panel">
+          <h2>非常口座席の確認 Exit-row check</h2>
+          <p class="muted">Picture check at boarding. Supports your own briefing and confirmation; it does not replace it.</p>
+          <div class="row"><button id="exitStart">確認を開始 Start check (row <span id="exitRows"></span>)</button></div>
+          <div class="exit-list" id="exitList"></div>
+        </section>
+      </div>
     </div>
   </main>
 
 <script type="module">
 import { connect, el, loadConfig } from "./common.js";
+import { pictogram } from "./pictograms.js";
 
 const $ = (id) => document.getElementById(id);
 const config = await loadConfig();
+const exitSeats = new Set(config.exit_seats);
 const STATUS = {
-  urgent_unconfirmed: ["至急・未確認", "Urgent, unconfirmed"],
-  confirmed: ["確認済み", "Confirmed"],
-  needs_human: ["要対応", "Needs human help"],
-  acknowledged: ["対応中", "Acknowledged"],
+  urgent_unconfirmed: ["至急・未確認", "Urgent, unconfirmed", "bad"],
+  confirmed: ["確認済み", "Confirmed", "ok"],
+  needs_human: ["要対応", "Needs human help", "bad"],
+  acknowledged: ["対応中", "Acknowledged", "dim"],
 };
+const HEAT = {
+  understood: ["理解", "Understood", "var(--ok)"],
+  understood_again: ["再説明で理解", "Understood after re-explaining", "var(--ok)"],
+  reexplaining: ["再説明中", "Re-explaining", "#a87cff"],
+  stuck: ["要対応", "Go to seat", "var(--bad)"],
+  pending: ["未回答", "No answer yet", "var(--warn)"],
+  offline: ["端末なし", "No device", "var(--idle)"],
+};
+
+// urgent alert: three short tones and a flashing banner, once per new urgent card
+let soundOn = true, audio = null;
+const seenUrgent = new Set();
+addEventListener("pointerdown", () => { audio ??= new AudioContext(); }, { once: true });  // browsers need a tap first
+function beep() {
+  if (!soundOn || !audio) return;
+  [0, 0.28, 0.56].forEach((t0) => {
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
+    const t = audio.currentTime + t0;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.start(t); o.stop(t + 0.24);
+  });
+}
+$("sound").addEventListener("click", () => {
+  soundOn = !soundOn;
+  $("sound").setAttribute("aria-pressed", String(soundOn));
+  $("sound").textContent = soundOn ? "🔔 音 Sound on" : "🔕 消音 Muted";
+});
 
 const socket = connect("/ws/crew", render, (on) => $("dot").classList.toggle("on", on));
 
@@ -43,44 +124,83 @@ $("phase").replaceChildren(...config.phases.map((p) => el("option", { value: p }
 $("phase").addEventListener("change", (e) => socket.send({ type: "phase", phase: e.target.value }));
 $("briefings").replaceChildren(...config.safety.map((s) =>
   el("button", { onclick: () => socket.send({ type: "broadcast", template_id: s.id }) }, `${s.title.ja} · ${s.title.en}`)));
+$("exitRows").textContent = [...new Set(config.exit_seats.map((s) => s.slice(0, -1)))].join(", ");
+$("exitStart").addEventListener("click", () => socket.send({ type: "exit_check" }));
 
 function cardView(c) {
-  const [ja, en] = STATUS[c.status];
-  const head = c.intent
+  const [ja, en, tone] = STATUS[c.status];
+  const what = c.intent
     ? [el("span", { class: "icon" }, c.icon), el("strong", {}, c.crew_ja), el("span", { class: "muted" }, c.label_en)]
-    : [el("strong", {}, "推定 Best guesses: "),
-       ...c.guesses.map((g) => el("span", {}, `${g.icon} ${g.label_ja} (${g.score.toFixed(2)})`))];
+    : [el("strong", {}, "推定 Best guesses:"), ...c.guesses.map((g) => el("span", {}, `${g.icon} ${g.label_ja} (${g.score.toFixed(2)})`))];
   return el("div", { class: `item ${c.urgent ? "is-urgent" : ""}` },
-    el("strong", {}, c.seat), ...head,
-    el("span", { class: `pill ${c.urgent ? "urgent" : ""}` }, `${ja} · ${en}`),
-    c.heard ? el("span", { class: "muted" }, `“${c.heard}” · ${c.lang}`) : null,
-    el("span", { class: "grow" }),
-    c.status !== "acknowledged"
-      ? el("button", { class: "primary", onclick: () => socket.send({ type: "ack", card_id: c.id }) }, "了解 Acknowledge")
-      : null,
-    ...config.replies.map((r) => el("button", { title: r.en, onclick: () => socket.send({ type: "reply", card_id: c.id, reply_id: r.id }) }, r.ja)),
-    el("button", { onclick: () => socket.send({ type: "close", card_id: c.id }) }, "完了 Done"));
+    el("span", { class: "who" }, c.seat),
+    el("div", { class: "body" },
+      el("div", { class: "what" }, ...what, el("span", { class: `pill ${tone}` }, `${ja} · ${en}`)),
+      c.heard ? el("span", { class: "muted" }, `“${c.heard}” · ${c.lang}`) : null,
+      el("div", { class: "acts" },
+        c.status !== "acknowledged"
+          ? el("button", { class: "primary", onclick: () => socket.send({ type: "ack", card_id: c.id }) }, "了解 Acknowledge") : null,
+        ...config.replies.map((r) => el("button", { title: r.en, onclick: () => socket.send({ type: "reply", card_id: c.id, reply_id: r.id }) }, r.ja)),
+        el("button", { onclick: () => socket.send({ type: "close", card_id: c.id }) }, "完了 Done"))));
 }
 
-function seatmap(heat) {
+function renderAlarm(cards) {
+  const fresh = cards.filter((c) => c.urgent && c.status !== "acknowledged" && !seenUrgent.has(c.id));
+  fresh.forEach((c) => seenUrgent.add(c.id));
+  const open = cards.filter((c) => c.urgent && c.status !== "acknowledged");
+  if (fresh.length) beep();
+  $("alarm").replaceChildren(...open.map((c) => el("div", { class: "alarm", role: "alert" },
+    el("b", {}, c.seat), `【至急】${c.crew_ja || "体調不良の可能性"} · Urgent: ${c.label_en || "possible medical"}`)));
+}
+
+function renderSafety(state) {
+  const b = state.broadcast, heat = state.heatmap;
+  $("briefTitle").replaceChildren(...(b
+    ? [el("strong", {}, `${b.title_ja} · ${b.title_en}`), el("button", { onclick: () => socket.send({ type: "end_broadcast" }) }, "終了 End")]
+    : [el("span", { class: "muted" }, "No briefing running. Choose one above.")]));
+  const tally = {};
+  Object.values(heat).forEach((s) => (tally[s] = (tally[s] || 0) + 1));
+  $("counts").replaceChildren(...(b ? Object.entries(HEAT) : []).filter(([k]) => tally[k]).map(([k, [ja, en, color]]) =>
+    el("span", {}, el("i", { class: "sw", style: `background:${color}` }), `${ja} ${en}: ${tally[k]}`)));
   const rows = [...new Set(config.seats.map((s) => s.slice(0, -1)))];
   const cells = [];
   for (const row of rows) {
     cells.push(el("span", { class: "muted" }, row));
-    for (const [i, letter] of [..."ABCDEGHJK"].entries()) {
+    [..."ABCDEGHJK"].forEach((letter, i) => {
       if (i === 3 || i === 6) cells.push(el("span"));
-      const id = row + letter;
-      cells.push(el("span", { class: `seat ${heat[id]}`, title: `${id}: ${heat[id]}` }, letter));
-    }
+      const id = row + letter, st = heat[id];
+      const step = b?.detail[id]?.step;
+      const tip = `${id}: ${HEAT[st]?.[1] || st}${step != null ? ` at step ${step + 1}` : ""}${exitSeats.has(id) ? " · exit row" : ""}`;
+      cells.push(el("span", { class: `seat ${st} ${exitSeats.has(id) ? "exit" : ""}`, title: tip, "aria-label": tip }, letter));
+    });
   }
   $("seatmap").replaceChildren(...cells);
+  const stuck = b ? Object.entries(b.detail).filter(([, a]) => a.status === "stuck") : [];
+  $("goto").replaceChildren(...(stuck.length ? [el("strong", {}, "このお席へ · Go to these seats")] : []),
+    ...stuck.map(([seat, a]) => {
+      const st = b.steps[a.step] || {};
+      const box = el("div", { class: "picto-box" }); box.innerHTML = pictogram(st.pictogram);
+      return el("div", { class: "item" }, el("span", { class: "who" }, seat), box,
+        el("div", { class: "body" }, el("strong", {}, `手順 ${a.step + 1}: ${st.ja || ""}`), el("span", { class: "muted" }, `Step ${a.step + 1}: ${st.en || ""}`)));
+    }));
+}
+
+function renderExit(checks) {
+  const RES = { pass: ["OK", "ok"], talk: ["要説明 Talk", "bad"], pending: ["未回答 Waiting", "dim"] };
+  $("exitList").replaceChildren(...checks.map((c) => {
+    const [label, tone] = c.connected || c.result !== "pending" ? RES[c.result] : ["端末なし No device", "dim"];
+    const why = c.reseat ? "別席希望 Wants another seat" : Object.entries(c.answers).filter(([, v]) => !v).map(([k]) => k.replace("_", " ")).join(", ");
+    return el("div", { class: "exit-item", title: why }, el("b", {}, c.seat), el("span", { class: `pill ${tone}` }, label));
+  }));
 }
 
 function render(msg) {
   if (msg.type !== "state") return;
   $("phase").value = msg.phase;
-  $("cards").replaceChildren(...(msg.cards.length ? msg.cards.map(cardView) : [el("p", { class: "muted" }, "No open requests")]));
-  seatmap(msg.heatmap);
+  $("cards").replaceChildren(...(msg.cards.length ? msg.cards.map(cardView) : [el("p", { class: "muted" }, "リクエストなし · No open requests")]));
+  renderAlarm(msg.cards);
+  renderSafety(msg);
+  renderExit(msg.exit_checks);
 }
 </script>
 </body>

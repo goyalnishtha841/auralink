@@ -9,3 +9,5 @@ data/recordings/*
 eval/.ipynb_checkpoints/
 models/
 .claude/
+# speech-to-text transcripts; will include volunteer speech
+eval/cache/
