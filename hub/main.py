@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from engine import PHASES, Hypothesis, Lexicon
 from engine.lexicon import ROOT
 
+from . import recordings
 from .state import SEAT_IDS, Cabin, Card
 from .templates import Templates
 
@@ -297,4 +298,5 @@ async def judge_ws(ws: WebSocket) -> None:
         judges.discard(ws)
 
 
+app.include_router(recordings.router)
 app.mount("/", StaticFiles(directory=ROOT / "apps", html=True), name="apps")

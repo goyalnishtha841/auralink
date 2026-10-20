@@ -37,9 +37,15 @@ certificate on each demo phone.
 | Folder | Owner | What lives there |
 |---|---|---|
 | `engine/` | A | `interpret(nbest, context, lexicon) -> Result`. ASR in `asr.py`, matcher in `matcher.py` |
-| `data/`, `eval/` | B | Intent lexicon, message templates, recordings index, evaluation notebooks |
+| `data/`, `eval/` | B | Intent lexicon, message templates, recording prompts and API (`hub/recordings.py`), evaluation |
 | `hub/`, `hardware/` | C | FastAPI + WebSocket hub, card state machine, safety heat map, ESP32 panel |
 | `apps/` | D | Passenger, crew and judge screens (current ones are placeholders) |
+
+## Collecting voices
+
+Open `/record.html` on a phone connected to the hub (HTTPS needed for the microphone on phones).
+Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
+`data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
 
 ## Contracts (change only as a team)
 

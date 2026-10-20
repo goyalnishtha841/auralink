@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Voice recording</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 640px; }
+    .prompt { font-size: 22px; line-height: 1.4; font-weight: 600; }
+    .big .prompt { font-size: 28px; }
+    .kind { align-self: flex-start; }
+    .progress { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+    .progress > div { height: 100%; background: var(--accent); transition: width .2s; }
+    .consent p, .consent li { font-size: 15px; }
+    .consent ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+    label.field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+    .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .code { font-family: ui-monospace, Menlo, monospace; font-size: 28px; letter-spacing: .1em; }
+    .notice { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--warn); color: var(--warn); }
+    .notice.bad { border-color: var(--bad); color: var(--bad); }
+    audio { width: 100%; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="h_title">Help us test Auralink</h1>
+    <select id="lang" aria-label="Language">
+      <option value="en">English</option>
+      <option value="hi">हिन्दी</option>
+    </select>
+  </header>
+  <main>
+
+    <!-- 1. consent and profile -->
+    <section class="panel consent" id="step_consent">
+      <p id="c_intro"></p>
+      <ul id="c_points"></ul>
+      <div class="fields">
+        <label class="field"><span id="l_age"></span>
+          <select id="age_band">
+            <option value="18-29">18–29</option><option value="30-49">30–49</option>
+            <option value="50-64">50–64</option><option value="65+">65+</option>
+          </select></label>
+        <label class="field"><span id="l_first_lang"></span>
+          <select id="first_lang">
+            <option value="hindi">Hindi · हिन्दी</option><option value="punjabi">Punjabi · ਪੰਜਾਬੀ</option>
+            <option value="bengali">Bengali · বাংলা</option><option value="tamil">Tamil · தமிழ்</option>
+            <option value="telugu">Telugu · తెలుగు</option><option value="marathi">Marathi · मराठी</option>
+            <option value="gujarati">Gujarati · ગુજરાતી</option><option value="kannada">Kannada · ಕನ್ನಡ</option>
+            <option value="malayalam">Malayalam · മലയാളം</option><option value="urdu">Urdu · اردو</option>
+            <option value="english">English</option><option value="japanese">Japanese · 日本語</option>
+            <option value="thai">Thai · ไทย</option><option value="vietnamese">Vietnamese · Tiếng Việt</option>
+            <option value="indonesian">Indonesian · Bahasa</option><option value="other">Other</option>
+          </select></label>
+        <label class="field"><span id="l_english"></span>
+          <select id="english_level">
+            <option value="basic" id="o_basic"></option>
+            <option value="conversational" id="o_conv"></option>
+            <option value="fluent" id="o_fluent"></option>
+          </select></label>
+      </div>
+      <label class="row"><input type="checkbox" id="consent"> <span id="l_consent"></span></label>
+      <p class="notice bad" id="mic_missing" hidden></p>
+      <button class="primary" id="start" disabled></button>
+      <details>
+        <summary id="w_summary"></summary>
+        <div class="row" style="margin-top:10px">
+          <input id="w_code" placeholder="S-XXXX" autocomplete="off" style="text-transform:uppercase">
+          <button id="w_button"></button>
+        </div>
+        <div class="row" id="w_confirm_row" hidden style="margin-top:10px">
+          <span id="w_confirm_text" class="grow"></span>
+          <button class="primary" id="w_confirm"></button>
+        </div>
+        <p class="muted" id="w_result"></p>
+      </details>
+    </section>
+
+    <!-- 2. recording -->
+    <section class="panel" id="step_record" hidden>
+      <div class="row">
+        <span class="muted grow" id="r_count"></span>
+        <label class="row muted"><span id="l_env"></span>
+          <select id="environment">
+            <option value="quiet" id="o_quiet"></option>
+            <option value="some_noise" id="o_some"></option>
+            <option value="noisy" id="o_noisy"></option>
+          </select></label>
+      </div>
+      <div class="progress"><div id="r_bar"></div></div>
+      <span class="pill kind" id="r_kind"></span>
+      <p class="prompt" id="r_prompt"></p>
+      <button type="button" class="mic" id="r_mic"><span class="icon">🎤</span> <span id="r_mic_label"></span></button>
+      <div id="r_review" hidden class="list">
+        <audio id="r_audio" controls></audio>
+        <div class="row">
+          <button class="primary grow" id="r_save"></button>
+          <button class="grow" id="r_again"></button>
+        </div>
+      </div>
+      <p class="notice" id="r_notice" hidden></p>
+      <button id="r_skip" class="muted"></button>
+    </section>
+
+    <!-- 3. done -->
+    <section class="panel" id="step_done" hidden>
+      <h2 id="d_title" style="color:var(--fg);font-size:22px"></h2>
+      <p id="d_code_label"></p>
+      <p class="code" id="d_code"></p>
+      <p class="muted" id="d_note"></p>
+      <button id="d_again"></button>
+    </section>
+
+    <p class="muted" id="stats"></p>
+  </main>
+
+<script type="module">
+import { Recorder, el } from "./common.js";
+
+const S = {
+  en: {
+    h_title: "Help us test Auralink",
+    c_intro: "Auralink is a student project for the Thapar Japan Hackathon 2026. It helps airline passengers who speak English with an accent, or who speak little English, ask cabin crew for help. We are recording short voice clips to check whether it understands people like you.",
+    c_points: [
+      "You will say about 24 short requests. It takes about 5 minutes.",
+      "We keep only your voice clips and the three answers below. We never ask for your name.",
+      "The clips stay with our team, are used only to test this project, and are deleted after the hackathon.",
+      "You will get a code. Tell us the code at any time and we will delete everything you recorded.",
+      "You must be 18 or older, or have a parent or guardian with you who agrees.",
+      "Taking part is your choice. You can stop at any time.",
+    ],
+    l_age: "Age", l_first_lang: "First language", l_english: "How comfortable are you speaking English?",
+    o_basic: "A little", o_conv: "I can have a conversation", o_fluent: "Fluent",
+    l_consent: "I have read this and agree to be recorded.",
+    start: "Start recording", mic_missing: "This device cannot record here. Open the page over https, or use another phone.",
+    w_summary: "Withdraw my recordings", w_button: "Find my recordings",
+    w_confirm_text: (c) => `This permanently deletes every clip recorded with code ${c}.`, w_confirm: "Delete",
+    w_done: (n) => `Deleted. ${n} clips removed.`,
+    l_env: "Where are you?", o_quiet: "Quiet room", o_some: "Some noise", o_noisy: "Noisy place",
+    count: (i, n) => `${i} of ${n}`, free: "Say it your own way", read: "Read this aloud",
+    speak: "Tap to record", stop: "Recording… tap when done",
+    save: "Save and next", again: "Record again", skip: "Skip this one", saving: "Saving…",
+    d_title: "Thank you!", d_code_label: "Your code. Keep it if you might want your recordings deleted later:",
+    d_note: "You can record another set if you like. A second set in a noisier place helps a lot.",
+    d_again: "Record another set",
+    stats: (s) => `So far: ${s.speakers} people, ${s.clips} clips, ${s.minutes} minutes.`,
+    too_short: "That was very short. Please say the whole request.",
+    too_long: "That was longer than 12 seconds. Please keep it short.",
+    silent: "We could not hear anything. Check that the microphone is allowed and try again.",
+    loud: "Saved, but it was very loud and may be distorted. Hold the phone a little further away next time.",
+  },
+  hi: {
+    h_title: "Auralink को परखने में मदद करें",
+    c_intro: "Auralink, थापर जापान हैकाथॉन 2026 के लिए छात्रों का एक प्रोजेक्ट है। यह उन हवाई यात्रियों की मदद करता है जो अलग लहजे में अंग्रेज़ी बोलते हैं या कम अंग्रेज़ी जानते हैं, ताकि वे केबिन क्रू से आसानी से मदद माँग सकें। हम छोटी आवाज़ रिकॉर्डिंग ले रहे हैं, यह जाँचने के लिए कि यह आप जैसे लोगों की बात समझता है या नहीं।",
+    c_points: [
+      "आप लगभग 24 छोटे अनुरोध बोलेंगे। इसमें लगभग 5 मिनट लगेंगे।",
+      "हम सिर्फ़ आपकी आवाज़ की रिकॉर्डिंग और नीचे के तीन जवाब रखते हैं। हम आपका नाम कभी नहीं पूछते।",
+      "रिकॉर्डिंग सिर्फ़ हमारी टीम के पास रहेंगी, सिर्फ़ इस प्रोजेक्ट को परखने में इस्तेमाल होंगी, और हैकाथॉन के बाद मिटा दी जाएँगी।",
+      "आपको एक कोड मिलेगा। कभी भी वह कोड बताइए, हम आपकी सारी रिकॉर्डिंग मिटा देंगे।",
+      "आपकी उम्र 18 साल या उससे ज़्यादा होनी चाहिए, या आपके साथ माता-पिता या अभिभावक हों जो सहमत हों।",
+      "भाग लेना आपकी मर्ज़ी है। आप कभी भी रुक सकते हैं।",
+    ],
+    l_age: "उम्र", l_first_lang: "पहली भाषा", l_english: "अंग्रेज़ी बोलने में आप कितने सहज हैं?",
+    o_basic: "थोड़ा-बहुत", o_conv: "बातचीत कर लेता/लेती हूँ", o_fluent: "धाराप्रवाह",
+    l_consent: "मैंने यह पढ़ लिया है और रिकॉर्डिंग के लिए सहमत हूँ।",
+    start: "रिकॉर्डिंग शुरू करें", mic_missing: "इस डिवाइस पर यहाँ रिकॉर्डिंग नहीं हो सकती। पेज https पर खोलें या दूसरा फ़ोन इस्तेमाल करें।",
+    w_summary: "मेरी रिकॉर्डिंग हटाएँ", w_button: "मेरी रिकॉर्डिंग खोजें",
+    w_confirm_text: (c) => `इससे कोड ${c} वाली सारी रिकॉर्डिंग हमेशा के लिए मिट जाएँगी।`, w_confirm: "मिटाएँ",
+    w_done: (n) => `मिटा दिया गया। ${n} रिकॉर्डिंग हटाई गईं।`,
+    l_env: "आप कहाँ हैं?", o_quiet: "शांत कमरा", o_some: "थोड़ा शोर", o_noisy: "शोर वाली जगह",
+    count: (i, n) => `${n} में से ${i}`, free: "अपने शब्दों में बोलिए", read: "इसे पढ़कर बोलिए",
+    speak: "रिकॉर्ड करने के लिए टैप करें", stop: "रिकॉर्ड हो रहा है… पूरा होने पर टैप करें",
+    save: "सेव करें और आगे बढ़ें", again: "फिर से रिकॉर्ड करें", skip: "इसे छोड़ें", saving: "सेव हो रहा है…",
+    d_title: "धन्यवाद!", d_code_label: "आपका कोड। अगर बाद में रिकॉर्डिंग मिटवानी हो तो इसे संभालकर रखें:",
+    d_note: "चाहें तो एक और सेट रिकॉर्ड करें। किसी शोर वाली जगह पर दूसरा सेट बहुत मदद करता है।",
+    d_again: "एक और सेट रिकॉर्ड करें",
+    stats: (s) => `अब तक: ${s.speakers} लोग, ${s.clips} रिकॉर्डिंग, ${s.minutes} मिनट।`,
+    too_short: "यह बहुत छोटा था। कृपया पूरा अनुरोध बोलिए।",
+    too_long: "यह 12 सेकंड से लंबा था। कृपया छोटा रखिए।",
+    silent: "हमें कुछ सुनाई नहीं दिया। देखिए कि माइक की अनुमति है, फिर दोबारा कोशिश कीजिए।",
+    loud: "सेव हो गया, पर आवाज़ बहुत तेज़ थी और बिगड़ सकती है। अगली बार फ़ोन थोड़ा दूर रखिए।",
+  },
+};
+
+const $ = (id) => document.getElementById(id);
+let lang = new URLSearchParams(location.search).get("lang") || "en";
+const t = (k, ...a) => { const v = S[lang][k] ?? S.en[k]; return typeof v === "function" ? v(...a) : v; };
+
+let speakerId = null;
+let queue = [];      // prompts for this session
+let index = 0;
+let recorder = null;
+let pcm = null;      // last take, ArrayBuffer of int16
+let micState = "idle";
+let allPrompts = [];
+
+function show(step) {
+  for (const id of ["step_consent", "step_record", "step_done"]) $(id).hidden = id !== step;
+}
+
+function applyStrings() {
+  document.documentElement.lang = lang;
+  for (const id of ["h_title", "c_intro", "l_age", "l_first_lang", "l_english", "o_basic", "o_conv", "o_fluent",
+                    "l_consent", "start", "w_summary", "w_button", "w_confirm", "l_env", "o_quiet", "o_some", "o_noisy",
+                    "d_title", "d_code_label", "d_note", "d_again"]) $(id).textContent = t(id);
+  $("c_points").replaceChildren(...t("c_points").map((p) => el("li", {}, p)));
+  $("mic_missing").textContent = t("mic_missing");
+  $("r_save").textContent = t("save");
+  $("r_again").textContent = t("again");
+  $("r_skip").textContent = t("skip");
+  if (queue.length) renderPrompt();
+}
+
+function shuffle(list) {
+  const a = [...list];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function setMic(state) {
+  micState = state;
+  $("r_mic").classList.toggle("recording", state === "recording");
+  $("r_mic").hidden = state === "review";
+  $("r_mic_label").textContent = t(state === "recording" ? "stop" : "speak");
+  $("r_review").hidden = state !== "review";
+}
+
+function notice(text, bad = false) {
+  $("r_notice").hidden = !text;
+  $("r_notice").textContent = text || "";
+  $("r_notice").classList.toggle("bad", bad);
+}
+
+function renderPrompt() {
+  const p = queue[index];
+  $("r_count").textContent = t("count", index + 1, queue.length);
+  $("r_bar").style.width = `${(index / queue.length) * 100}%`;
+  $("r_kind").textContent = t(p.kind);
+  $("r_prompt").textContent = p.text[lang] || p.text.en;
+  setMic(micState === "recording" ? "recording" : pcm ? "review" : "idle");
+}
+
+function nextPrompt() {
+  pcm = null;
+  notice(null);
+  index += 1;
+  if (index >= queue.length) return finish();
+  setMic("idle");
+  renderPrompt();
+}
+
+function finish() {
+  $("d_code").textContent = speakerId;
+  show("step_done");
+  loadStats();
+}
+
+function startSession() {
+  // free prompts first, so our scripted wording does not shape how people phrase requests
+  queue = [...shuffle(allPrompts.filter((p) => p.kind === "free")), ...shuffle(allPrompts.filter((p) => p.kind === "read"))];
+  index = 0;
+  pcm = null;
+  setMic("idle");
+  renderPrompt();
+  show("step_record");
+}
+
+function wavUrl(buffer) {
+  const data = new Uint8Array(buffer);
+  const header = new DataView(new ArrayBuffer(44));
+  const str = (o, s) => [...s].forEach((c, i) => header.setUint8(o + i, c.charCodeAt(0)));
+  str(0, "RIFF"); header.setUint32(4, 36 + data.length, true); str(8, "WAVE");
+  str(12, "fmt "); header.setUint32(16, 16, true); header.setUint16(20, 1, true); header.setUint16(22, 1, true);
+  header.setUint32(24, 16000, true); header.setUint32(28, 32000, true); header.setUint16(32, 2, true); header.setUint16(34, 16, true);
+  str(36, "data"); header.setUint32(40, data.length, true);
+  return URL.createObjectURL(new Blob([header, data], { type: "audio/wav" }));
+}
+
+function toBase64(buffer) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(",", 2)[1]);
+    reader.readAsDataURL(new Blob([buffer]));
+  });
+}
+
+async function api(method, path, body) {
+  const res = await fetch(`/api/recordings${path}`, {
+    method, headers: { "Content-Type": "application/json" }, body: body && JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const d = data.detail;
+    throw new Error(d?.code ? t(d.code) : typeof d === "string" ? d : `Error ${res.status}`);
+  }
+  return data;
+}
+
+async function loadStats() {
+  try { $("stats").textContent = t("stats", await api("GET", "/stats")); } catch { /* stats are optional */ }
+}
+
+// consent step
+$("consent").addEventListener("change", (e) => { $("start").disabled = !e.target.checked || !Recorder.supported(); });
+$("start").addEventListener("click", async () => {
+  $("start").disabled = true;
+  try {
+    const coarse = matchMedia("(pointer: coarse)").matches;
+    const r = await api("POST", "/speakers", {
+      consent: true, age_band: $("age_band").value, first_lang: $("first_lang").value,
+      english_level: $("english_level").value, device: coarse ? "phone" : "laptop",
+    });
+    speakerId = r.speaker_id;
+    startSession();
+  } catch (err) {
+    $("mic_missing").textContent = err.message;
+    $("mic_missing").hidden = false;
+    $("start").disabled = false;
+  }
+});
+
+// recording step
+$("r_mic").addEventListener("click", async () => {
+  if (micState === "idle") {
+    recorder = new Recorder();
+    try {
+      await recorder.start(12, () => micState === "recording" && $("r_mic").click());
+      notice(null);
+      setMic("recording");
+    } catch {
+      notice(t("mic_missing"), true);
+    }
+  } else if (micState === "recording") {
+    pcm = await recorder.stop();
+    $("r_audio").src = wavUrl(pcm);
+    setMic("review");
+  }
+});
+$("r_again").addEventListener("click", () => { pcm = null; notice(null); setMic("idle"); });
+$("r_skip").addEventListener("click", () => { if (micState !== "recording") nextPrompt(); });
+$("r_save").addEventListener("click", async () => {
+  $("r_save").disabled = true;
+  $("r_save").textContent = t("saving");
+  try {
+    const r = await api("POST", "/clips", {
+      speaker_id: speakerId, prompt_id: queue[index].id,
+      environment: $("environment").value, audio_b64: await toBase64(pcm),
+    });
+    nextPrompt();
+    if (r.warning) notice(t(r.warning));
+  } catch (err) {
+    notice(err.message, true);  // e.g. silent clip: stay on this prompt so they can record again
+    pcm = null;
+    setMic("idle");
+  } finally {
+    $("r_save").disabled = false;
+    $("r_save").textContent = t("save");
+  }
+});
+
+// done step
+$("d_again").addEventListener("click", startSession);
+
+// withdrawal: two steps, nothing is deleted without the explicit confirm button
+$("w_button").addEventListener("click", () => {
+  const code = $("w_code").value.trim().toUpperCase();
+  if (!/^S-[A-Z2-9]{4}$/.test(code)) { $("w_result").textContent = "S-XXXX"; return; }
+  $("w_confirm_text").textContent = t("w_confirm_text", code);
+  $("w_confirm_row").hidden = false;
+  $("w_confirm").dataset.code = code;
+});
+$("w_confirm").addEventListener("click", async () => {
+  try {
+    const r = await api("DELETE", `/speakers/${$("w_confirm").dataset.code}`);
+    $("w_result").textContent = t("w_done", r.clips_removed);
+    loadStats();
+  } catch (err) {
+    $("w_result").textContent = err.message;
+  }
+  $("w_confirm_row").hidden = true;
+});
+
+$("lang").addEventListener("change", (e) => { lang = e.target.value; applyStrings(); loadStats(); });
+
+$("lang").value = lang;
+if (!Recorder.supported()) $("mic_missing").hidden = false;
+allPrompts = await api("GET", "/prompts");
+applyStrings();
+loadStats();
+</script>
+</body>
+</html>
