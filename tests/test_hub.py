@@ -61,10 +61,13 @@ def test_safety_heatmap():
         crew.send_json({"type": "broadcast", "template_id": "turbulence"})
         safety = pax.receive_json()
         assert safety["type"] == "safety"
-        pax.send_json({"type": "safety", "understood": False})
+        assert [st["pictogram"] for st in safety["template"]["steps"]] == ["return_seat", "seatbelt", "toilet_closed"]
+        pax.send_json({"type": "safety", "status": "reexplaining"})
+        pax.send_json({"type": "safety", "status": "stuck", "step": 1})
         state = crew_state(crew)
-        while state["heatmap"]["31C"] != "explain_again":
+        while state["heatmap"]["31C"] != "stuck":
             state = crew_state(crew)
+        assert state["broadcast"]["detail"]["31C"]["step"] == 1
         assert state["heatmap"]["30A"] == "offline"
 
 
@@ -142,3 +145,24 @@ def test_judge_gets_explanation_for_voice():
         wave = msg["explain"]["waveform"]
         assert len(wave["peaks"]) == 160 and wave["speech"]
         assert msg["explain"]["stages"]["speech_to_text"] > 0
+
+
+def test_exit_row_check():
+    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+            shared.websocket_connect("/ws/passenger/30A") as ok, shared.websocket_connect("/ws/passenger/30K") as unsure:
+        ok.send_json({"type": "hello", "lang": "hi"})
+        crew.send_json({"type": "exit_check"})
+        q = ok.receive_json()
+        assert q["type"] == "exit_check" and len(q["check"]["questions"]) == 3
+        assert q["check"]["answers"]["yes"] == "हाँ"
+        assert unsure.receive_json()["type"] == "exit_check"
+        ids = [x["id"] for x in q["check"]["questions"]]
+        ok.send_json({"type": "exit_answer", "answers": {i: True for i in ids}})
+        assert ok.receive_json()["result"] == "pass"
+        unsure.send_json({"type": "exit_answer", "answers": {i: True for i in ids}, "reseat": True})
+        assert unsure.receive_json()["result"] == "talk"
+        state = crew_state(crew)
+        while sum(c["result"] != "pending" for c in state["exit_checks"]) < 2:
+            state = crew_state(crew)
+        results = {c["seat"]: c["result"] for c in state["exit_checks"]}
+        assert results["30A"] == "pass" and results["30K"] == "talk" and results["30B"] == "pending"

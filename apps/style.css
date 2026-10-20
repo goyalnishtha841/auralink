@@ -73,3 +73,17 @@ pre { margin: 0; font-size: 12px; overflow-x: auto; }
 .big .mic { padding: 28px; font-size: 24px; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 10px rgba(255, 107, 107, .18); } }
 @media (prefers-reduced-motion: reduce) { .mic.recording { animation: none; } }
+
+/* safety briefing and exit-row check */
+.picto { width: 100%; height: auto; color: var(--fg); display: block; }
+.picto .acc { stroke: var(--accent); }
+.picto-box { width: 84px; flex: none; padding: 6px; border-radius: 14px; background: var(--surface-2); }
+.picto-big { width: min(220px, 60vw); align-self: center; padding: 14px; border-radius: 22px; background: var(--surface-2); }
+.picto-big .picto-box { width: 100%; padding: 0; background: none; }
+.safety-title { color: var(--accent); }
+.safety-step { display: flex; gap: 14px; align-items: center; }
+.safety-text { margin: 0; font-size: 17px; font-weight: 500; }
+.safety-step .muted { margin: 2px 0 0; }
+.safety-simple { margin: 0; font-size: 24px; font-weight: 600; text-align: center; }
+.big .picto-box { width: 112px; } .big .safety-text { font-size: 21px; } .big .safety-simple { font-size: 30px; }
+button.link { background: none; border: 0; color: var(--muted); text-decoration: underline; min-height: 44px; }

@@ -40,11 +40,31 @@ class Seat(BaseModel):
     failed_attempts: int = 0
 
 
+# understood: first time; understood_again: after the simpler step-by-step version;
+# reexplaining: going through that version now; stuck: still unclear at `step` -> crew should go
+SafetyStatus = Literal["understood", "understood_again", "reexplaining", "stuck"]
+
+
+class SafetyAnswer(BaseModel):
+    status: SafetyStatus
+    step: int | None = None
+    at: float = Field(default_factory=time.time)
+
+
 class Broadcast(BaseModel):
     id: str
     template_id: str
     sent_at: float = Field(default_factory=time.time)
-    responses: dict[str, Literal["understood", "explain_again"]] = Field(default_factory=dict)
+    responses: dict[str, SafetyAnswer] = Field(default_factory=dict)
+
+
+class ExitCheck(BaseModel):
+    """Exit-row picture check at boarding (supports the crew's own confirmation; it does not replace it)."""
+    seat: str
+    answers: dict[str, bool] = Field(default_factory=dict)
+    reseat: bool = False
+    result: Literal["pending", "pass", "talk"] = "pending"
+    at: float = Field(default_factory=time.time)
 
 
 class Cabin:
@@ -54,6 +74,7 @@ class Cabin:
         self.seats = {s: Seat(id=s) for s in SEAT_IDS}
         self.cards: dict[str, Card] = {}
         self.broadcast: Broadcast | None = None
+        self.exit_checks: dict[str, ExitCheck] = {}
         self._ids = itertools.count(1)
 
     # passenger side
@@ -103,9 +124,22 @@ class Cabin:
         card.updated_at = time.time()
         return card
 
-    def safety_response(self, seat: str, understood: bool) -> None:
-        if self.broadcast:
-            self.broadcast.responses[seat] = "understood" if understood else "explain_again"
+    def safety_response(self, seat: str, status: str, step: int | None = None) -> SafetyAnswer:
+        if not self.broadcast:
+            raise ValueError("no safety briefing is running")
+        answer = SafetyAnswer(status=status, step=step if status == "stuck" else None)
+        self.broadcast.responses[seat] = answer
+        return answer
+
+    def exit_answer(self, seat: str, answers: dict[str, bool], reseat: bool, question_ids: list[str]) -> ExitCheck:
+        check = self.exit_checks.get(seat)
+        if check is None:
+            raise ValueError(f"no exit-row check for seat {seat}")
+        check.answers = {q: bool(answers.get(q)) for q in question_ids}
+        check.reseat = reseat
+        check.result = "pass" if not reseat and all(check.answers.values()) else "talk"
+        check.at = time.time()
+        return check
 
     # crew side
 
@@ -124,12 +158,16 @@ class Cabin:
         self.broadcast = Broadcast(id=f"b{next(self._ids)}", template_id=template_id)
         return self.broadcast
 
+    def start_exit_check(self, seats: list[str]) -> list[ExitCheck]:
+        self.exit_checks = {s: ExitCheck(seat=s) for s in seats if s in self.seats}
+        return list(self.exit_checks.values())
+
     def heatmap(self) -> dict[str, str]:
-        """Per seat: understood / explain_again / pending / offline (no device connected)."""
+        """Per seat: understood / understood_again / reexplaining / stuck / pending / idle / offline."""
         out = {}
         for sid, seat in self.seats.items():
             if self.broadcast and sid in self.broadcast.responses:
-                out[sid] = self.broadcast.responses[sid]
+                out[sid] = self.broadcast.responses[sid].status
             elif not seat.connected:
                 out[sid] = "offline"
             else:

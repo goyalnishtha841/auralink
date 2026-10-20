@@ -40,13 +40,16 @@
 
 <script type="module">
 import { Recorder, connect, el, loadConfig } from "./common.js";
+import { pictogram } from "./pictograms.js";
 
 const STRINGS = {
   en: { title: "How can we help?", typeHint: "Type or say what you need", send: "Send", orTap: "Or tap a picture",
         requestsLabel: "Your requests", seniorLabel: "Large mode", confirmQ: "Did you mean this?",
         pickOne: "Which one did you mean?", yes: "Yes", no: "No", none: "None of these",
         together: "Let's find it together. Tap what you need.", understood: "I understood",
-        explain: "Explain again", ok: "OK", seat: "Seat", speak: "Tap to speak", stop: "Listening… tap when done",
+        explain: "Explain again", ok: "OK", seat: "Seat", gotIt: "Got it", stillUnclear: "Still not clear",
+        step: "Step", of: "of", question: "Question", crewComing: "A crew member is coming to explain in person.",
+        thanks: "Thank you!", reexplain: "Let's go one step at a time.", speak: "Tap to speak", stop: "Listening… tap when done",
         thinking: "Understanding…", micOff: "Voice needs a secure (https) connection. Please type or tap a picture.",
         micDenied: "Microphone not allowed. Please type or tap a picture." },
   hi: { title: "हम आपकी कैसे मदद करें?", typeHint: "जो चाहिए, लिखें या बोलें", send: "भेजें",
@@ -54,6 +57,8 @@ const STRINGS = {
         confirmQ: "क्या आपका मतलब यह था?", pickOne: "आपका मतलब कौन-सा था?", yes: "हाँ", no: "नहीं",
         none: "इनमें से कोई नहीं", together: "चलिए साथ में ढूँढते हैं। जो चाहिए उस पर टैप करें।",
         understood: "मैं समझ गया/गई", explain: "फिर से समझाइए", ok: "ठीक है", seat: "सीट",
+        gotIt: "समझ गया/गई", stillUnclear: "अब भी समझ नहीं आया", step: "चरण", of: "/", question: "सवाल",
+        crewComing: "एक क्रू सदस्य आपको खुद समझाने आ रहे हैं।", thanks: "धन्यवाद!", reexplain: "चलिए, एक-एक करके देखते हैं।",
         speak: "बोलने के लिए टैप करें", stop: "सुन रहे हैं… बोलकर टैप करें", thinking: "समझ रहे हैं…",
         micOff: "आवाज़ के लिए सुरक्षित (https) कनेक्शन चाहिए। कृपया लिखें या तस्वीर पर टैप करें।",
         micDenied: "माइक की अनुमति नहीं है। कृपया लिखें या तस्वीर पर टैप करें।" },
@@ -176,15 +181,66 @@ function onMessage(msg) {
     $("title").textContent = msg.message;
     setTimeout(() => ($("title").textContent = t("title")), 6000);
   } else if (msg.type === "safety") {
-    const s = msg.template;
-    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    const answer = (understood) => { socket.send({ type: "safety", understood }); closeSheet(); };
-    sheet(el("h2", {}, s.title), el("div", { class: "tile" }, el("span", { class: "icon" }, "🪑"), s.caption),
-      lang !== "en" ? el("p", { class: "muted" }, s.caption_en) : null,
-      el("div", { class: "row" },
-        el("button", { class: "primary grow", onclick: () => answer(true) }, t("understood")),
-        el("button", { class: "grow", onclick: () => answer(false) }, t("explain"))));
+    showBriefing(msg.template);
+  } else if (msg.type === "exit_check") {
+    showExitCheck(msg.check);
+  } else if (msg.type === "exit_done") {
+    sheet(el("h2", {}, t("thanks")), el("p", {}, msg.message),
+      el("button", { class: "primary", onclick: closeSheet }, t("ok")));
   }
+}
+
+// --- safety briefing: all steps, then "Explain again" goes one simple step at a time -------------
+const picto = (id) => { const d = el("div", { class: "picto-box" }); d.innerHTML = pictogram(id); return d; };
+const counter = (word, i, n) => `${word} ${i} ${t("of")} ${n}`;
+
+function showBriefing(b) {
+  if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  const steps = b.steps.map((st) => el("div", { class: "safety-step" }, picto(st.pictogram),
+    el("div", {}, el("p", { class: "safety-text" }, st.text),
+      lang !== "en" ? el("p", { class: "muted" }, st.text_en) : null)));
+  sheet(el("h2", { class: "safety-title" }, b.title), ...steps,
+    el("div", { class: "row" },
+      el("button", { class: "primary grow", onclick: () => { socket.send({ type: "safety", status: "understood" }); closeSheet(); } }, t("understood")),
+      el("button", { class: "grow", onclick: () => { socket.send({ type: "safety", status: "reexplaining" }); simpleStep(b, 0); } }, t("explain"))));
+}
+
+function simpleStep(b, i) {
+  if (i >= b.steps.length) {
+    socket.send({ type: "safety", status: "understood_again" });
+    sheet(el("h2", {}, t("thanks")), el("button", { class: "primary", onclick: closeSheet }, t("ok")));
+    return;
+  }
+  const st = b.steps[i];
+  sheet(el("p", { class: "muted" }, i === 0 ? t("reexplain") : counter(t("step"), i + 1, b.steps.length)),
+    i === 0 ? el("p", { class: "muted" }, counter(t("step"), 1, b.steps.length)) : null,
+    el("div", { class: "picto-big" }, picto(st.pictogram)),
+    el("p", { class: "safety-simple" }, st.simple),
+    el("div", { class: "row" },
+      el("button", { class: "primary grow", onclick: () => simpleStep(b, i + 1) }, t("gotIt")),
+      el("button", { class: "grow", onclick: () => {
+        socket.send({ type: "safety", status: "stuck", step: i });
+        sheet(el("h2", {}, st.simple), el("p", {}, t("crewComing")),
+          el("button", { class: "primary", onclick: closeSheet }, t("ok")));
+      } }, t("stillUnclear"))));
+}
+
+// --- exit-row check at boarding: three picture questions --------------------------------------------
+function showExitCheck(c) {
+  const answers = {};
+  const ask = (i) => {
+    if (i >= c.questions.length) return socket.send({ type: "exit_answer", answers });
+    const q = c.questions[i];
+    sheet(el("h2", { class: "safety-title" }, c.title), i === 0 ? el("p", {}, c.intro) : null,
+      el("p", { class: "muted" }, counter(t("question"), i + 1, c.questions.length)),
+      el("div", { class: "picto-big" }, picto(q.pictogram)),
+      el("p", { class: "safety-simple" }, q.text),
+      el("div", { class: "row" },
+        el("button", { class: "primary grow", onclick: () => { answers[q.id] = true; ask(i + 1); } }, c.answers.yes),
+        el("button", { class: "grow", onclick: () => { answers[q.id] = false; ask(i + 1); } }, c.answers.no)),
+      el("button", { class: "link", onclick: () => socket.send({ type: "exit_answer", answers, reseat: true }) }, c.answers.reseat));
+  };
+  ask(0);
 }
 
 $("mic").addEventListener("click", toggleMic);

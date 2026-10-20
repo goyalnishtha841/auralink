@@ -110,14 +110,29 @@ def card_for_crew(card: Card) -> dict:
     return data
 
 
+def exit_seats() -> list[str]:
+    rows = {str(r) for r in templates.exit_rows}
+    return [s for s in SEAT_IDS if s[:-1] in rows]
+
+
 def crew_state() -> dict:
     b = cabin.broadcast
+    briefing = None
+    if b:
+        t = templates.safety[b.template_id]
+        briefing = {
+            "id": b.id, "template_id": b.template_id, "title_ja": t["title"]["ja"], "title_en": t["title"]["en"],
+            "steps": [{"pictogram": st["pictogram"], "ja": st["text"]["ja"], "en": st["simple"]["en"]} for st in t["steps"]],
+            "detail": {seat: a.model_dump() for seat, a in b.responses.items()},
+        }
     return {
         "type": "state",
         "phase": cabin.phase,
         "cards": [card_for_crew(c) for c in cabin.crew_cards()],
         "heatmap": cabin.heatmap(),
-        "broadcast": {"id": b.id, "template_id": b.template_id} if b else None,
+        "broadcast": briefing,
+        "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
+                        for c in cabin.exit_checks.values()],
     }
 
 
@@ -198,6 +213,7 @@ def config() -> dict:
         "intents": [{"id": i.id, "icon": i.icon, "label": i.label, "urgent": i.urgent} for i in lexicon.intents],
         "replies": templates.data["replies"],
         "safety": [{"id": s["id"], "title": s["title"]} for s in templates.data["safety"]],
+        "exit_seats": exit_seats(),
     }
 
 
@@ -306,7 +322,13 @@ async def handle_passenger(seat: str, msg: dict) -> None:
             await to_seat(seat, {"type": "grid", "reason": "rejected", "card_id": card.id})
 
     elif kind == "safety":
-        cabin.safety_response(seat, bool(msg.get("understood")))
+        status = msg.get("status") or ("understood" if msg.get("understood") else "reexplaining")
+        cabin.safety_response(seat, status, msg.get("step"))
+
+    elif kind == "exit_answer":
+        check = cabin.exit_answer(seat, msg.get("answers", {}), bool(msg.get("reseat")), templates.exit_question_ids)
+        await to_seat(seat, {"type": "exit_done", "result": check.result,
+                             "message": templates.exit_done(check.result, s.lang)})
 
     await push_crew()
 
@@ -341,10 +363,18 @@ async def handle_crew(msg: dict) -> None:
     elif kind == "phase" and msg.get("phase") in PHASES:
         cabin.phase = msg["phase"]
     elif kind == "broadcast":
+        templates.reload_if_changed()
         b = cabin.start_broadcast(msg["template_id"])
         for seat, sockets in passengers.items():
             view = templates.safety_view(b.template_id, cabin.seats[seat].lang)
             await _send(sockets, {"type": "safety", "broadcast_id": b.id, "template": view})
+    elif kind == "end_broadcast":
+        cabin.broadcast = None
+    elif kind == "exit_check":
+        templates.reload_if_changed()
+        for check in cabin.start_exit_check(exit_seats()):
+            view = templates.exit_view(cabin.seats[check.seat].lang)
+            await _send(passengers[check.seat], {"type": "exit_check", "check": view})
     await push_crew()
 
 
