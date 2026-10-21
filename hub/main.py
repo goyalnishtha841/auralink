@@ -22,7 +22,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import checkin, demo, languages, persist, recordings
+from . import checkin, demo, languages, pa, persist, recordings
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -84,6 +84,7 @@ async def revalidate_static(request, call_next):
     return response
 lexicon = Lexicon()
 templates = Templates()
+pa_library = pa.Library()
 cabin = Cabin(lexicon)
 for _seat, _prefs in checkin.load().items():          # check-ins survive a hub restart
     if _seat in cabin.seats:
@@ -155,6 +156,7 @@ def crew_state() -> dict:
         "broadcast": briefing,
         "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
                         for c in cabin.exit_checks.values()],
+        "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
         "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "checked_in", "connected"})
                        for s in cabin.seats.values() if s.lang != "en" or s.senior or s.pictures or s.read],
     }
@@ -289,6 +291,68 @@ async def presenter_crew(msg: dict) -> dict:
     return {"done": msg["type"]}
 
 
+# --- live PA captions --------------------------------------------------------------------------------
+
+PA_MAX_S = 30
+
+
+class PaHeardIn(BaseModel):
+    text: str | None = Field(None, max_length=600)   # typed (presenter backup, tests) ...
+    audio_b64: str | None = None                       # ... or the crew's announcement, 16 kHz mono int16
+
+
+@app.post("/api/pa/match")
+async def pa_match(body: PaHeardIn) -> dict:
+    """What did the crew announce? Speech is decoded as Japanese and English; every reading is matched
+    against the library and the best one wins. Nothing is sent to passengers until the crew tap Send."""
+    import base64
+
+    import numpy as np
+
+    if body.audio_b64:
+        pcm = base64.b64decode(body.audio_b64)
+        if len(pcm) > PA_MAX_S * 16_000 * 2:
+            raise HTTPException(413, f"Announcement longer than {PA_MAX_S} s: send it in parts")
+        audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
+        try:
+            tr = await asyncio.to_thread(run_asr, audio, ("ja", "en"))
+        except ImportError:
+            raise HTTPException(503, "voice unavailable: faster-whisper not installed") from None
+        readings = [h.text for h in tr.hypotheses] or [""]
+        latency = tr.latency_ms
+    else:
+        readings, latency = [body.text or ""], {}
+    t = time.perf_counter()
+    results = [pa_library.match(r) for r in readings]
+    best = max(results, key=lambda r: r["matches"][0]["score"] if r["matches"] else 0.0)
+    latency = {**latency, "match": round((time.perf_counter() - t) * 1000, 1)}
+    for m in best["matches"]:
+        m.update(pa_library.caption(m["id"], "en", m["n"]))
+    return {**best, "readings": readings, "latency_ms": latency}
+
+
+class PaSendIn(BaseModel):
+    id: str
+    n: str | None = Field(None, max_length=4, pattern=r"^[0-9]{1,3}[A-Z]?$")
+
+
+@app.post("/api/pa/send")
+async def pa_send(body: PaSendIn) -> dict:
+    """Caption one announcement on every connected seat, each in its own language."""
+    pa_library.reload_if_changed()
+    if body.id not in pa_library.items:
+        raise HTTPException(404, f"No announcement {body.id!r}")
+    entry = cabin.add_pa(body.id, body.n)
+    seats = 0
+    for seat, sockets in passengers.items():
+        if sockets:
+            seats += 1
+            await _send(sockets, {"type": "pa", "pa_id": entry["pa_id"],
+                                  "caption": pa_library.caption(body.id, cabin.seats[seat].lang, body.n)})
+    await push_crew()
+    return {"sent": body.id, "seats": seats}
+
+
 @app.get("/api/report")
 def report() -> dict:
     """Flight report since the last cabin reset (report.html)."""
@@ -350,6 +414,7 @@ def config() -> dict:
         "replies": templates.data["replies"],
         "safety": [{"id": s["id"], "title": s["title"]} for s in templates.data["safety"]],
         "phrasebook": {k: v for k, v in templates.data["phrasebook"].items() if not k.startswith("_")},
+        "announcements": pa_library.menu(),
         "exit_seats": exit_seats(),
         "languages": [{"code": lang["code"], "name": lang["name"]} for lang in languages.registry()],
     }

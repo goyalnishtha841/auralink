@@ -125,3 +125,17 @@ button.listen .icon .ic { width: 22px; height: 22px; color: var(--info); }
 .grid.triage { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid.triage .tile .icon { color: var(--bad); }
 .grid.triage .tile .icon .ic { width: 44px; height: 44px; }
+
+/* live PA caption: a banner over the top of the seat screen, in the passenger's language */
+.pa-banner { position: fixed; left: 12px; right: 12px; top: 12px; z-index: 30; display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center;
+             padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 2px solid var(--info); box-shadow: 0 18px 50px rgba(0, 0, 0, .45);
+             animation: paIn .35s cubic-bezier(.2, .8, .2, 1); }
+.pa-banner .icon .ic { width: 44px; height: 44px; color: var(--info); }
+.pa-banner .pa-tag { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--info); font-weight: 700; }
+.pa-banner .pa-text { font-size: 20px; line-height: 1.4; font-weight: 600; margin: 2px 0 0; }
+.pa-banner .pa-en { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.pa-banner .pa-acts { display: flex; gap: 6px; align-items: center; }
+.big .pa-banner .pa-text { font-size: 26px; }
+@media (max-width: 520px) { .pa-banner { grid-template-columns: 40px minmax(0, 1fr); } .pa-banner .pa-acts { grid-column: 1 / -1; justify-content: flex-end; } .pa-banner .icon .ic { width: 34px; height: 34px; } }
+@keyframes paIn { from { transform: translateY(-120%); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pa-banner { animation: none; } }

@@ -36,6 +36,7 @@
     </div>
   </main>
   <div id="overlay"></div>
+  <div id="pa" aria-live="assertive"></div>
 
 <script type="module">
 import { Recorder, connect, el, loadConfig } from "./common.js";
@@ -204,6 +205,8 @@ function onMessage(msg) {
   } else if (msg.type === "notice") {
     $("title").textContent = msg.message;
     setTimeout(() => ($("title").textContent = t("title")), 6000);
+  } else if (msg.type === "pa") {
+    showCaption(msg.caption);
   } else if (msg.type === "safety") {
     attention();
     showBriefing(msg.template);
@@ -222,6 +225,21 @@ function onMessage(msg) {
     sheet(el("h2", {}, t("thanks")), el("p", {}, msg.message),
       el("button", { class: "primary", onclick: closeSheet }, t("ok")));
   }
+}
+
+// --- live PA caption: what the crew just announced, in this passenger's language ------------------
+let captionTimer = 0;
+function showCaption(c) {
+  attention();   // flash + vibration: the passenger may not hear the announcement at all
+  say(c.text);
+  const close = () => { clearTimeout(captionTimer); $("pa").replaceChildren(); };
+  $("pa").replaceChildren(el("div", { class: "pa-banner", role: "alert" },
+    icon(c.icon),
+    el("div", {}, el("div", { class: "pa-tag" }, t("announcement")), el("p", { class: "pa-text" }, c.text),
+      lang !== "en" ? el("p", { class: "pa-en", lang: "en" }, c.text_en) : null),
+    el("div", { class: "pa-acts" }, listenBtn(c.text), el("button", { class: "primary", onclick: close }, t("ok")))));
+  clearTimeout(captionTimer);
+  captionTimer = setTimeout(close, 90_000);
 }
 
 // --- medical: what is wrong? Six big pictures, so crew know before they reach the seat ------------

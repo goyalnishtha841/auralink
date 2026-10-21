@@ -83,6 +83,7 @@ class Cabin:
         self.broadcast: Broadcast | None = None
         self.past_broadcasts: list[Broadcast] = []
         self.exit_checks: dict[str, ExitCheck] = {}
+        self.pa_log: list[dict] = []          # captioned announcements: {pa_id, id, n, at}
         self._ids = itertools.count(1)
 
     def reset(self) -> None:
@@ -91,6 +92,7 @@ class Cabin:
         self.broadcast = None
         self.past_broadcasts.clear()
         self.exit_checks.clear()
+        self.pa_log.clear()
         self.phase = "cruise"
         for seat in self.seats.values():
             seat.failed_attempts = 0
@@ -199,6 +201,11 @@ class Cabin:
     def start_exit_check(self, seats: list[str]) -> list[ExitCheck]:
         self.exit_checks = {s: ExitCheck(seat=s) for s in seats if s in self.seats}
         return list(self.exit_checks.values())
+
+    def add_pa(self, announcement_id: str, n: str | None = None) -> dict:
+        entry = {"pa_id": f"pa{next(self._ids)}", "id": announcement_id, "n": n, "at": time.time()}
+        self.pa_log.append(entry)
+        return entry
 
     def heatmap(self) -> dict[str, str]:
         """Per seat: understood / understood_again / reexplaining / stuck / pending / idle / offline."""

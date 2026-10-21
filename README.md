@@ -91,6 +91,17 @@ requests in Japanese. Only the fixed, pre-approved sentences are spoken (`apps/s
 voice services are never used, and it stays off in picture-only mode. If a device has no voice for a
 language, the option is hidden.
 
+## Live PA captions
+
+On the crew tablet, **Live PA captions → Record announcement**, then make the announcement as usual
+(Japanese or English, up to 30 s). Whisper decodes it in both languages, each reading is matched against
+[data/templates/announcements.json](data/templates/announcements.json) by its key phrases, and the crew
+see the match (with minutes or a gate number taken from the speech) before tapping **Send to all
+seats**. Every seat shows a banner in its own language, with a screen flash and vibration for
+passengers who cannot hear the PA. An announcement that is not in the library is not captioned and
+the crew are told so: Auralink never machine-translates. Typed text works too (`POST /api/pa/match`
+with `{"text": ...}`, then `POST /api/pa/send` with `{"id": "descent", "n": "20"}`).
+
 ## Adding a language (no code, no retraining)
 
 1. `data/languages.json`: add `{"code": "bn", "name": "বাংলা", "asr": ["en", "bn"]}`, and the script's
