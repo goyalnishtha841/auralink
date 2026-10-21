@@ -1,8 +1,40 @@
 # Auralink
 
+[![tests](https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml/badge.svg)](https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Repair-first passenger–crew communication for JAL-PS-02 (Thapar Japan Hackathon 2026).
 When speech recognition is unsure, Auralink asks the passenger the easiest possible follow-up
 instead of guessing, and it checks that passengers actually understood safety instructions.
+
+## Features
+
+- **Voice or icons, in the passenger's language**: Whisper n-best plus a phonetic matcher, with a
+  confirm step instead of guessing ([what is real](#what-is-real-and-what-is-a-placeholder))
+- **Accent-aware matching** with hand-set and learned accent costs ([evaluation](#evaluation),
+  [learned costs](#learned-accent-costs))
+- **Check-in at the gate** for language and accessibility needs ([check-in](#check-in-the-airport-stage))
+- **Read aloud** with the phone's offline voice ([read aloud](#read-aloud))
+- **Live PA captions** from pre-approved announcements, never machine translation ([PA captions](#live-pa-captions))
+- **Care rounds**: one trolley loop for open requests and check-ins for quiet passengers ([care rounds](#care-rounds))
+- **Crash recovery**: cabin state survives a hub restart ([crash recovery](#crash-recovery))
+- **New languages without code or retraining** ([adding a language](#adding-a-language-no-code-no-retraining))
+- **Voice collection** for the held-out evaluation set ([collecting voices](#collecting-voices))
+
+## Architecture
+
+```
+ Passenger phone ─┐
+ Crew tablet ─────┼── WebSockets (cabin Wi-Fi) ──▶  Cabin hub (FastAPI on a laptop, hub/)
+ Jury screen ─────┘                                     │
+                                                        ▼
+                                  Engine (engine/): Silero VAD → Whisper n-best (en + passenger language)
+                                                    → phonetic matcher (eSpeak-NG + accent costs)
+                                                    → context priors → confirm cards
+```
+
+Everything runs offline on the laptop: no cloud speech, translation or LLM calls. Screens are plain
+HTML/JS served by the hub; crew-facing text comes from pre-approved templates.
 
 ## Run it
 
@@ -29,7 +61,8 @@ and say "thoda wotter and kambal", or type it.
 The first start downloads Whisper `base` (~145 MB) into the Hugging Face cache; after that
 everything runs offline. Choose another model with `AURALINK_ASR_MODEL=small scripts/run.sh`.
 
-Run the tests with `.venv/bin/python -m pytest -q`.
+Run the tests with `.venv/bin/python -m pytest -q` and the linter with `.venv/bin/ruff check .`; CI runs both
+on every push (voice tests that need the Whisper model are skipped there via `AURALINK_SKIP_WHISPER=1`).
 
 ### On phones
 
@@ -58,7 +91,7 @@ certificate on each demo phone.
 | `engine/` | A | `interpret(nbest, context, lexicon) -> Result`. ASR in `asr.py`, matcher in `matcher.py` |
 | `data/`, `eval/` | B | Intent lexicon, message templates, recording prompts and API (`hub/recordings.py`), evaluation |
 | `hub/`, `hardware/` | C | FastAPI + WebSocket hub, card state machine, safety heat map, ESP32 panel |
-| `apps/` | D | Passenger, crew and judge screens (current ones are placeholders) |
+| `apps/` | D | Plain HTML/JS screens: passenger, crew tablet, judge glass-box, presenter, check-in, report, recording |
 
 ## Collecting voices
 

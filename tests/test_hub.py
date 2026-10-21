@@ -1,4 +1,6 @@
 """End-to-end through the real WebSockets: passenger -> hub -> crew."""
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -95,8 +97,14 @@ def _clip_pcm(name: str) -> bytes:
         return w.readframes(w.getnframes())
 
 
-def test_voice_request_end_to_end(client):
+def _needs_whisper():
     pytest.importorskip("faster_whisper")
+    if os.environ.get("AURALINK_SKIP_WHISPER") == "1":  # CI: don't download the model
+        pytest.skip("Whisper disabled by AURALINK_SKIP_WHISPER")
+
+
+def test_voice_request_end_to_end(client):
+    _needs_whisper()
     with client.websocket_connect("/ws/passenger/33H") as pax:
         pax.send_bytes(_clip_pcm("rishi_water_blanket"))  # "Madam, thoda wotter and kambal please"
         assert pax.receive_json()["type"] == "thinking"
@@ -106,7 +114,7 @@ def test_voice_request_end_to_end(client):
 
 
 def test_silence_goes_to_icon_grid(client):
-    pytest.importorskip("faster_whisper")
+    _needs_whisper()
     with client.websocket_connect("/ws/passenger/33J") as pax:
         pax.send_bytes(bytes(16_000 * 2))  # one second of silence
         assert pax.receive_json()["type"] == "thinking"
@@ -139,7 +147,7 @@ def test_explain_endpoint_shows_the_reasoning(client):
 
 
 def test_judge_gets_explanation_for_voice():
-    pytest.importorskip("faster_whisper")
+    _needs_whisper()
     # one shared event loop for both sockets, as on the real server (separate TestClient portals stall
     # when one connection's handler sends a large message to the other)
     with TestClient(main.app) as shared, shared.websocket_connect("/ws/judge") as judge, \
@@ -195,7 +203,7 @@ def test_picture_mode_reaches_crew_card():
 
 
 def test_presenter_backup_reset_and_status():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew"), \
             shared.websocket_connect("/ws/passenger/34K") as pax:
         r = shared.post("/api/presenter/say", json={"seat": "34K", "text": "I have chest pain"}).json()
         assert r["seat_has_screen"] is True

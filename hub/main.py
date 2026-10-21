@@ -14,13 +14,13 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from engine import PHASES, Context, Hypothesis, Lexicon, interpret
-from engine.types import Phase
 from engine.lexicon import ROOT
+from engine.types import Phase
 
 from . import checkin, demo, languages, pa, persist, recordings, rounds
 from . import report as flight_report
