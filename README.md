@@ -178,6 +178,21 @@ deck). Compares Baseline A (first result, keywords, no confirmation) with four A
 The text challenge set was used to develop the matcher, so its numbers are optimistic; the claims
 for the final presentation must come from the held-out volunteer recordings.
 
+### Learned accent costs
+
+```bash
+.venv/bin/python scripts/learn_costs.py          # from the synthetic voices (run evaluate.py first)
+.venv/bin/python scripts/learn_costs.py --real   # + volunteer read-aloud prompts, train split only
+```
+
+Compares what each speaker meant with what Whisper heard, sound by sound, and counts the swaps
+(ɑ heard as ɔ, w as v ...). A swap seen at least 3 times becomes cheaper
+(`cost = max(0.15, 1 − n/(n+3))`); one-off noise and sentences Whisper got completely wrong are
+skipped. Writes `data/lexicon/phone_costs_learned.json` and [eval/learned_costs.md](eval/learned_costs.md);
+`evaluate.py` then adds a "hybrid, learned costs" row. Honest status: the synthetic voices are too
+few, so no swap has been seen often enough yet and the learned table equals the hand-set one. It
+needs the volunteer recordings; only the train split is used, so the test split stays a fair exam.
+
 ## Speech-to-text spike (2026-10-21)
 
 `scripts/asr_spike.py` → [eval/asr_spike_results.md](eval/asr_spike_results.md). Stand-in voices

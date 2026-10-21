@@ -19,6 +19,7 @@ from pathlib import Path
 from .lexicon import ROOT
 
 COSTS_FILE = ROOT / "data" / "lexicon" / "phone_costs.json"
+LEARNED_COSTS_FILE = ROOT / "data" / "lexicon" / "phone_costs_learned.json"   # scripts/learn_costs.py
 LANGUAGES_FILE = ROOT / "data" / "languages.json"
 _VOWEL_CHARS = set("aeiouyɑæʌɐəɛɪɔʊɚɜøœɒɤɯʉ")
 
@@ -269,10 +270,16 @@ _shared_lock = threading.Lock()
 
 
 def make_similarity(kind: str = "phonetic") -> PhoneticSimilarity:
-    """kind: "phonetic" (accent cost matrix) or "phonetic_uniform" (plain phoneme edit distance)."""
+    """kind: "phonetic" (hand-set accent costs), "phonetic_learned" (costs learned from recordings by
+    scripts/learn_costs.py) or "phonetic_uniform" (plain phoneme edit distance)."""
     global _shared
     with _shared_lock:
         if _shared is None:
             _shared = Phonemizer()
-    costs = Costs(None) if kind == "phonetic_uniform" else Costs.load()
+    if kind == "phonetic_uniform":
+        costs = Costs(None)
+    elif kind == "phonetic_learned":
+        costs = Costs.load(LEARNED_COSTS_FILE)
+    else:
+        costs = Costs.load()
     return PhoneticSimilarity(_shared, costs, kind)

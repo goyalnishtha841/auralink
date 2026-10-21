@@ -137,6 +137,10 @@ def make_similarity(kind: str) -> Similarity:
 
         if kind == "hybrid":
             return HybridSimilarity(make_phonetic("phonetic"))
+        if kind == "hybrid_learned":
+            h = HybridSimilarity(make_phonetic("phonetic_learned"))
+            h.name = "hybrid_learned"
+            return h
         return make_phonetic(kind)
     except Exception as e:  # eSpeak-NG or phonemizer missing: keep working with spelling matching
         log.warning("phonetic matcher unavailable (%s); using text similarity", e)
