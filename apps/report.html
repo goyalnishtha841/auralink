@@ -74,6 +74,16 @@
         <div id="exit"></div>
       </section>
     </div>
+    <div class="grid2">
+      <section class="panel">
+        <h2>機内アナウンス字幕 · PA captions</h2>
+        <div id="pa"></div>
+      </section>
+      <section class="panel">
+        <h2>ケアラウンド · Care rounds</h2>
+        <div id="rounds"></div>
+      </section>
+    </div>
   </main>
 
 <script type="module">
@@ -154,6 +164,33 @@ function render(r) {
     el("div", { class: "chips" }, el("span", { class: "chip" }, `Passed: ${e.pass}`), el("span", { class: "chip" }, `Need a talk: ${e.talk}`), el("span", { class: "chip" }, `No answer: ${e.pending}`)),
     ...e.talk_seats.map((t) => el("p", {}, el("strong", {}, t.seat), ` · ${t.reseat ? "asked for another seat" : `answered No to: ${t.no_to.map((x) => x.replace("_", " ")).join(", ")}`}`)),
   ] : [el("p", { class: "empty" }, "No exit-row check run yet.")]));
+  renderPa(r.announcements);
+  renderRounds(r.care_rounds);
+}
+
+function renderPa(p) {
+  $("pa").replaceChildren(...(p.count ? [
+    el("div", { class: "chips" }, el("span", { class: "chip" }, `Captions sent: ${p.count}`),
+      el("span", { class: "chip" }, `Languages: ${p.languages.map((c) => LANG[c] || c).join(", ") || "–"}`)),
+    el("table", {}, el("thead", {}, el("tr", {}, el("th", {}, "Time"), el("th", {}, "Announcement"), el("th", {}, "Seats"))),
+      el("tbody", {}, ...p.items.map((a) => el("tr", {},
+        el("td", {}, new Date(a.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })),
+        el("td", {}, `${a.title_ja} · ${a.title_en}${a.n ? ` (${a.n})` : ""}`),
+        el("td", { class: "n" }, a.seats == null ? "–" : String(a.seats)))))),
+  ] : [el("p", { class: "empty" }, "No announcement captioned yet.")]));
+}
+
+function renderRounds(c) {
+  const saved = c.walk_rows.saved;
+  $("rounds").replaceChildren(...(c.count ? [
+    el("div", { class: "chips" },
+      el("span", { class: "chip" }, `Rounds: ${c.count}${c.in_progress ? " (one in progress)" : ""}`),
+      el("span", { class: "chip" }, `Requests delivered: ${c.requests_delivered}`),
+      el("span", { class: "chip" }, `Check-in visits: ${c.check_ins_done} of ${c.check_ins}`),
+      el("span", { class: "chip" }, `Median round: ${c.minutes.n ? `${c.minutes.median} min` : "–"}`)),
+    el("p", {}, saved == null ? "No deliveries yet." :
+      `About ${Math.round(saved * 100)}% less walking than one trip per request (${c.walk_rows.rounds} rows walked instead of ${c.walk_rows.separate}; an estimate from seat rows).`),
+  ] : [el("p", { class: "empty" }, "No care round started yet.")]));
 }
 
 async function load() { render(await (await crewFetch("/api/report")).json()); }

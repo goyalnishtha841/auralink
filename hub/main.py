@@ -347,12 +347,14 @@ async def pa_send(body: PaSendIn) -> dict:
     if body.id not in pa_library.items:
         raise HTTPException(404, f"No announcement {body.id!r}")
     entry = cabin.add_pa(body.id, body.n)
-    seats = 0
+    seats, langs = 0, set()
     for seat, sockets in passengers.items():
         if sockets:
             seats += 1
+            langs.add(cabin.seats[seat].lang)
             await _send(sockets, {"type": "pa", "pa_id": entry["pa_id"],
                                   "caption": pa_library.caption(body.id, cabin.seats[seat].lang, body.n)})
+    entry.update(seats=seats, langs=sorted(langs))      # for the flight report
     await push_crew()
     return {"sent": body.id, "seats": seats}
 
@@ -361,7 +363,7 @@ async def pa_send(body: PaSendIn) -> dict:
 def report() -> dict:
     """Flight report since the last cabin reset (report.html)."""
     templates.reload_if_changed()
-    return flight_report.build(cabin, templates)
+    return flight_report.build(cabin, templates, pa_library)
 
 
 @app.get("/api/report.csv", dependencies=CREW)

@@ -11,6 +11,7 @@ import io
 import statistics
 import time
 
+from .rounds import GALLEY_ROW
 from .state import Cabin, Card
 
 
@@ -42,7 +43,42 @@ def summary(values: list[float]) -> dict:
             "p90": round(ordered[max(0, int(0.9 * len(ordered)) - 1)], 1), "max": round(ordered[-1], 1)}
 
 
-def build(cabin: Cabin, templates) -> dict:
+def pa_report(cabin: Cabin, library) -> dict:
+    """Announcements captioned on the seats: which, when, and how many seats and languages got them."""
+    items = []
+    for a in cabin.pa_log:
+        item = library.items.get(a["id"]) if library else None
+        items.append({"at": a["at"], "id": a["id"], "n": a.get("n"),
+                      "title_en": item["title"]["en"] if item else a["id"], "title_ja": item["title"]["ja"] if item else "",
+                      "seats": a.get("seats"), "langs": a.get("langs", [])})
+    return {"count": len(items), "items": items,
+            "languages": sorted({code for i in items for code in i["langs"]})}
+
+
+def rounds_report(cabin: Cabin) -> dict:
+    """Care rounds: requests delivered in one trip, check-in stops, and walking saved (in rows, an estimate)."""
+    done = [r for r in cabin.past_rounds + ([cabin.round] if cabin.round else [])]
+    stops = [st for r in done for st in r["stops"]]
+    separate = loop = 0
+    for r in done:
+        rows = [int(st["seat"][:-1]) for st in r["stops"]]
+        separate += sum(2 * (int(st["seat"][:-1]) - GALLEY_ROW) * len(st["cards"]) for st in r["stops"])
+        loop += 2 * (max(rows, default=GALLEY_ROW) - GALLEY_ROW)
+    minutes = [round((r["ended_at"] - r["started_at"]) / 60, 1) for r in done if r.get("ended_at")]
+    return {
+        "count": len(done),
+        "in_progress": cabin.round is not None,
+        "stops": len(stops),
+        "requests_delivered": sum(len(st["cards"]) for st in stops if st.get("done")),
+        "check_ins": sum(1 for st in stops if st.get("care")),
+        "check_ins_done": sum(1 for st in stops if st.get("care") and st.get("done")),
+        "minutes": summary(minutes),
+        "walk_rows": {"separate": separate, "rounds": loop,
+                      "saved": round(1 - loop / separate, 3) if separate else None},
+    }
+
+
+def build(cabin: Cabin, templates, pa_library=None) -> dict:
     cards = list(cabin.cards.values())
     outcomes = {c.id: outcome(c) for c in cards}
     count = lambda key: {k: sum(1 for c in cards if key(c) == k) for k in sorted({key(c) for c in cards})}  # noqa: E731
@@ -92,6 +128,8 @@ def build(cabin: Cabin, templates) -> dict:
                        "time_to_acknowledge_s": summary([v for c in urgent if (v := seconds(c, "acknowledged")) is not None])},
         },
         "briefings": briefings,
+        "announcements": pa_report(cabin, pa_library),
+        "care_rounds": rounds_report(cabin),
         "exit_row": {"checked": len(exits), "pass": sum(e.result == "pass" for e in exits),
                      "talk": sum(e.result == "talk" for e in exits), "pending": sum(e.result == "pending" for e in exits),
                      "talk_seats": [{"seat": e.seat, "reseat": e.reseat,

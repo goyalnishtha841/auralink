@@ -22,7 +22,7 @@
   --glass: rgba(18, 26, 54, 0.62);
 
   --display: "Outfit", "Noto Sans", system-ui, sans-serif;
-  --body: "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", system-ui, sans-serif;
+  --body: "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
 
   --r-sm: 10px;

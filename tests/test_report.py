@@ -70,3 +70,24 @@ def test_csv_and_endpoint(monkeypatch, crew_login):
     assert client.get("/api/report").json()["requests"]["total"] == 5
     csv = client.get("/api/report.csv")
     assert csv.headers["content-type"].startswith("text/csv") and "attachment" in csv.headers["content-disposition"]
+
+
+def test_pa_captions_and_care_rounds_in_report():
+    from hub import pa, rounds
+
+    cabin = Cabin(Lexicon())
+    entry = cabin.add_pa("descent", "20")
+    entry.update(seats=3, langs=["hi", "ta"])
+    cabin.icon_request("31A", "blanket")
+    cabin.icon_request("34K", "water")
+    cabin.start_round(rounds.plan(cabin))
+    cabin.finish_stop("31A")
+    cabin.finish_stop("34K")                       # last stop ends the round
+
+    r = flight_report.build(cabin, Templates(), pa.Library())
+    a = r["announcements"]
+    assert a["count"] == 1 and a["items"][0]["title_en"] == "Starting descent" and a["items"][0]["n"] == "20"
+    assert a["languages"] == ["hi", "ta"]
+    c = r["care_rounds"]
+    assert (c["count"], c["requests_delivered"], c["check_ins"], c["in_progress"]) == (1, 2, 0, False)
+    assert c["walk_rows"] == {"separate": 4 + 10, "rounds": 10, "saved": round(1 - 10 / 14, 3)}
