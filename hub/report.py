@@ -13,6 +13,7 @@ import time
 
 from .state import Cabin, Card
 
+
 def outcome(card: Card) -> str:
     """One label per request, from the passenger's side."""
     t = card.timeline
