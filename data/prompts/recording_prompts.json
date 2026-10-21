@@ -1,31 +1,493 @@
 {
-  "_note": "Prompts for the recording page. 'free' prompts come first in every session so our scripted wording does not shape how people phrase requests. 'none' prompts are not requests: they measure false alarms (wrong-action rate).",
-  "prompts": [
-    {"id": "f_water",   "kind": "free", "intents": ["water"],     "text": {"en": "Ask the crew for water, in your own words.",            "hi": "क्रू से पानी माँगिए, अपने शब्दों में।"}},
-    {"id": "f_tea",     "kind": "free", "intents": ["tea"],       "text": {"en": "Ask for tea or coffee, the way you normally would.",     "hi": "चाय या कॉफ़ी माँगिए, जैसे आप आमतौर पर माँगते हैं।"}},
-    {"id": "f_blanket", "kind": "free", "intents": ["blanket"],   "text": {"en": "You feel cold. Ask for a blanket.",                      "hi": "आपको ठंड लग रही है। कंबल माँगिए।"}},
-    {"id": "f_pillow",  "kind": "free", "intents": ["pillow"],    "text": {"en": "Ask for a pillow.",                                      "hi": "तकिया माँगिए।"}},
-    {"id": "f_toilet",  "kind": "free", "intents": ["toilet"],    "text": {"en": "Ask where the toilet is.",                               "hi": "पूछिए कि शौचालय कहाँ है।"}},
-    {"id": "f_meal",    "kind": "free", "intents": ["meal"],      "text": {"en": "Ask about food, for example vegetarian food.",           "hi": "खाने के बारे में पूछिए, जैसे शाकाहारी खाना।"}},
-    {"id": "f_medical", "kind": "free", "intents": ["medical"],   "text": {"en": "You suddenly feel unwell. Tell the crew.",               "hi": "अचानक आपकी तबीयत ठीक नहीं लग रही। क्रू को बताइए।"}},
-    {"id": "f_crew",    "kind": "free", "intents": ["call_crew"], "text": {"en": "Call a crew member to your seat.",                       "hi": "क्रू सदस्य को अपनी सीट पर बुलाइए।"}},
-    {"id": "f_soft",    "kind": "free", "intents": ["water"],     "text": {"en": "People nearby are sleeping. Quietly ask for water.",     "hi": "आस-पास लोग सो रहे हैं। धीरे से पानी माँगिए।"}},
-
-    {"id": "r_paani",       "kind": "read", "intents": ["water"],            "text": {"en": "Thoda paani dijiye.",                        "hi": "थोड़ा पानी दीजिए।"}},
-    {"id": "r_water_en",    "kind": "read", "intents": ["water"],            "text": {"en": "Can I get some water, please?",              "hi": "Can I get some water, please?"}},
-    {"id": "r_blanket",     "kind": "read", "intents": ["blanket"],          "text": {"en": "Madam, ek blanket milega?",                  "hi": "मैडम, एक ब्लैंकेट मिलेगा?"}},
-    {"id": "r_kambal",      "kind": "read", "intents": ["blanket"],          "text": {"en": "Bahut thand hai, kambal chahiye.",           "hi": "बहुत ठंड है, कंबल चाहिए।"}},
-    {"id": "r_washroom",    "kind": "read", "intents": ["toilet"],           "text": {"en": "Washroom kahan hai?",                        "hi": "वॉशरूम कहाँ है?"}},
-    {"id": "r_chai",        "kind": "read", "intents": ["tea"],              "text": {"en": "Mujhe ek chai chahiye.",                     "hi": "मुझे एक चाय चाहिए।"}},
-    {"id": "r_veg",         "kind": "read", "intents": ["meal"],             "text": {"en": "Is there vegetarian food?",                  "hi": "Is there vegetarian food?"}},
-    {"id": "r_pillow",      "kind": "read", "intents": ["pillow"],           "text": {"en": "One pillow please.",                         "hi": "One pillow please."}},
-    {"id": "r_dawai",       "kind": "read", "intents": ["medical"],          "text": {"en": "Mujhe dawai chahiye, sir mein dard hai.",    "hi": "मुझे दवाई चाहिए, सिर में दर्द है।"}},
-    {"id": "r_chest",       "kind": "read", "intents": ["medical"],          "text": {"en": "I have chest pain.",                         "hi": "I have chest pain."}},
-    {"id": "r_come",        "kind": "read", "intents": ["call_crew"],        "text": {"en": "Excuse me, please come here.",               "hi": "Excuse me, please come here."}},
-    {"id": "r_water_kambal","kind": "read", "intents": ["water", "blanket"], "text": {"en": "Thoda water and kambal please.",             "hi": "थोड़ा वॉटर और कंबल प्लीज़।"}},
-    {"id": "r_chai_takiya", "kind": "read", "intents": ["tea", "pillow"],    "text": {"en": "Chai aur ek takiya dijiye.",                 "hi": "चाय और एक तकिया दीजिए।"}},
-
-    {"id": "n_thanks",      "kind": "read", "intents": [],                   "text": {"en": "Thank you so much, that's all.",             "hi": "बहुत धन्यवाद, बस इतना ही।"}},
-    {"id": "n_fine",        "kind": "read", "intents": [],                   "text": {"en": "No thanks, I'm fine.",                       "hi": "नहीं, धन्यवाद, मैं ठीक हूँ।"}}
-  ]
+ "_note": "Prompts for the recording page. 'free' prompts come first in every session so our scripted wording does not shape how people phrase requests. 'none' prompts are not requests: they measure false alarms (wrong-action rate). 'for' limits a prompt to volunteers using the page in those languages (Hindi phrases for Hindi speakers, Tamil for Tamil ...); without it, everyone gets it.",
+ "prompts": [
+  {
+   "id": "f_water",
+   "kind": "free",
+   "intents": [
+    "water"
+   ],
+   "text": {
+    "en": "Ask the crew for water, in your own words.",
+    "hi": "क्रू से पानी माँगिए, अपने शब्दों में।",
+    "ta": "குழுவினரிடம் தண்ணீர் கேளுங்கள், உங்கள் சொந்த வார்த்தைகளில்.",
+    "th": "ขอน้ำจากลูกเรือ ด้วยคำพูดของคุณเอง"
+   }
+  },
+  {
+   "id": "f_tea",
+   "kind": "free",
+   "intents": [
+    "tea"
+   ],
+   "text": {
+    "en": "Ask for tea or coffee, the way you normally would.",
+    "hi": "चाय या कॉफ़ी माँगिए, जैसे आप आमतौर पर माँगते हैं।",
+    "ta": "டீ அல்லது காபி கேளுங்கள், வழக்கமாகக் கேட்பது போல.",
+    "th": "ขอชาหรือกาแฟ แบบที่คุณขอตามปกติ"
+   }
+  },
+  {
+   "id": "f_blanket",
+   "kind": "free",
+   "intents": [
+    "blanket"
+   ],
+   "text": {
+    "en": "You feel cold. Ask for a blanket.",
+    "hi": "आपको ठंड लग रही है। कंबल माँगिए।",
+    "ta": "உங்களுக்குக் குளிர்கிறது. போர்வை கேளுங்கள்.",
+    "th": "คุณรู้สึกหนาว ขอผ้าห่ม"
+   }
+  },
+  {
+   "id": "f_pillow",
+   "kind": "free",
+   "intents": [
+    "pillow"
+   ],
+   "text": {
+    "en": "Ask for a pillow.",
+    "hi": "तकिया माँगिए।",
+    "ta": "தலையணை கேளுங்கள்.",
+    "th": "ขอหมอน"
+   }
+  },
+  {
+   "id": "f_toilet",
+   "kind": "free",
+   "intents": [
+    "toilet"
+   ],
+   "text": {
+    "en": "Ask where the toilet is.",
+    "hi": "पूछिए कि शौचालय कहाँ है।",
+    "ta": "கழிவறை எங்கே என்று கேளுங்கள்.",
+    "th": "ถามว่าห้องน้ำอยู่ที่ไหน"
+   }
+  },
+  {
+   "id": "f_meal",
+   "kind": "free",
+   "intents": [
+    "meal"
+   ],
+   "text": {
+    "en": "Ask about food, for example vegetarian food.",
+    "hi": "खाने के बारे में पूछिए, जैसे शाकाहारी खाना।",
+    "ta": "உணவைப் பற்றிக் கேளுங்கள், உதாரணமாக சைவ உணவு.",
+    "th": "ถามเรื่องอาหาร เช่น อาหารมังสวิรัติ"
+   }
+  },
+  {
+   "id": "f_medical",
+   "kind": "free",
+   "intents": [
+    "medical"
+   ],
+   "text": {
+    "en": "You suddenly feel unwell. Tell the crew.",
+    "hi": "अचानक आपकी तबीयत ठीक नहीं लग रही। क्रू को बताइए।",
+    "ta": "திடீரென்று உடல்நலம் சரியில்லை. குழுவினரிடம் சொல்லுங்கள்.",
+    "th": "จู่ๆ คุณรู้สึกไม่สบาย บอกลูกเรือ"
+   }
+  },
+  {
+   "id": "f_crew",
+   "kind": "free",
+   "intents": [
+    "call_crew"
+   ],
+   "text": {
+    "en": "Call a crew member to your seat.",
+    "hi": "क्रू सदस्य को अपनी सीट पर बुलाइए।",
+    "ta": "ஒரு குழு உறுப்பினரை உங்கள் இருக்கைக்கு அழையுங்கள்.",
+    "th": "เรียกลูกเรือมาที่ที่นั่งของคุณ"
+   }
+  },
+  {
+   "id": "f_soft",
+   "kind": "free",
+   "intents": [
+    "water"
+   ],
+   "text": {
+    "en": "People nearby are sleeping. Quietly ask for water.",
+    "hi": "आस-पास लोग सो रहे हैं। धीरे से पानी माँगिए।",
+    "ta": "அருகில் உள்ளவர்கள் தூங்குகிறார்கள். மெதுவாகத் தண்ணீர் கேளுங்கள்.",
+    "th": "คนรอบข้างกำลังนอนหลับ ขอน้ำเบาๆ"
+   }
+  },
+  {
+   "id": "r_paani",
+   "kind": "read",
+   "intents": [
+    "water"
+   ],
+   "text": {
+    "en": "Thoda paani dijiye.",
+    "hi": "थोड़ा पानी दीजिए।"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "r_water_en",
+   "kind": "read",
+   "intents": [
+    "water"
+   ],
+   "text": {
+    "en": "Can I get some water, please?",
+    "hi": "Can I get some water, please?",
+    "ta": "Can I get some water, please?",
+    "th": "Can I get some water, please?"
+   }
+  },
+  {
+   "id": "r_blanket",
+   "kind": "read",
+   "intents": [
+    "blanket"
+   ],
+   "text": {
+    "en": "Madam, ek blanket milega?",
+    "hi": "मैडम, एक ब्लैंकेट मिलेगा?"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "r_kambal",
+   "kind": "read",
+   "intents": [
+    "blanket"
+   ],
+   "text": {
+    "en": "Bahut thand hai, kambal chahiye.",
+    "hi": "बहुत ठंड है, कंबल चाहिए।"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "r_washroom",
+   "kind": "read",
+   "intents": [
+    "toilet"
+   ],
+   "text": {
+    "en": "Washroom kahan hai?",
+    "hi": "वॉशरूम कहाँ है?"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "r_chai",
+   "kind": "read",
+   "intents": [
+    "tea"
+   ],
+   "text": {
+    "en": "Mujhe ek chai chahiye.",
+    "hi": "मुझे एक चाय चाहिए।"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "r_veg",
+   "kind": "read",
+   "intents": [
+    "meal"
+   ],
+   "text": {
+    "en": "Is there vegetarian food?",
+    "hi": "Is there vegetarian food?",
+    "ta": "Is there vegetarian food?",
+    "th": "Is there vegetarian food?"
+   }
+  },
+  {
+   "id": "r_pillow",
+   "kind": "read",
+   "intents": [
+    "pillow"
+   ],
+   "text": {
+    "en": "One pillow please.",
+    "hi": "One pillow please.",
+    "ta": "One pillow please.",
+    "th": "One pillow please."
+   }
+  },
+  {
+   "id": "r_dawai",
+   "kind": "read",
+   "intents": [
+    "medical"
+   ],
+   "text": {
+    "en": "Mujhe dawai chahiye, sir mein dard hai.",
+    "hi": "मुझे दवाई चाहिए, सिर में दर्द है।"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "r_chest",
+   "kind": "read",
+   "intents": [
+    "medical"
+   ],
+   "text": {
+    "en": "I have chest pain.",
+    "hi": "I have chest pain.",
+    "ta": "I have chest pain.",
+    "th": "I have chest pain."
+   }
+  },
+  {
+   "id": "r_come",
+   "kind": "read",
+   "intents": [
+    "call_crew"
+   ],
+   "text": {
+    "en": "Excuse me, please come here.",
+    "hi": "Excuse me, please come here.",
+    "ta": "Excuse me, please come here.",
+    "th": "Excuse me, please come here."
+   }
+  },
+  {
+   "id": "r_water_kambal",
+   "kind": "read",
+   "intents": [
+    "water",
+    "blanket"
+   ],
+   "text": {
+    "en": "Thoda water and kambal please.",
+    "hi": "थोड़ा वॉटर और कंबल प्लीज़।"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "r_chai_takiya",
+   "kind": "read",
+   "intents": [
+    "tea",
+    "pillow"
+   ],
+   "text": {
+    "en": "Chai aur ek takiya dijiye.",
+    "hi": "चाय और एक तकिया दीजिए।"
+   },
+   "for": [
+    "en",
+    "hi"
+   ]
+  },
+  {
+   "id": "n_thanks",
+   "kind": "read",
+   "intents": [],
+   "text": {
+    "en": "Thank you so much, that's all.",
+    "hi": "बहुत धन्यवाद, बस इतना ही।",
+    "ta": "ரொம்ப நன்றி, அவ்வளவுதான்.",
+    "th": "ขอบคุณมากครับ แค่นี้ครับ"
+   }
+  },
+  {
+   "id": "n_fine",
+   "kind": "read",
+   "intents": [],
+   "text": {
+    "en": "No thanks, I'm fine.",
+    "hi": "नहीं, धन्यवाद, मैं ठीक हूँ।",
+    "ta": "வேண்டாம், நன்றி, நான் நலமாக இருக்கிறேன்.",
+    "th": "ไม่เป็นไรครับ ขอบคุณ ผมสบายดี"
+   }
+  },
+  {
+   "id": "r_ta_thanni",
+   "kind": "read",
+   "intents": [
+    "water"
+   ],
+   "for": [
+    "ta"
+   ],
+   "text": {
+    "en": "Konjam thanni kodunga.",
+    "hi": "Konjam thanni kodunga.",
+    "ta": "கொஞ்சம் தண்ணீர் கொடுங்க.",
+    "th": "Konjam thanni kodunga."
+   }
+  },
+  {
+   "id": "r_ta_porvai",
+   "kind": "read",
+   "intents": [
+    "blanket"
+   ],
+   "for": [
+    "ta"
+   ],
+   "text": {
+    "en": "Romba kulira irukku, porvai venum.",
+    "hi": "Romba kulira irukku, porvai venum.",
+    "ta": "ரொம்ப குளிரா இருக்கு, போர்வை வேணும்.",
+    "th": "Romba kulira irukku, porvai venum."
+   }
+  },
+  {
+   "id": "r_ta_toilet",
+   "kind": "read",
+   "intents": [
+    "toilet"
+   ],
+   "for": [
+    "ta"
+   ],
+   "text": {
+    "en": "Toilet enga irukku?",
+    "hi": "Toilet enga irukku?",
+    "ta": "டாய்லெட் எங்க இருக்கு?",
+    "th": "Toilet enga irukku?"
+   }
+  },
+  {
+   "id": "r_ta_marundhu",
+   "kind": "read",
+   "intents": [
+    "medical"
+   ],
+   "for": [
+    "ta"
+   ],
+   "text": {
+    "en": "Enakku marundhu venum, thalai valikkudhu.",
+    "hi": "Enakku marundhu venum, thalai valikkudhu.",
+    "ta": "எனக்கு மருந்து வேணும், தலை வலிக்குது.",
+    "th": "Enakku marundhu venum, thalai valikkudhu."
+   }
+  },
+  {
+   "id": "r_ta_thanni_porvai",
+   "kind": "read",
+   "intents": [
+    "water",
+    "blanket"
+   ],
+   "for": [
+    "ta"
+   ],
+   "text": {
+    "en": "Thanni and oru porvai please.",
+    "hi": "Thanni and oru porvai please.",
+    "ta": "தண்ணீர் அண்ட் ஒரு போர்வை ப்ளீஸ்.",
+    "th": "Thanni and oru porvai please."
+   }
+  },
+  {
+   "id": "r_th_nam",
+   "kind": "read",
+   "intents": [
+    "water"
+   ],
+   "for": [
+    "th"
+   ],
+   "text": {
+    "en": "Kho nam noi khrap.",
+    "hi": "Kho nam noi khrap.",
+    "ta": "Kho nam noi khrap.",
+    "th": "ขอน้ำหน่อยครับ"
+   }
+  },
+  {
+   "id": "r_th_hongnam",
+   "kind": "read",
+   "intents": [
+    "toilet"
+   ],
+   "for": [
+    "th"
+   ],
+   "text": {
+    "en": "Hong nam yu thinai?",
+    "hi": "Hong nam yu thinai?",
+    "ta": "Hong nam yu thinai?",
+    "th": "ห้องน้ำอยู่ที่ไหน"
+   }
+  },
+  {
+   "id": "r_th_phahom",
+   "kind": "read",
+   "intents": [
+    "blanket"
+   ],
+   "for": [
+    "th"
+   ],
+   "text": {
+    "en": "Nao mak, kho pha hom noi kha.",
+    "hi": "Nao mak, kho pha hom noi kha.",
+    "ta": "Nao mak, kho pha hom noi kha.",
+    "th": "หนาวมาก ขอผ้าห่มหน่อยค่ะ"
+   }
+  },
+  {
+   "id": "r_th_maisabai",
+   "kind": "read",
+   "intents": [
+    "medical"
+   ],
+   "for": [
+    "th"
+   ],
+   "text": {
+    "en": "Mai sabai khrap, chuay duay.",
+    "hi": "Mai sabai khrap, chuay duay.",
+    "ta": "Mai sabai khrap, chuay duay.",
+    "th": "ไม่สบายครับ ช่วยด้วย"
+   }
+  },
+  {
+   "id": "r_th_nam_mon",
+   "kind": "read",
+   "intents": [
+    "water",
+    "pillow"
+   ],
+   "for": [
+    "th"
+   ],
+   "text": {
+    "en": "Kho nam kap mon noi khrap.",
+    "hi": "Kho nam kap mon noi khrap.",
+    "ta": "Kho nam kap mon noi khrap.",
+    "th": "ขอน้ำกับหมอนหน่อยครับ"
+   }
+  }
+ ]
 }

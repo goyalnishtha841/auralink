@@ -229,6 +229,7 @@ h1 { font-size: clamp(44px, 7.2vw, 92px); line-height: 1.02; font-weight: 800; l
 .lab-examples, .lab-phase { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .lab-examples button, .lab-phase button { min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink-dim); font: 500 14px var(--body); cursor: pointer; transition: border-color .2s, color .2s, background .2s; }
 .lab-examples button:hover, .lab-phase button:hover { color: var(--ink); border-color: var(--line-strong); }
+.lab-examples button small { margin-left: 4px; font-size: 11px; color: var(--ink-dim); opacity: .7; letter-spacing: .04em; text-transform: uppercase; }
 .lab-phase .mono { color: var(--ink-faint); margin-right: 6px; }
 .lab-phase button[aria-checked="true"] { color: var(--call-ink); background: var(--call); border-color: var(--call); }
 .lab-out { min-height: 180px; display: flex; flex-direction: column; gap: 14px; }
