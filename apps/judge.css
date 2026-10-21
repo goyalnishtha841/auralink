@@ -8,7 +8,7 @@
   --teal: #3ce8c8; --blue: #5b8cff; --violet: #a87cff; --amber: #ffb547; --amber-ink: #1d1300;
   --ok: #3ddc97; --bad: #ff6b6b;
   --display: "Outfit", "Noto Sans", system-ui, sans-serif;
-  --body: "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", system-ui, sans-serif;
+  --body: "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
   --r: 16px;
   color-scheme: dark;
