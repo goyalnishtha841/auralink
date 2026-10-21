@@ -14,6 +14,7 @@
     <select id="lang" aria-label="Language"></select>
     <label class="row muted"><input type="checkbox" id="senior"> <span id="seniorLabel">Large mode</span></label>
     <label class="row muted"><input type="checkbox" id="pictures"> <span id="picturesLabel">Pictures only</span></label>
+    <label class="row muted" id="readWrap" hidden><input type="checkbox" id="read"> <span id="readLabel">Read aloud</span></label>
   </header>
   <main>
     <div class="panel voice-panel">
@@ -40,6 +41,7 @@
 import { Recorder, connect, el, loadConfig } from "./common.js";
 import { pictogram } from "./pictograms.js";
 import { icon } from "./icons.js";
+import { canSpeak, speak } from "./speech.js";
 
 // Screen text comes from data/i18n/<code>.json via the hub; missing keys fall back to English.
 let STRINGS = {}, FALLBACK = {};
@@ -55,6 +57,9 @@ let lang = params.get("lang") || "en";
 let senior = params.get("senior") === "1";
 // picture-only mode: for passengers who are deaf or have a speech difficulty (also via ?mode=pictures on the seat QR)
 let pictures = params.get("mode") === "pictures";
+// read aloud: the phone's own offline voice reads the fixed, pre-approved sentences (never in picture-only mode)
+let readAloud = params.get("read") === "1";
+let voiceOK = false;
 let config;
 const requests = new Map();  // card id -> {intent, label, message, state, urgent}
 
@@ -68,6 +73,12 @@ const socket = connect(`/ws/passenger/${seat}`, (msg) => ready.then(() => onMess
   if (on) socket.send({ type: "hello", lang, senior, pictures });
 });
 
+function say(lines) { if (readAloud && voiceOK && !pictures) speak(lines, lang); }
+function listenBtn(lines) {
+  if (!voiceOK || pictures) return null;
+  return el("button", { class: "listen", "aria-label": t("listen"), title: t("listen"), onclick: () => speak(lines, lang) }, icon("speaker"));
+}
+
 // every update is also shown and felt, never only heard: a screen flash plus vibration
 function attention() {
   document.body.classList.remove("flash");
@@ -78,7 +89,8 @@ function attention() {
 
 function applyStrings() {
   document.documentElement.lang = lang;
-  for (const id of ["title", "typeHint", "send", "orTap", "requestsLabel", "seniorLabel", "picturesLabel"]) $(id).textContent = t(id);
+  for (const id of ["title", "typeHint", "send", "orTap", "requestsLabel", "seniorLabel", "picturesLabel", "readLabel"]) $(id).textContent = t(id);
+  $("readWrap").hidden = !voiceOK || pictures;
   if (pictures) $("orTap").textContent = t("tapNeed");
   document.body.classList.toggle("pictures", pictures);
   setMic(micState);
@@ -107,13 +119,16 @@ function showNextConfirm() {
   if (!card) return closeSheet();
   if (card.confident) {
     const o = card.options[0];
-    sheet(el("h2", {}, t("confirmQ")),
+    say([t("confirmQ"), o.label]);
+    sheet(el("div", { class: "row" }, el("h2", { class: "grow" }, t("confirmQ")), listenBtn([t("confirmQ"), o.label])),
       el("div", { class: "tile" }, icon(o.intent), o.label),
       el("div", { class: "row" },
         el("button", { class: "primary grow", onclick: () => { socket.send({ type: "confirm", card_id: card.id, intent: o.intent }); showNextConfirm(); } }, t("yes")),
         el("button", { class: "grow", onclick: () => socket.send({ type: "reject", card_id: card.id }) }, t("no"))));
   } else {
-    sheet(el("h2", {}, t("pickOne")),
+    const labels = card.options.slice(0, 2).map((o) => o.label);
+    say([t("pickOne"), ...labels]);
+    sheet(el("div", { class: "row" }, el("h2", { class: "grow" }, t("pickOne")), listenBtn([t("pickOne"), ...labels])),
       el("div", { class: "grid" }, card.options.slice(0, 2).map((o) => el("button", { class: "tile", onclick: () => {
         socket.send({ type: "confirm", card_id: card.id, intent: o.intent }); showNextConfirm(); } },
         icon(o.intent), o.label))),
@@ -127,6 +142,7 @@ function showGrid(cardId) {
     socket.send(cardId ? { type: "icon", card_id: cardId, intent } : { type: "icon", intent });
     showNextConfirm();
   });
+  say(t("together"));
   sheet(el("h2", {}, t("together")), grid);
 }
 
@@ -135,7 +151,7 @@ function renderRequests() {
     el("div", { class: `item ${r.urgent ? "is-urgent" : ""}` },
       icon(r.intent), el("strong", {}, r.label),
       el("span", { class: "state", title: t(r.state) }, icon({ sent: "check", seen: "eye", replied: "reply" }[r.state] || "check", t(r.state))),
-      el("span", { class: "muted grow" }, r.message))));
+      el("span", { class: "muted grow" }, r.message), listenBtn([r.label, r.message]))));
 }
 
 // microphone: idle -> recording -> thinking -> idle
@@ -175,11 +191,11 @@ function onMessage(msg) {
     const state = c.status === "acknowledged" ? "seen" : "sent";
     requests.set(c.id, { intent: shown.intent, label: shown.label, message: msg.message, urgent: c.urgent, state });
     if (c.status === "needs_human") closeSheet();
-    if (state === "seen" || c.status === "needs_human") attention();
+    if (state === "seen" || c.status === "needs_human") { attention(); say(msg.message); }
     renderRequests();
   } else if (msg.type === "reply") {
     const r = requests.get(msg.card_id);
-    if (r) { r.message = msg.text; r.state = "replied"; renderRequests(); attention(); }
+    if (r) { r.message = msg.text; r.state = "replied"; renderRequests(); attention(); say(msg.text); }
   } else if (msg.type === "notice") {
     $("title").textContent = msg.message;
     setTimeout(() => ($("title").textContent = t("title")), 6000);
@@ -192,6 +208,7 @@ function onMessage(msg) {
   } else if (msg.type === "reset") {   // presenter reset between demo runs
     pending = []; requests.clear(); renderRequests(); closeSheet();
   } else if (msg.type === "exit_done") {
+    say(msg.message);
     sheet(el("h2", {}, t("thanks")), el("p", {}, msg.message),
       el("button", { class: "primary", onclick: closeSheet }, t("ok")));
   }
@@ -204,9 +221,10 @@ const counter = (word, i, n) => `${word} ${i} ${t("of")} ${n}`;
 function showBriefing(b) {
   if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
   const steps = b.steps.map((st) => el("div", { class: "safety-step" }, picto(st.pictogram),
-    el("div", {}, el("p", { class: "safety-text" }, st.text),
-      lang !== "en" ? el("p", { class: "muted" }, st.text_en) : null)));
-  sheet(el("h2", { class: "safety-title" }, b.title), ...steps,
+    el("div", { class: "grow" }, el("p", { class: "safety-text" }, st.text),
+      lang !== "en" ? el("p", { class: "muted" }, st.text_en) : null), listenBtn(st.text)));
+  say([b.title, ...b.steps.map((st) => st.text)]);
+  sheet(el("div", { class: "row" }, el("h2", { class: "safety-title grow" }, b.title), listenBtn([b.title, ...b.steps.map((st) => st.text)])), ...steps,
     el("div", { class: "row" },
       el("button", { class: "primary grow", onclick: () => { socket.send({ type: "safety", status: "understood" }); closeSheet(); } }, t("understood")),
       el("button", { class: "grow", onclick: () => { socket.send({ type: "safety", status: "reexplaining" }); simpleStep(b, 0); } }, t("explain"))));
@@ -219,14 +237,16 @@ function simpleStep(b, i) {
     return;
   }
   const st = b.steps[i];
+  say(st.simple);
   sheet(el("p", { class: "muted" }, i === 0 ? t("reexplain") : counter(t("step"), i + 1, b.steps.length)),
     i === 0 ? el("p", { class: "muted" }, counter(t("step"), 1, b.steps.length)) : null,
     el("div", { class: "picto-big" }, picto(st.pictogram)),
-    el("p", { class: "safety-simple" }, st.simple),
+    el("p", { class: "safety-simple" }, st.simple, listenBtn(st.simple)),
     el("div", { class: "row" },
       el("button", { class: "primary grow", onclick: () => simpleStep(b, i + 1) }, t("gotIt")),
       el("button", { class: "grow", onclick: () => {
         socket.send({ type: "safety", status: "stuck", step: i });
+        say(t("crewComing"));
         sheet(el("h2", {}, st.simple), el("p", {}, t("crewComing")),
           el("button", { class: "primary", onclick: closeSheet }, t("ok")));
       } }, t("stillUnclear"))));
@@ -238,10 +258,11 @@ function showExitCheck(c) {
   const ask = (i) => {
     if (i >= c.questions.length) return socket.send({ type: "exit_answer", answers });
     const q = c.questions[i];
+    say(i === 0 ? [c.title, c.intro, q.text] : q.text);
     sheet(el("h2", { class: "safety-title" }, c.title), i === 0 ? el("p", {}, c.intro) : null,
       el("p", { class: "muted" }, counter(t("question"), i + 1, c.questions.length)),
       el("div", { class: "picto-big" }, picto(q.pictogram)),
-      el("p", { class: "safety-simple" }, q.text),
+      el("p", { class: "safety-simple" }, q.text, listenBtn(q.text)),
       el("div", { class: "row" },
         el("button", { class: "primary grow", onclick: () => { answers[q.id] = true; ask(i + 1); } }, c.answers.yes),
         el("button", { class: "grow", onclick: () => { answers[q.id] = false; ask(i + 1); } }, c.answers.no)),
@@ -258,9 +279,11 @@ $("form").addEventListener("submit", (e) => {
   socket.send({ type: "text", text });
   $("text").value = "";
 });
+$("read").addEventListener("change", (e) => { readAloud = e.target.checked; if (readAloud) speak(t("readLabel"), lang); });
 $("lang").addEventListener("change", async (e) => {
   lang = e.target.value;
   await loadStrings(lang);
+  voiceOK = await canSpeak(lang);
   applyStrings();
   socket.send({ type: "hello", lang, senior, pictures });
 });
@@ -271,6 +294,8 @@ config = await loadConfig();
 $("lang").replaceChildren(...config.languages.map((l) => el("option", { value: l.code }, l.name)));
 if (!config.languages.some((l) => l.code === lang)) lang = "en";
 await loadStrings(lang);
+voiceOK = await canSpeak(lang);
+$("read").checked = readAloud;
 if (!Recorder.supported()) { micState = "off"; micNote("micOff"); }
 $("lang").value = lang;
 $("senior").checked = senior;

@@ -66,6 +66,15 @@ Open `/record.html` on a phone connected to the hub (HTTPS needed for the microp
 Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
 `data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
 
+## Read aloud
+
+Passengers can switch on **Read aloud** (or open the seat link with `&read=1`): confirm questions,
+crew replies, safety steps and exit-row questions are spoken by the phone's own offline voice in the
+passenger's language, and a speaker button replays any of them. The crew tablet can announce new
+requests in Japanese. Only the fixed, pre-approved sentences are spoken (`apps/speech.js`); online
+voice services are never used, and it stays off in picture-only mode. If a device has no voice for a
+language, the option is hidden.
+
 ## Adding a language (no code, no retraining)
 
 1. `data/languages.json`: add `{"code": "bn", "name": "বাংলা", "asr": ["en", "bn"]}`, and the script's

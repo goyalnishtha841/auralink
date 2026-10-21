@@ -110,3 +110,9 @@ body.flash::after { content: ""; position: fixed; inset: 0; pointer-events: none
                     box-shadow: inset 0 0 0 10px var(--accent); animation: flash 1.6s ease-out forwards; }
 @keyframes flash { 0%, 40% { opacity: 1; } 20%, 60% { opacity: .2; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { body.flash::after { animation: none; opacity: 0; } }
+
+/* read-aloud button (apps/speech.js) */
+button.listen { min-height: 44px; min-width: 44px; padding: 8px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; }
+button.listen .icon .ic { width: 22px; height: 22px; color: var(--info); }
+.safety-simple button.listen { margin-left: 8px; vertical-align: middle; }
+.big button.listen { min-width: 56px; min-height: 56px; }

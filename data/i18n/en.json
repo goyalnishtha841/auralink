@@ -33,5 +33,7 @@
   "tapNeed": "Tap what you need",
   "sent": "sent",
   "seen": "seen by crew",
-  "replied": "crew replied"
+  "replied": "crew replied",
+  "readLabel": "Read aloud",
+  "listen": "Listen"
 }

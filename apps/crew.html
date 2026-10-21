@@ -50,6 +50,7 @@
     <h1>客室乗務員パネル <span class="muted">Crew panel</span></h1>
     <label class="row muted">飛行フェーズ Phase <select id="phase"></select></label>
     <button id="sound" class="muted-btn" aria-pressed="true" title="Sound for urgent requests">🔔 音 Sound on</button>
+    <label class="row muted" id="readWrap" hidden><input type="checkbox" id="read"> 読み上げ Read aloud</label>
   </header>
   <main>
     <div id="alarm"></div>
@@ -83,6 +84,7 @@
 import { connect, el, loadConfig } from "./common.js";
 import { pictogram } from "./pictograms.js";
 import { icon } from "./icons.js";
+import { canSpeak, speak } from "./speech.js";
 
 const $ = (id) => document.getElementById(id);
 const config = await loadConfig();
@@ -199,8 +201,22 @@ function renderExit(checks) {
   }));
 }
 
+// optional: announce each NEW request in Japanese (crew busy in the aisle); urgent ones first
+let readAloud = false, announced = null;
+canSpeak("ja").then((ok) => { $("readWrap").hidden = !ok; });
+$("read").addEventListener("change", (e) => { readAloud = e.target.checked; });
+function announce(cards) {
+  const fresh = cards.filter((c) => !announced.has(c.id) && c.status !== "acknowledged");
+  cards.forEach((c) => announced.add(c.id));
+  if (!readAloud || !fresh.length) return;
+  fresh.sort((a, b) => Number(b.urgent) - Number(a.urgent));
+  speak(fresh.map((c) => `${c.urgent ? "至急。" : ""}${c.seat}、${c.crew_ja || (c.guesses[0] ? c.guesses[0].label_ja : "ご用件が不明です")}`), "ja");
+}
+
 function render(msg) {
   if (msg.type !== "state") return;
+  if (announced === null) announced = new Set(msg.cards.map((c) => c.id));   // don't read out what was already there
+  announce(msg.cards);
   $("phase").value = msg.phase;
   $("cards").replaceChildren(...(msg.cards.length ? msg.cards.map(cardView) : [el("p", { class: "muted" }, "リクエストなし · No open requests")]));
   renderAlarm(msg.cards);
