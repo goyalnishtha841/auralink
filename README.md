@@ -1,40 +1,143 @@
-# Auralink
+<div align="center">
+  <img src="docs/images/logo.svg" width="84" height="84" alt="Auralink logo" />
 
-[![tests](https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml/badge.svg)](https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+  <h1>Auralink</h1>
 
-Repair-first passenger–crew communication for JAL-PS-02 (Thapar Japan Hackathon 2026).
-When speech recognition is unsure, Auralink asks the passenger the easiest possible follow-up
-instead of guessing, and it checks that passengers actually understood safety instructions.
+  <p><strong>Every passenger, understood.</strong></p>
+  <p>Repair-first communication between airline passengers and cabin crew, across accents, languages and a loud cabin.<br />
+  When speech is unclear, Auralink <strong>asks the passenger one simple question</strong> instead of guessing.</p>
+
+  <p>
+    <a href="https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml"><img src="https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml/badge.svg" alt="tests" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-ffb547.svg" alt="MIT License" /></a>
+    <img src="https://img.shields.io/badge/python-3.12-5b8cff.svg" alt="Python 3.12" />
+    <img src="https://img.shields.io/badge/runs-100%25%20offline-3ce8c8.svg" alt="Runs fully offline" />
+    <img src="https://img.shields.io/badge/JAL--PS--02-Thapar%20Japan%20Hackathon%202026-a87cff.svg" alt="JAL-PS-02, Thapar Japan Hackathon 2026" />
+  </p>
+
+  <br />
+  <img src="docs/images/landing.jpg" width="900" alt="The Auralink landing page: 'Every passenger, understood.' next to a crew tablet showing two Japanese request cards for seat 34K" />
+</div>
+
+## The 30-second version
+
+A passenger in seat 33H, flying Delhi → Tokyo, says *"Madam, thoda wotter and kambal please"*
+(Hindi-English: "a little water and a blanket"). A Japanese crew member hears noise.
+
+| | What happens |
+|---|---|
+| 🎙️ **Hear** | Whisper turns speech into several guesses in English **and** Hindi, all on the laptop. |
+| 🧩 **Understand** | Filler words (*madam, thoda, please*) are dropped. *"wotter"* is matched to **water** by how it *sounds*, using an accent-aware phoneme distance, and *"kambal"* to **blanket**. One sentence becomes two requests. |
+| ✅ **Check** | Unsure? The passenger's phone asks *"क्या आपका मतलब यह था? पानी"* ("Did you mean: water?") with a picture. One tap. |
+| 📋 **Deliver** | The crew tablet shows **お水をご希望です · 33H** in Japanese. The crew taps a pre-approved reply, and the passenger reads it in Hindi. |
+
+Nothing leaves the aircraft. There is no cloud speech service, no machine translation and no LLM.
+Every sentence a passenger or crew member reads comes from a reviewed template.
+
+## Take a look
+
+<table>
+  <tr>
+    <td width="32%" valign="top"><img src="docs/images/passenger.jpg" alt="Passenger phone in Hindi asking 'Did you mean: water?' with a yes/no button and an icon grid" /><br /><sub><b>Passenger phone.</b> No app to install: scan the seat QR. Asks instead of guessing, in the passenger's language, with pictures.</sub></td>
+    <td width="68%" valign="top"><img src="docs/images/crew.png" alt="Crew tablet in Japanese with an urgent possible-medical card for seat 31C, safety briefing seat map and live PA captions" /><br /><sub><b>Crew tablet, in Japanese.</b> Urgent requests jump the queue before the passenger has even confirmed. Also on this screen: the safety-briefing heat map, care rounds, passenger needs and live PA captions.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/images/judge.png" alt="Under-the-hood view: the sentence, the words that matter, the split rule, and a scored bar for each candidate intent with the t1 threshold" /><br /><sub><b>Under the hood (the jury screen).</b> Every decision in the open: which words mattered, which rule fired, and how each request was scored against the thresholds.</sub></td>
+  </tr>
+</table>
+
+## Contents
+
+- [How it works](#how-it-works) · [Results](#results) · [Features](#features)
+- [Run it](#run-it) · [On phones](#on-phones) · [Testing and CI](#testing-and-ci)
+- [Feature guide](#feature-guide) · [For developers](#for-developers) · [Evaluation](#evaluation)
+
+## How it works
+
+```mermaid
+flowchart LR
+    P["📱 Passenger phone<br/>voice · text · icons"]
+    C["📋 Crew tablet<br/>Japanese"]
+    J["🖥️ Jury screen<br/>glass-box view"]
+    subgraph Laptop["💻 Cabin hub — one laptop, fully offline"]
+        H["FastAPI hub<br/>cards · safety · rounds"]
+        subgraph E["Engine"]
+            V["Silero VAD"] --> W["Whisper n-best<br/>English + passenger language"]
+            W --> M["Phonetic matcher<br/>eSpeak NG + accent costs"]
+            M --> R["Context priors<br/>+ ambiguity rules"]
+        end
+        H <--> E
+    end
+    P <-- WebSocket --> H
+    C <-- WebSocket --> H
+    J <-- WebSocket --> H
+```
+
+One request, end to end:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as 📱 Passenger (Hindi)
+    participant H as 💻 Hub + engine
+    participant C as 📋 Crew (Japanese)
+    P->>H: "thoda wotter and kambal" (audio)
+    H->>H: VAD → Whisper n-best → phonetic match → split into 2 cards
+    alt confident
+        H->>P: confirm with one tap: पानी, कंबल
+    else unsure
+        H->>P: "Did you mean…?" top 2–3 pictures
+    end
+    P->>H: yes
+    H->>C: お水をご希望です · 毛布をご希望です (33H)
+    C->>H: ack + template reply
+    H->>P: अभी लेकर आ रहे हैं। ("Bringing it now.")
+    Note over H,C: medical/emergency skips the queue:<br/>crew see it before the passenger confirms
+```
+
+The matcher is the core idea. Speech-to-text often writes accented words the way they sound (*wotter*, *blankit*), and Hindi words
+turn up in English sentences (*kambal*, blanket). Auralink turns both what was heard and every known request word into
+phonemes, then compares them with a weighted edit distance in which common accent swaps are cheap
+(v/w, retroflex t/d, a dropped final r and so on). Two thresholds decide what happens next:
+
+- top score ≥ **t1** and well clear of the runner-up (gap ≥ **t2**): confirm with one tap
+- close call: show the top 2–3 choices as pictures
+- nothing plausible: open the icon grid
+
+## Results
+
+From [eval/results.md](eval/results.md), generated by `scripts/evaluate.py`. **Baseline A** is what most
+systems do: take the first speech-to-text result, look for keywords, and never ask.
+
+| System | First try | Within one tap | Wrong confident card | Urgent caught |
+|---|---:|---:|---:|---:|
+| Baseline A: first result, keywords | 56.1% | 56.1% | 0% | 76.9% |
+| **Auralink, hybrid (default)** | **91.2%** | **93.0%** | **0%** | **100%** |
+
+<sub>Text challenge set: 65 transcripts written to mimic accented and code-mixed speech-to-text output. The matcher was
+developed on this set, so treat it as a benchmark, not a final result. On synthetic audio through Whisper `base`
+(clean, 10 dB and 0 dB cabin noise) the hybrid matcher gets 92.9% first try against 64.3% for the baseline. Final
+claims come from held-out volunteer recordings.</sub>
+
+Speed on an Apple M1 CPU: about **0.7 s** for speech-to-text with Whisper `base`, **under 20 ms** for
+matching, and **1.0–1.2 s** from the end of speech to the confirm screen (target: under 2 s).
 
 ## Features
 
-- **Voice or icons, in the passenger's language**: Whisper n-best plus a phonetic matcher, with a
+- **Voice, text or icons, in the passenger's language**: Whisper n-best plus a phonetic matcher, with a
   confirm step instead of guessing ([what is real](#what-is-real-and-what-is-a-placeholder))
 - **Accent-aware matching** with hand-set and learned accent costs ([evaluation](#evaluation),
   [learned costs](#learned-accent-costs))
+- **Safety briefing that checks understanding**: a live seat heat map of who understood, who wants it
+  explained again, and an exit-row check
 - **Check-in at the gate** for language and accessibility needs ([check-in](#check-in-the-airport-stage))
 - **Read aloud** with the phone's offline voice ([read aloud](#read-aloud))
 - **Live PA captions** from pre-approved announcements, never machine translation ([PA captions](#live-pa-captions))
 - **Care rounds**: one trolley loop for open requests and check-ins for quiet passengers ([care rounds](#care-rounds))
 - **Crash recovery**: cabin state survives a hub restart ([crash recovery](#crash-recovery))
-- **New languages without code or retraining** ([adding a language](#adding-a-language-no-code-no-retraining))
+- **New languages without code or retraining** ([adding a language](#adding-a-language-no-code-no-retraining)):
+  Hindi, Tamil, Thai, English and Hinglish today
 - **Voice collection** for the held-out evaluation set ([collecting voices](#collecting-voices))
-
-## Architecture
-
-```
- Passenger phone ─┐
- Crew tablet ─────┼── WebSockets (cabin Wi-Fi) ──▶  Cabin hub (FastAPI on a laptop, hub/)
- Jury screen ─────┘                                     │
-                                                        ▼
-                                  Engine (engine/): Silero VAD → Whisper n-best (en + passenger language)
-                                                    → phonetic matcher (eSpeak-NG + accent costs)
-                                                    → context priors → confirm cards
-```
-
-Everything runs offline on the laptop: no cloud speech, translation or LLM calls. Screens are plain
-HTML/JS served by the hub; crew-facing text comes from pre-approved templates.
 
 ## Run it
 
@@ -45,24 +148,26 @@ brew install espeak-ng          # phoneme matcher; apt install espeak-ng on Linu
 scripts/run.sh
 ```
 
-On demo day use `scripts/demo.sh` instead: it runs a pre-flight check (packages, Whisper downloaded,
-eSpeak-NG, HTTPS certificate, free port, a test sentence), prints the address and a QR code for
-phones, then starts the hub. Demo tools: `/presenter.html` (pitch checklist with timer, health,
-backup buttons that send requests as a seat, and a two-tap cabin reset between rehearsals),
-`/seats.html` (printable seat QR cards) and `/noise.html` (cabin-noise player with a level meter).
-`/report.html` is the flight report: requests by outcome, type and language, median time to
-acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row
-results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset.
-The presenter endpoints have no password: fine on the demo network, not for a real aircraft.
-
 Open <http://localhost:8000> and put **Passenger** and **Crew** side by side. Tap the microphone
 and say "thoda wotter and kambal", or type it.
 
 The first start downloads Whisper `base` (~145 MB) into the Hugging Face cache; after that
 everything runs offline. Choose another model with `AURALINK_ASR_MODEL=small scripts/run.sh`.
 
-Run the tests with `.venv/bin/python -m pytest -q` and the linter with `.venv/bin/ruff check .`; CI runs both
-on every push (voice tests that need the Whisper model are skipped there via `AURALINK_SKIP_WHISPER=1`).
+### Demo day
+
+Use `scripts/demo.sh` instead: it runs a pre-flight check (packages, Whisper downloaded,
+eSpeak-NG, HTTPS certificate, free port, a test sentence), prints the address and a QR code for
+phones, then starts the hub.
+
+| Page | What it is for |
+|---|---|
+| `/presenter.html` | Pitch checklist with timer, health, backup buttons that send requests as a seat, and a two-tap cabin reset between rehearsals |
+| `/seats.html` | Printable seat QR cards |
+| `/noise.html` | Cabin-noise player with a level meter |
+| `/report.html` | Flight report: requests by outcome, type and language, median time to acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset. |
+
+The presenter endpoints have no password: fine on the demo network, not for a real aircraft.
 
 ### On phones
 
@@ -70,9 +175,9 @@ Run `scripts/setup_https.sh` once on the laptop (it asks before adding mkcert's 
 authority to the Mac's trusted list; undo with `mkcert -uninstall`), start the hub with
 `scripts/demo.sh`, then open `https://<laptop-ip>:8000/phone-setup.html` on each phone. That page
 walks through installing the certificate on iPhone or Android and has a live microphone test.
-The manual steps below do the same thing.
 
-#### Manual steps
+<details>
+<summary><b>Manual steps</b></summary>
 
 Phones only allow the microphone over HTTPS. Create a local certificate once:
 
@@ -84,7 +189,19 @@ mkdir -p certs && mkcert -cert-file certs/hub.pem -key-file certs/hub-key.pem <l
 `scripts/run.sh` switches to HTTPS automatically when `certs/` exists. Install the mkcert root
 certificate on each demo phone.
 
-## Layout and owners
+</details>
+
+### Testing and CI
+
+```bash
+.venv/bin/python -m pytest -q    # 92 tests
+.venv/bin/ruff check .
+```
+
+[GitHub Actions](.github/workflows/tests.yml) runs both on every push and pull request. Voice tests that
+need the Whisper model are skipped there (`AURALINK_SKIP_WHISPER=1`), so CI never downloads it.
+
+## Project layout and owners
 
 | Folder | Owner | What lives there |
 |---|---|---|
@@ -93,20 +210,9 @@ certificate on each demo phone.
 | `hub/`, `hardware/` | C | FastAPI + WebSocket hub, card state machine, safety heat map, ESP32 panel |
 | `apps/` | D | Plain HTML/JS screens: passenger, crew tablet, judge glass-box, presenter, check-in, report, recording |
 
-## Collecting voices
+## Feature guide
 
-Open `/record.html` on a phone connected to the hub (HTTPS needed for the microphone on phones).
-Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
-`data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
-
-## Crash recovery
-
-The hub saves the cabin state after every change (`data/flight/cabin_state.json`, git-ignored,
-written atomically) and restores it on start: requests, briefing answers, exit-row checks and the
-flight report survive a restart, and screens reconnect by themselves. The presenter console shows
-when state was restored. Start clean with `AURALINK_FRESH=1 scripts/run.sh` or use Reset cabin.
-
-## Check-in (the airport stage)
+### Check-in (the airport stage)
 
 `/checkin.html` is a kiosk page for the airport or boarding gate: the passenger picks language, seat
 and any of large text, pictures only and read aloud, in their own language. A plain seat QR
@@ -115,7 +221,7 @@ panel lists who reads which language and who needs large text, pictures or read 
 and preferences are stored (`data/flight/checkin.json`, git-ignored), never names; in a real
 deployment this would come from the airline's check-in system.
 
-## Read aloud
+### Read aloud
 
 Passengers can switch on **Read aloud** (or open the seat link with `&read=1`): confirm questions,
 crew replies, safety steps and exit-row questions are spoken by the phone's own offline voice in the
@@ -124,7 +230,7 @@ requests in Japanese. Only the fixed, pre-approved sentences are spoken (`apps/s
 voice services are never used, and it stays off in picture-only mode. If a device has no voice for a
 language, the option is hidden.
 
-## Live PA captions
+### Live PA captions
 
 On the crew tablet, **Live PA captions → Record announcement**, then make the announcement as usual
 (Japanese or English, up to 30 s). Whisper decodes it in both languages, each reading is matched against
@@ -135,7 +241,7 @@ passengers who cannot hear the PA. An announcement that is not in the library is
 the crew are told so: Auralink never machine-translates. Typed text works too (`POST /api/pa/match`
 with `{"text": ...}`, then `POST /api/pa/send` with `{"id": "descent", "n": "20"}`).
 
-## Care rounds
+### Care rounds
 
 The crew tablet always shows a planned **care round**: every open, non-urgent request for something
 the crew carry (water, tea, blanket, pillow, food), as one loop from the front galley, down the left
@@ -146,7 +252,14 @@ because older and deaf passengers often do not ask. **Start round** tells each w
 in their language, which stop they are ("stop 3 of 7"); **Done** at each seat closes its requests.
 Urgent and medical requests never wait for a round. Logic: [hub/rounds.py](hub/rounds.py).
 
-## Adding a language (no code, no retraining)
+### Crash recovery
+
+The hub saves the cabin state after every change (`data/flight/cabin_state.json`, git-ignored,
+written atomically) and restores it on start: requests, briefing answers, exit-row checks and the
+flight report survive a restart, and screens reconnect by themselves. The presenter console shows
+when state was restored. Start clean with `AURALINK_FRESH=1 scripts/run.sh` or use Reset cabin.
+
+### Adding a language (no code, no retraining)
 
 1. `data/languages.json`: add `{"code": "bn", "name": "বাংলা", "asr": ["en", "bn"]}`, and the script's
    character range + eSpeak-NG voice under `scripts` if it has its own writing system.
@@ -161,49 +274,16 @@ Thai shows two general mechanisms, both switched on from `data/languages.json`:
 - `"spaces": false`: Thai has no spaces between words, so text is split by longest match against the
   lexicon ("ขอน้ำหน่อยครับ" → "ขอ น้ำ หน่อย ครับ"; "ห้องน้ำ" stays toilet, not water).
 - `"espeak": null`: eSpeak-NG's Thai phonemes are unusable, so Thai script is matched by spelling only.
+
 Keep romanized words long and distinctive: short ones like "mon" (Thai pillow) collided with English
 "son" and raised false alarms; `scripts/evaluate.py` catches this. All Hindi,
 Tamil and Japanese text is a draft until a native speaker has checked it.
 
-## Contracts (change only as a team)
+### Collecting voices
 
-- **Engine types** – `engine/types.py`: `Hypothesis`, `Context`, `Candidate`, `CardDraft`, `Result`.
-- **Lexicon** – `data/lexicon/intents.json`. The hub reloads it when the file changes, so a new
-  word or language works without a restart.
-- **Templates** – `data/templates/messages.json`. Pre-approved text only; every Japanese and
-  Hindi line needs a native-speaker check before the demo.
-- **WebSocket messages** – see below.
-
-### Passenger socket `/ws/passenger/{seat}`
-
-| Sends | Receives |
-|---|---|
-| *binary frame*: one utterance, 16 kHz mono int16 PCM, max 10 s | `thinking` – speech received, working on it |
-| `hello {lang, senior}` | `confirm {rule, cards[]}` – each card has `confident`, `options[]`, `urgent` |
-| `text {text}` | `grid {reason, card_id?}` – show the icon grid |
-| `icon {intent, card_id?}` | `status {card, message}` – message already in the passenger's language |
-| `confirm {card_id, intent}` | `reply {card_id, text}` – crew reply, translated from a template |
-| `reject {card_id}` | `safety {broadcast_id, template}` |
-| `safety {understood}` | `notice {message}`, `error {detail}` |
-
-### Crew socket `/ws/crew`
-
-Sends `ack`, `reply {card_id, reply_id}`, `close`, `phase {phase}`, `broadcast {template_id}`.
-Receives `state {phase, cards[], heatmap{seat: understood|explain_again|pending|idle|offline}, broadcast}`
-after every change.
-
-### Judge socket `/ws/judge`
-
-Receives `result {phase, result}` for every interpretation – the raw material for the glass-box view.
-
-## Request lifecycle
-
-```
-awaiting_confirm ──confirm──▶ confirmed ──ack──▶ acknowledged ──close──▶ closed
-       │                         ▲
-       └─reject ×2──▶ needs_human┘ (crew sees best guesses)
-urgent_unconfirmed: medical/emergency, shown to crew immediately while the passenger confirms
-```
+Open `/record.html` on a phone connected to the hub (HTTPS needed for the microphone on phones).
+Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
+`data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
 
 ## What is real and what is a placeholder
 
@@ -219,6 +299,65 @@ urgent_unconfirmed: medical/emergency, shown to crew immediately while the passe
   `AURALINK_MATCHER=hybrid|phonetic|phonetic_uniform|text`. Without eSpeak-NG it falls back to spelling.
 - **Untuned:** `T1 = 0.70` and `T2 = 0.10` are starting values. Member B tunes them on the
   held-out split.
+
+## For developers
+
+<details>
+<summary><b>Contracts (change only as a team)</b></summary>
+
+- **Engine types** – `engine/types.py`: `Hypothesis`, `Context`, `Candidate`, `CardDraft`, `Result`.
+- **Lexicon** – `data/lexicon/intents.json`. The hub reloads it when the file changes, so a new
+  word or language works without a restart.
+- **Templates** – `data/templates/messages.json`. Pre-approved text only; every Japanese and
+  Hindi line needs a native-speaker check before the demo.
+- **WebSocket messages** – see below.
+
+</details>
+
+<details>
+<summary><b>WebSocket protocol</b></summary>
+
+#### Passenger socket `/ws/passenger/{seat}`
+
+| Sends | Receives |
+|---|---|
+| *binary frame*: one utterance, 16 kHz mono int16 PCM, max 10 s | `thinking` – speech received, working on it |
+| `hello {lang, senior}` | `confirm {rule, cards[]}` – each card has `confident`, `options[]`, `urgent` |
+| `text {text}` | `grid {reason, card_id?}` – show the icon grid |
+| `icon {intent, card_id?}` | `status {card, message}` – message already in the passenger's language |
+| `confirm {card_id, intent}` | `reply {card_id, text}` – crew reply, translated from a template |
+| `reject {card_id}` | `safety {broadcast_id, template}` |
+| `safety {understood}` | `notice {message}`, `error {detail}` |
+
+#### Crew socket `/ws/crew`
+
+Sends `ack`, `reply {card_id, reply_id}`, `close`, `phase {phase}`, `broadcast {template_id}`.
+Receives `state {phase, cards[], heatmap{seat: understood|explain_again|pending|idle|offline}, broadcast}`
+after every change.
+
+#### Judge socket `/ws/judge`
+
+Receives `result {phase, result}` for every interpretation – the raw material for the glass-box view.
+
+</details>
+
+<details>
+<summary><b>Request lifecycle</b></summary>
+
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting_confirm
+    awaiting_confirm --> confirmed: confirm
+    awaiting_confirm --> needs_human: reject ×2
+    needs_human --> acknowledged: crew sees best guesses
+    confirmed --> acknowledged: ack
+    acknowledged --> closed: close
+    [*] --> urgent_unconfirmed: medical / emergency
+    urgent_unconfirmed --> confirmed: confirm
+    note right of urgent_unconfirmed: shown to crew immediately,<br/>while the passenger confirms
+```
+
+</details>
 
 ## Evaluation
 
@@ -248,7 +387,7 @@ skipped. Writes `data/lexicon/phone_costs_learned.json` and [eval/learned_costs.
 few, so no swap has been seen often enough yet and the learned table equals the hand-set one. It
 needs the volunteer recordings; only the train split is used, so the test split stays a fair exam.
 
-## Speech-to-text spike (2026-10-21)
+### Speech-to-text spike (2026-10-21)
 
 `scripts/asr_spike.py` → [eval/asr_spike_results.md](eval/asr_spike_results.md). Stand-in voices
 (macOS Rishi, Aman, Lekha), 14 phrases, clean / 10 dB / 0 dB brown noise, Apple M1 CPU:
@@ -261,3 +400,7 @@ needs the volunteer recordings; only the train split is used, so the test split 
 Measured in the browser: end of speech → confirm screen in about 1.0–1.2 s (deck target < 2 s).
 Silence and noise-only clips are rejected by the VAD gate. These are synthetic voices, so they are
 a smoke test, not results; Member B's recordings replace them.
+
+## License
+
+[MIT](LICENSE) © 2026 The Auralink team. Screenshots in this README are real captures of the running app.
