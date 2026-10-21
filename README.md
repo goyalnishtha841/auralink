@@ -21,7 +21,7 @@ backup buttons that send requests as a seat, and a two-tap cabin reset between r
 `/report.html` is the flight report: requests by outcome, type and language, median time to
 acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row
 results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset.
-The presenter endpoints have no password: fine on the demo network, not for a real aircraft.
+Crew screens ask for the crew PIN (see [Crew PIN](#crew-pin)).
 
 Open <http://localhost:8000> and put **Passenger** and **Crew** side by side. Tap the microphone
 and say "thoda wotter and kambal", or type it.
@@ -113,6 +113,19 @@ because older and deaf passengers often do not ask. **Start round** tells each w
 in their language, which stop they are ("stop 3 of 7"); **Done** at each seat closes its requests.
 Urgent and medical requests never wait for a round. Logic: [hub/rounds.py](hub/rounds.py).
 
+## Crew PIN
+
+Passengers and crew share the cabin Wi-Fi, so the crew side is locked with a PIN. `/crew.html`,
+`/presenter.html`, `/report.html` and `/judge.html` (Under the hood quotes real seats' words) show
+a small 乗務員PIN / Crew PIN prompt once per device; after that an HttpOnly cookie (derived from the
+PIN, valid 24 h) unlocks `/ws/crew`, `/ws/judge`, `/api/status`, `/api/presenter/*`, `/api/pa/*`
+and `/api/report*`. Without it HTTP answers 401 and sockets close with code 4401. Seat screens,
+check-in, the recording page, the landing page and its "try it" box stay open. Set the PIN with
+`AURALINK_CREW_PIN=482913 scripts/run.sh`; `scripts/demo.sh` prints it (and picks one if unset);
+otherwise the hub makes a 6-digit PIN at startup and logs it once. Five wrong tries from one device
+lock it out for a minute. Logic: [hub/auth.py](hub/auth.py). Not covered (a real aircraft would
+need them): per-crew accounts, HTTPS-only cookies when serving plain HTTP, and the PIN rotating per flight.
+
 ## Adding a language (no code, no retraining)
 
 1. `data/languages.json`: add `{"code": "bn", "name": "বাংলা", "asr": ["en", "bn"]}`, and the script's
@@ -155,6 +168,7 @@ Tamil and Japanese text is a draft until a native speaker has checked it.
 
 ### Crew socket `/ws/crew`
 
+Needs the crew PIN cookie (closes with 4401 without it; same for `/ws/judge`).
 Sends `ack`, `reply {card_id, reply_id}`, `close`, `phase {phase}`, `broadcast {template_id}`.
 Receives `state {phase, cards[], heatmap{seat: understood|explain_again|pending|idle|offline}, broadcast}`
 after every change.

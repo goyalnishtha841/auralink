@@ -32,7 +32,8 @@ def test_checkin_rejects_unknown_seat_and_language():
     assert client.post("/api/checkin", json={"seat": "34K", "lang": "xx"}).status_code == 422
 
 
-def test_crew_sees_passenger_needs():
+def test_crew_sees_passenger_needs(crew_login):
+    crew_login(client)
     client.post("/api/checkin", json={"seat": "31C", "lang": "ta", "pictures": True})
     with client.websocket_connect("/ws/crew") as crew:
         needs = {n["id"]: n for n in crew.receive_json()["seat_needs"]}

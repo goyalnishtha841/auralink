@@ -57,8 +57,8 @@ def test_every_announcement_has_every_language():
                     assert all("{n}" in v for v in a[field].values()), a["id"]
 
 
-def test_caption_reaches_each_seat_in_its_language():
-    with TestClient(main.app) as client:
+def test_caption_reaches_each_seat_in_its_language(crew_login):
+    with crew_login(TestClient(main.app)) as client:
         with client.websocket_connect("/ws/passenger/31A") as hi, client.websocket_connect("/ws/passenger/32C") as th:
             hi.send_json({"type": "hello", "lang": "hi"})
             th.send_json({"type": "hello", "lang": "th"})
@@ -71,7 +71,7 @@ def test_caption_reaches_each_seat_in_its_language():
     assert main.cabin.pa_log[0]["id"] == "descent"
 
 
-def test_send_rejects_unknown_and_bad_numbers():
-    client = TestClient(main.app)
+def test_send_rejects_unknown_and_bad_numbers(crew_login):
+    client = crew_login(TestClient(main.app))
     assert client.post("/api/pa/send", json={"id": "nope"}).status_code == 404
     assert client.post("/api/pa/send", json={"id": "descent", "n": "<b>"}).status_code == 422

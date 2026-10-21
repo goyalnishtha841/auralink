@@ -39,8 +39,8 @@ def test_quiet_senior_passenger_gets_a_care_stop(cabin, monkeypatch):
     assert rounds.plan(cabin)["stops"][0]["care"] is None
 
 
-def test_round_tells_passengers_their_place_and_closes_requests(cabin):
-    with TestClient(main.app) as client, client.websocket_connect("/ws/passenger/31A") as a, \
+def test_round_tells_passengers_their_place_and_closes_requests(cabin, crew_login):
+    with crew_login(TestClient(main.app)) as client, client.websocket_connect("/ws/passenger/31A") as a, \
             client.websocket_connect("/ws/passenger/34K") as k:
         a.send_json({"type": "hello", "lang": "hi"})
         k.send_json({"type": "icon", "intent": "water"})

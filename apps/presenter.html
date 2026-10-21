@@ -94,7 +94,7 @@
   </main>
 
 <script type="module">
-import { el, loadConfig } from "./common.js";
+import { crewFetch, el, loadConfig } from "./common.js";
 
 const $ = (id) => document.getElementById(id);
 const config = await loadConfig();
@@ -143,7 +143,7 @@ const ACTIONS = {
 };
 
 async function post(path, body) {
-  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const res = await crewFetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Error ${res.status}`);
   return data;
@@ -188,7 +188,7 @@ $("reset").addEventListener("click", async () => {
 // health, every 2 seconds
 async function refresh() {
   try {
-    const s = await (await fetch("/api/status")).json();
+    const s = await (await crewFetch("/api/status")).json();
     $("dot").classList.add("on");
     const cells = [
       ["Hub", "online", "ok"],

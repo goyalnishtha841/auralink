@@ -163,7 +163,7 @@
   </main>
 
 <script type="module">
-import { Recorder, connect, el, loadConfig } from "./common.js";
+import { Recorder, connect, crewFetch, el, loadConfig } from "./common.js";
 import { pictogram } from "./pictograms.js";
 import { icon } from "./icons.js";
 import { canSpeak, speak } from "./speech.js";
@@ -376,7 +376,7 @@ $("paMicIcon").append(icon("mic"));
 async function paMatch(body) {
   $("paResult").replaceChildren(el("span", { class: "muted" }, "照合中… Matching…"));
   try {
-    const res = await fetch("/api/pa/match", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const res = await crewFetch("/api/pa/match", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const r = await res.json();
     if (!res.ok) throw new Error(r.detail || res.status);
     paShow(r);
@@ -401,7 +401,7 @@ function paShow(r) {
   send.addEventListener("click", async () => {
     send.disabled = true;
     const n = nInput.value.trim().toUpperCase() || null;
-    const res = await fetch("/api/pa/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: pick.id, n }) });
+    const res = await crewFetch("/api/pa/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: pick.id, n }) });
     const out = await res.json();
     $("paResult").replaceChildren(res.ok ? el("span", { class: "pill ok" }, `送信済み Sent to ${out.seats} seats`) : el("span", { class: "pill bad" }, JSON.stringify(out.detail)));
   });

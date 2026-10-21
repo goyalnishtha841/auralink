@@ -13,7 +13,7 @@ import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -22,7 +22,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import checkin, demo, languages, pa, persist, recordings, rounds
+from . import auth, checkin, demo, languages, pa, persist, recordings, rounds
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -72,6 +72,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Auralink cabin hub", lifespan=lifespan)
+CREW = [Depends(auth.require_crew)]       # crew-only routes: see hub/auth.py
 
 
 @app.middleware("http")
@@ -243,7 +244,7 @@ class SayIn(BaseModel):
     text: str = Field(min_length=1, max_length=200)
 
 
-@app.get("/api/status")
+@app.get("/api/status", dependencies=CREW)
 def status() -> dict:
     from engine.matcher import default_similarity
 
@@ -262,7 +263,7 @@ def status() -> dict:
     }
 
 
-@app.post("/api/presenter/reset")
+@app.post("/api/presenter/reset", dependencies=CREW)
 async def presenter_reset() -> dict:
     cabin.reset()
     for sockets in passengers.values():
@@ -271,7 +272,7 @@ async def presenter_reset() -> dict:
     return {"reset": True}
 
 
-@app.post("/api/presenter/say")
+@app.post("/api/presenter/say", dependencies=CREW)
 async def presenter_say(body: SayIn) -> dict:
     """Send a request as if a passenger typed it at `seat` (backup when a phone or microphone fails)."""
     if body.seat not in cabin.seats:
@@ -281,7 +282,7 @@ async def presenter_say(body: SayIn) -> dict:
     return {"sent": True, "seat_has_screen": cabin.seats[body.seat].connected}
 
 
-@app.post("/api/presenter/crew")
+@app.post("/api/presenter/crew", dependencies=CREW)
 async def presenter_crew(msg: dict) -> dict:
     """Trigger a crew action (broadcast, exit_check, phase, end_broadcast) as if tapped on the crew tablet."""
     allowed = {"broadcast", "exit_check", "phase", "end_broadcast", "start_round", "stop_done", "end_round"}
@@ -304,7 +305,7 @@ class PaHeardIn(BaseModel):
     audio_b64: str | None = None                       # ... or the crew's announcement, 16 kHz mono int16
 
 
-@app.post("/api/pa/match")
+@app.post("/api/pa/match", dependencies=CREW)
 async def pa_match(body: PaHeardIn) -> dict:
     """What did the crew announce? Speech is decoded as Japanese and English; every reading is matched
     against the library and the best one wins. Nothing is sent to passengers until the crew tap Send."""
@@ -339,7 +340,7 @@ class PaSendIn(BaseModel):
     n: str | None = Field(None, max_length=4, pattern=r"^[0-9]{1,3}[A-Z]?$")
 
 
-@app.post("/api/pa/send")
+@app.post("/api/pa/send", dependencies=CREW)
 async def pa_send(body: PaSendIn) -> dict:
     """Caption one announcement on every connected seat, each in its own language."""
     pa_library.reload_if_changed()
@@ -356,14 +357,14 @@ async def pa_send(body: PaSendIn) -> dict:
     return {"sent": body.id, "seats": seats}
 
 
-@app.get("/api/report")
+@app.get("/api/report", dependencies=CREW)
 def report() -> dict:
     """Flight report since the last cabin reset (report.html)."""
     templates.reload_if_changed()
     return flight_report.build(cabin, templates)
 
 
-@app.get("/api/report.csv")
+@app.get("/api/report.csv", dependencies=CREW)
 def report_csv() -> Response:
     return Response(flight_report.to_csv(cabin), media_type="text/csv",
                     headers={"Content-Disposition": 'attachment; filename="auralink-flight-report.csv"'})
@@ -556,7 +557,8 @@ async def handle_passenger(seat: str, msg: dict) -> None:
 
 @app.websocket("/ws/crew")
 async def crew_ws(ws: WebSocket) -> None:
-    await ws.accept()
+    if not await auth.crew_socket_ok(ws):
+        return
     crew.add(ws)
     await ws.send_json(crew_state())
     try:
@@ -614,7 +616,8 @@ async def handle_crew(msg: dict) -> None:
 
 @app.websocket("/ws/judge")
 async def judge_ws(ws: WebSocket) -> None:
-    await ws.accept()
+    if not await auth.crew_socket_ok(ws):      # live explanations quote real seats' words
+        return
     judges.add(ws)
     try:
         while True:
@@ -623,6 +626,7 @@ async def judge_ws(ws: WebSocket) -> None:
         judges.discard(ws)
 
 
+app.include_router(auth.router)
 app.include_router(recordings.router)
 app.include_router(demo.router)
 app.include_router(languages.router)

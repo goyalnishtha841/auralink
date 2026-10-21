@@ -14,7 +14,10 @@ export function connect(path, onMessage, onStatus = () => {}) {
     ws = new WebSocket(`${proto}://${location.host}${path}`);
     ws.onopen = () => { onStatus(true); queue.forEach((m) => ws.send(m)); queue = []; };
     ws.onmessage = (e) => onMessage(JSON.parse(e.data));
-    ws.onclose = () => { onStatus(false); setTimeout(open, 1000); };
+    ws.onclose = (e) => {
+      onStatus(false);
+      if (e.code === 4401) askCrewPin(); else setTimeout(open, 1000);   // crew screens: PIN first
+    };
   };
   open();
   return {
@@ -26,6 +29,44 @@ export function connect(path, onMessage, onStatus = () => {}) {
       if (ws.readyState === WebSocket.OPEN) ws.send(buffer); else queue.push(buffer);
     },
   };
+}
+
+// Crew PIN (hub/auth.py). Crew screens get 401 or a socket close 4401 without it: ask once, then reload.
+export function askCrewPin() {
+  if (document.getElementById("crew-pin")) return;
+  const box = document.createElement("div");
+  box.id = "crew-pin";
+  box.style.cssText = "position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:16px;" +
+    "background:rgba(6,9,21,.82);backdrop-filter:blur(6px)";
+  box.innerHTML = `
+    <form role="dialog" aria-modal="true" aria-labelledby="crew-pin-title" style="background:var(--surface,#0f1630);
+        color:var(--fg,#edf2ff);border:1px solid var(--line,rgba(150,175,255,.16));border-radius:16px;padding:20px;
+        width:min(340px,100%);display:flex;flex-direction:column;gap:12px">
+      <h2 id="crew-pin-title" style="margin:0;font-size:18px">乗務員PIN<br><small style="font-weight:500;color:var(--muted,#a3afcf)">Crew PIN</small></h2>
+      <input name="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="32" required
+        aria-label="乗務員PIN / Crew PIN" style="font:600 24px system-ui;letter-spacing:.3em;text-align:center;padding:10px;
+        border-radius:10px;border:1px solid var(--line,#334);background:var(--bg,#060915);color:inherit">
+      <p class="crew-pin-err" role="alert" style="margin:0;min-height:1.5em;color:var(--bad,#ff6b6b)"></p>
+      <button class="primary" type="submit">入る / Enter</button>
+    </form>`;
+  document.body.append(box);
+  const form = box.querySelector("form"), err = box.querySelector(".crew-pin-err");
+  form.pin.focus();
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const res = await fetch("/api/crew/login", { method: "POST", headers: { "Content-Type": "application/json" },
+                                                 body: JSON.stringify({ pin: form.pin.value }) });
+    if (res.ok) { location.reload(); return; }
+    err.textContent = (await res.json().catch(() => ({}))).detail || "PINが違います / Wrong PIN";
+    form.pin.select();
+  };
+}
+
+// fetch for crew-only routes: shows the PIN prompt on 401.
+export async function crewFetch(url, options) {
+  const res = await fetch(url, options);
+  if (res.status === 401) { askCrewPin(); throw new Error("乗務員PINが必要です / Crew PIN required"); }
+  return res;
 }
 
 // Tap-to-talk recorder. Resolves to 16 kHz mono int16 PCM, the format the hub expects.
