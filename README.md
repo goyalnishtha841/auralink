@@ -21,7 +21,7 @@ backup buttons that send requests as a seat, and a two-tap cabin reset between r
 `/report.html` is the flight report: requests by outcome, type and language, median time to
 acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row
 results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset.
-The presenter endpoints have no password: fine on the demo network, not for a real aircraft.
+Crew screens ask for the crew PIN (see [Crew PIN](#crew-pin)).
 
 Open <http://localhost:8000> and put **Passenger** and **Crew** side by side. Tap the microphone
 and say "thoda wotter and kambal", or type it.
@@ -66,6 +66,13 @@ Open `/record.html` on a phone connected to the hub (HTTPS needed for the microp
 Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
 `data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
 
+## Crash recovery
+
+The hub saves the cabin state after every change (`data/flight/cabin_state.json`, git-ignored,
+written atomically) and restores it on start: requests, briefing answers, exit-row checks and the
+flight report survive a restart, and screens reconnect by themselves. The presenter console shows
+when state was restored. Start clean with `AURALINK_FRESH=1 scripts/run.sh` or use Reset cabin.
+
 ## Check-in (the airport stage)
 
 `/checkin.html` is a kiosk page for the airport or boarding gate: the passenger picks language, seat
@@ -83,6 +90,41 @@ passenger's language, and a speaker button replays any of them. The crew tablet 
 requests in Japanese. Only the fixed, pre-approved sentences are spoken (`apps/speech.js`); online
 voice services are never used, and it stays off in picture-only mode. If a device has no voice for a
 language, the option is hidden.
+
+## Live PA captions
+
+On the crew tablet, **Live PA captions → Record announcement**, then make the announcement as usual
+(Japanese or English, up to 30 s). Whisper decodes it in both languages, each reading is matched against
+[data/templates/announcements.json](data/templates/announcements.json) by its key phrases, and the crew
+see the match (with minutes or a gate number taken from the speech) before tapping **Send to all
+seats**. Every seat shows a banner in its own language, with a screen flash and vibration for
+passengers who cannot hear the PA. An announcement that is not in the library is not captioned and
+the crew are told so: Auralink never machine-translates. Typed text works too (`POST /api/pa/match`
+with `{"text": ...}`, then `POST /api/pa/send` with `{"id": "descent", "n": "20"}`).
+
+## Care rounds
+
+The crew tablet always shows a planned **care round**: every open, non-urgent request for something
+the crew carry (water, tea, blanket, pillow, food), as one loop from the front galley, down the left
+aisle and back up the right, with a trolley load list and how much walking it saves compared with one
+trip per request. Passengers who use large text or pictures only and have not asked for anything for
+90 minutes (`AURALINK_CARE_AFTER_S`; `scripts/demo.sh` sets 2 minutes) are added as check-in stops,
+because older and deaf passengers often do not ask. **Start round** tells each waiting passenger,
+in their language, which stop they are ("stop 3 of 7"); **Done** at each seat closes its requests.
+Urgent and medical requests never wait for a round. Logic: [hub/rounds.py](hub/rounds.py).
+
+## Crew PIN
+
+Passengers and crew share the cabin Wi-Fi, so the crew side is locked with a PIN. `/crew.html`,
+`/presenter.html`, `/report.html` and `/judge.html` (Under the hood quotes real seats' words) show
+a small 乗務員PIN / Crew PIN prompt once per device; after that an HttpOnly cookie (derived from the
+PIN, valid 24 h) unlocks `/ws/crew`, `/ws/judge`, `/api/status`, `/api/presenter/*`, `/api/pa/*`
+and `/api/report*`. Without it HTTP answers 401 and sockets close with code 4401. Seat screens,
+check-in, the recording page, the landing page and its "try it" box stay open. Set the PIN with
+`AURALINK_CREW_PIN=482913 scripts/run.sh`; `scripts/demo.sh` prints it (and picks one if unset);
+otherwise the hub makes a 6-digit PIN at startup and logs it once. Five wrong tries from one device
+lock it out for a minute. Logic: [hub/auth.py](hub/auth.py). Not covered (a real aircraft would
+need them): per-crew accounts, HTTPS-only cookies when serving plain HTTP, and the PIN rotating per flight.
 
 ## Adding a language (no code, no retraining)
 
@@ -126,6 +168,7 @@ Tamil and Japanese text is a draft until a native speaker has checked it.
 
 ### Crew socket `/ws/crew`
 
+Needs the crew PIN cookie (closes with 4401 without it; same for `/ws/judge`).
 Sends `ack`, `reply {card_id, reply_id}`, `close`, `phase {phase}`, `broadcast {template_id}`.
 Receives `state {phase, cards[], heatmap{seat: understood|explain_again|pending|idle|offline}, broadcast}`
 after every change.
@@ -170,6 +213,21 @@ Writes [eval/results.md](eval/results.md), `eval/results.json` and `eval/results
 deck). Compares Baseline A (first result, keywords, no confirmation) with four Auralink matchers.
 The text challenge set was used to develop the matcher, so its numbers are optimistic; the claims
 for the final presentation must come from the held-out volunteer recordings.
+
+### Learned accent costs
+
+```bash
+.venv/bin/python scripts/learn_costs.py          # from the synthetic voices (run evaluate.py first)
+.venv/bin/python scripts/learn_costs.py --real   # + volunteer read-aloud prompts, train split only
+```
+
+Compares what each speaker meant with what Whisper heard, sound by sound, and counts the swaps
+(ɑ heard as ɔ, w as v ...). A swap seen at least 3 times becomes cheaper
+(`cost = max(0.15, 1 − n/(n+3))`); one-off noise and sentences Whisper got completely wrong are
+skipped. Writes `data/lexicon/phone_costs_learned.json` and [eval/learned_costs.md](eval/learned_costs.md);
+`evaluate.py` then adds a "hybrid, learned costs" row. Honest status: the synthetic voices are too
+few, so no swap has been seen often enough yet and the learned table equals the hand-set one. It
+needs the volunteer recordings; only the train split is used, so the test split stays a fair exam.
 
 ## Speech-to-text spike (2026-10-21)
 

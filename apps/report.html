@@ -77,7 +77,7 @@
   </main>
 
 <script type="module">
-import { el, loadConfig } from "./common.js";
+import { crewFetch, el, loadConfig } from "./common.js";
 import { icon } from "./icons.js";
 
 const $ = (id) => document.getElementById(id);
@@ -156,7 +156,7 @@ function render(r) {
   ] : [el("p", { class: "empty" }, "No exit-row check run yet.")]));
 }
 
-async function load() { render(await (await fetch("/api/report")).json()); }
+async function load() { render(await (await crewFetch("/api/report")).json()); }
 $("refresh").addEventListener("click", load);
 load();
 setInterval(load, 10000);

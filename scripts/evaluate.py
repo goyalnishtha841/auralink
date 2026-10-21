@@ -39,9 +39,11 @@ from engine import Context, Hypothesis, Lexicon, interpret  # noqa: E402
 from engine.matcher import make_similarity, tokenize  # noqa: E402
 
 SYSTEMS = ["baseline_a", "text", "phonetic_uniform", "phonetic", "hybrid"]
+if (ROOT / "data" / "lexicon" / "phone_costs_learned.json").exists():   # made by scripts/learn_costs.py
+    SYSTEMS.append("hybrid_learned")
 NAMES = {"baseline_a": "Baseline A: first result, keywords", "text": "Auralink, spelling",
          "phonetic_uniform": "Auralink, phonemes", "phonetic": "Auralink, phonemes + accent costs",
-         "hybrid": "Auralink, hybrid (default)"}
+         "hybrid": "Auralink, hybrid (default)", "hybrid_learned": "Auralink, hybrid, learned costs"}
 CACHE = ROOT / "eval" / "cache"
 OUT_MD = ROOT / "eval" / "results.md"
 OUT_JSON = ROOT / "eval" / "results.json"
@@ -192,7 +194,7 @@ def chart(results: dict, path: Path) -> None:
     """Grouped bar chart of first-try accuracy by group, as a standalone SVG for the deck."""
     groups = list(results["hybrid"]["by_group"])
     colors = {"baseline_a": "#7d89ab", "text": "#5b8cff", "phonetic_uniform": "#a87cff", "phonetic": "#3ce8c8",
-              "hybrid": "#ffb547"}
+              "hybrid": "#ffb547", "hybrid_learned": "#3ddc97"}
     W, H, left, top, bottom = 900, 380, 48, 30, 70
     gw = (W - left - 20) / len(groups)
     bw = (gw - 18) / len(SYSTEMS)
@@ -211,7 +213,7 @@ def chart(results: dict, path: Path) -> None:
             out.append(f'<rect x="{x:.1f}" y="{top + ph - h:.1f}" width="{bw - 3:.1f}" height="{h:.1f}" rx="3" fill="{colors[k]}"/>')
         out.append(f'<text x="{left + gi * gw + gw / 2:.1f}" y="{H - bottom + 18}" fill="#edf2ff" font-size="12" text-anchor="middle">{g.replace("_", " ")}</text>')
     for si, k in enumerate(SYSTEMS):
-        x = left + si * 172
+        x = left + si * (W - left - 20) / len(SYSTEMS)
         out.append(f'<rect x="{x}" y="{H - 28}" width="12" height="12" rx="2" fill="{colors[k]}"/>')
         out.append(f'<text x="{x + 18}" y="{H - 18}" fill="#a3afcf" font-size="11">{NAMES[k].replace("Auralink, ", "")}</text>')
     out.append("</svg>")

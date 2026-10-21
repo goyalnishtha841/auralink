@@ -64,6 +64,12 @@
       "hi": "अनुरोध पूरा हुआ",
       "ta": "கோரிக்கை முடிந்தது",
       "th": "คำขอเสร็จสิ้น"
+    },
+    "on_round": {
+      "en": "Crew are on their way with your request. You are stop {pos} of {n}.",
+      "hi": "क्रू आपका सामान लेकर आ रहे हैं। आप {n} में से {pos}वें स्टॉप पर हैं।",
+      "ta": "குழுவினர் உங்கள் கோரிக்கையுடன் வருகிறார்கள். {n} நிறுத்தங்களில் நீங்கள் {pos}-வது.",
+      "th": "ลูกเรือกำลังนำของมาให้คุณ คุณอยู่ลำดับที่ {pos} จาก {n}"
     }
   },
   "safety": [
@@ -349,5 +355,314 @@
   },
   "exit_rows": [
     30
-  ]
+  ],
+  "triage": {
+    "_note": "Shown when a passenger confirms they feel unwell. Draft wording: have a native speaker and, ideally, cabin-crew medical training staff check it.",
+    "title": {
+      "en": "What is wrong? Tap one.",
+      "hi": "क्या तकलीफ़ है? एक पर टैप करें।",
+      "ta": "என்ன பிரச்சனை? ஒன்றைத் தொடுங்கள்.",
+      "th": "มีอาการอะไร แตะหนึ่งข้อ",
+      "ja": "どのような症状ですか？"
+    },
+    "done": {
+      "en": "Help is coming. Please stay in your seat.",
+      "hi": "मदद आ रही है। कृपया अपनी सीट पर बैठे रहें।",
+      "ta": "உதவி வருகிறது. உங்கள் இருக்கையிலேயே இருங்கள்.",
+      "th": "ความช่วยเหลือกำลังมา กรุณานั่งอยู่ที่ที่นั่ง",
+      "ja": "ただいま参ります。お席でお待ちください。"
+    },
+    "symptoms": [
+      {
+        "id": "chest_pain",
+        "icon": "medical",
+        "label": {
+          "en": "Chest pain",
+          "hi": "सीने में दर्द",
+          "ta": "நெஞ்சு வலி",
+          "th": "เจ็บหน้าอก",
+          "ja": "胸の痛み"
+        }
+      },
+      {
+        "id": "breathing",
+        "icon": "wind",
+        "label": {
+          "en": "Hard to breathe",
+          "hi": "साँस लेने में तकलीफ़",
+          "ta": "மூச்சு விட கஷ்டம்",
+          "th": "หายใจลำบาก",
+          "ja": "呼吸困難"
+        }
+      },
+      {
+        "id": "dizzy",
+        "icon": "dizzy",
+        "label": {
+          "en": "Dizzy or faint",
+          "hi": "चक्कर या बेहोशी",
+          "ta": "தலைசுற்றல் / மயக்கம்",
+          "th": "เวียนหัว / จะเป็นลม",
+          "ja": "めまい・失神"
+        }
+      },
+      {
+        "id": "nausea",
+        "icon": "nausea",
+        "label": {
+          "en": "Feel sick or vomiting",
+          "hi": "जी मिचलाना या उल्टी",
+          "ta": "குமட்டல் / வாந்தி",
+          "th": "คลื่นไส้ / อาเจียน",
+          "ja": "吐き気・嘔吐"
+        }
+      },
+      {
+        "id": "pain",
+        "icon": "pain",
+        "label": {
+          "en": "Pain somewhere else",
+          "hi": "कहीं और दर्द",
+          "ta": "வேறு இடத்தில் வலி",
+          "th": "ปวดที่อื่น",
+          "ja": "その他の痛み"
+        }
+      },
+      {
+        "id": "other",
+        "icon": "question",
+        "label": {
+          "en": "Something else",
+          "hi": "कुछ और",
+          "ta": "வேறு ஏதோ",
+          "th": "อย่างอื่น",
+          "ja": "その他"
+        }
+      }
+    ]
+  },
+  "phrasebook": {
+    "_note": "Crew shows these face to face on the tablet. Fixed, pre-approved phrases only; drafts for native-speaker check.",
+    "groups": [
+      {
+        "id": "start",
+        "ja": "はじめに",
+        "en": "Start"
+      },
+      {
+        "id": "health",
+        "ja": "体調",
+        "en": "Health"
+      },
+      {
+        "id": "comfort",
+        "ja": "快適",
+        "en": "Comfort"
+      },
+      {
+        "id": "safety",
+        "ja": "安全",
+        "en": "Safety"
+      },
+      {
+        "id": "arrival",
+        "ja": "到着",
+        "en": "Arrival"
+      }
+    ],
+    "phrases": [
+      {
+        "id": "how_help",
+        "group": "start",
+        "yes_no": false,
+        "text": {
+          "en": "How can I help you?",
+          "hi": "मैं आपकी कैसे मदद कर सकता/सकती हूँ?",
+          "ta": "நான் உங்களுக்கு எப்படி உதவலாம்?",
+          "th": "มีอะไรให้ช่วยไหม",
+          "ja": "どうなさいましたか？"
+        }
+      },
+      {
+        "id": "point",
+        "group": "start",
+        "yes_no": false,
+        "text": {
+          "en": "Please point to what you need.",
+          "hi": "जो चाहिए, उस पर उंगली रखकर दिखाइए।",
+          "ta": "உங்களுக்கு வேண்டியதைச் சுட்டிக் காட்டுங்கள்.",
+          "th": "กรุณาชี้สิ่งที่คุณต้องการ",
+          "ja": "必要なものを指さしてください。"
+        }
+      },
+      {
+        "id": "come_back",
+        "group": "start",
+        "yes_no": false,
+        "text": {
+          "en": "Please wait. I will come back soon.",
+          "hi": "कृपया रुकिए, मैं जल्दी वापस आऊँगा/आऊँगी।",
+          "ta": "சற்று காத்திருங்கள். நான் விரைவில் திரும்பி வருகிறேன்.",
+          "th": "กรุณารอสักครู่ เดี๋ยวจะกลับมา",
+          "ja": "少々お待ちください。すぐに戻ります。"
+        }
+      },
+      {
+        "id": "where_pain",
+        "group": "health",
+        "yes_no": false,
+        "text": {
+          "en": "Where does it hurt? Please point.",
+          "hi": "दर्द कहाँ है? उंगली से दिखाइए।",
+          "ta": "எங்கே வலிக்கிறது? சுட்டிக் காட்டுங்கள்.",
+          "th": "เจ็บตรงไหน กรุณาชี้",
+          "ja": "どこが痛みますか？指さしてください。"
+        }
+      },
+      {
+        "id": "doctor",
+        "group": "health",
+        "yes_no": true,
+        "text": {
+          "en": "Do you need a doctor?",
+          "hi": "क्या आपको डॉक्टर चाहिए?",
+          "ta": "உங்களுக்கு மருத்துவர் வேண்டுமா?",
+          "th": "ต้องการหมอไหม",
+          "ja": "医師が必要ですか？"
+        }
+      },
+      {
+        "id": "own_medicine",
+        "group": "health",
+        "yes_no": true,
+        "text": {
+          "en": "Do you have your own medicine with you?",
+          "hi": "क्या आपके पास अपनी दवा है?",
+          "ta": "உங்களிடம் உங்கள் மருந்து இருக்கிறதா?",
+          "th": "คุณมียาของตัวเองติดตัวไหม",
+          "ja": "ご自身のお薬をお持ちですか？"
+        }
+      },
+      {
+        "id": "breathe",
+        "group": "health",
+        "yes_no": true,
+        "text": {
+          "en": "Can you breathe normally?",
+          "hi": "क्या आप ठीक से साँस ले पा रहे हैं?",
+          "ta": "நீங்கள் சாதாரணமாக மூச்சு விட முடிகிறதா?",
+          "th": "หายใจได้ปกติไหม",
+          "ja": "普通に呼吸できますか？"
+        }
+      },
+      {
+        "id": "rest",
+        "group": "health",
+        "yes_no": false,
+        "text": {
+          "en": "Please stay seated and rest. I am here.",
+          "hi": "कृपया बैठे रहिए और आराम कीजिए। मैं यहीं हूँ।",
+          "ta": "இருக்கையிலேயே அமர்ந்து ஓய்வெடுங்கள். நான் இங்கே இருக்கிறேன்.",
+          "th": "กรุณานั่งพักก่อน ฉันอยู่ตรงนี้",
+          "ja": "お席でお休みください。私がそばにおります。"
+        }
+      },
+      {
+        "id": "cold",
+        "group": "comfort",
+        "yes_no": true,
+        "text": {
+          "en": "Are you cold?",
+          "hi": "क्या आपको ठंड लग रही है?",
+          "ta": "உங்களுக்குக் குளிர்கிறதா?",
+          "th": "หนาวไหม",
+          "ja": "寒いですか？"
+        }
+      },
+      {
+        "id": "veg",
+        "group": "comfort",
+        "yes_no": true,
+        "text": {
+          "en": "Do you need a vegetarian meal?",
+          "hi": "क्या आपको शाकाहारी खाना चाहिए?",
+          "ta": "உங்களுக்குச் சைவ உணவு வேண்டுமா?",
+          "th": "ต้องการอาหารมังสวิรัติไหม",
+          "ja": "ベジタリアンのお食事が必要ですか？"
+        }
+      },
+      {
+        "id": "anything",
+        "group": "comfort",
+        "yes_no": true,
+        "text": {
+          "en": "Do you need anything else?",
+          "hi": "क्या आपको और कुछ चाहिए?",
+          "ta": "உங்களுக்கு வேறு ஏதாவது வேண்டுமா?",
+          "th": "ต้องการอะไรเพิ่มไหม",
+          "ja": "ほかに何かご入用ですか？"
+        }
+      },
+      {
+        "id": "seatbelt",
+        "group": "safety",
+        "yes_no": false,
+        "text": {
+          "en": "Please fasten your seatbelt now.",
+          "hi": "कृपया अभी सीट बेल्ट बाँध लीजिए।",
+          "ta": "தயவுசெய்து இப்போதே இருக்கை பட்டையை அணியுங்கள்.",
+          "th": "กรุณารัดเข็มขัดนิรภัยตอนนี้",
+          "ja": "シートベルトをお締めください。"
+        }
+      },
+      {
+        "id": "bag",
+        "group": "safety",
+        "yes_no": false,
+        "text": {
+          "en": "Please put your bag under the seat in front of you.",
+          "hi": "कृपया अपना बैग आगे वाली सीट के नीचे रखिए।",
+          "ta": "உங்கள் பையை முன் இருக்கையின் கீழ் வையுங்கள்.",
+          "th": "กรุณาวางกระเป๋าไว้ใต้ที่นั่งด้านหน้า",
+          "ja": "お手荷物は前の座席の下にお入れください。"
+        }
+      },
+      {
+        "id": "upright",
+        "group": "safety",
+        "yes_no": false,
+        "text": {
+          "en": "Please put your seat upright.",
+          "hi": "कृपया अपनी सीट सीधी कीजिए।",
+          "ta": "உங்கள் இருக்கையை நேராக வையுங்கள்.",
+          "th": "กรุณาปรับพนักพิงให้ตรง",
+          "ja": "背もたれを元の位置にお戻しください。"
+        }
+      },
+      {
+        "id": "connection",
+        "group": "arrival",
+        "yes_no": true,
+        "text": {
+          "en": "Do you have a connecting flight?",
+          "hi": "क्या आपकी आगे की कोई और उड़ान है?",
+          "ta": "உங்களுக்கு இணைப்பு விமானம் இருக்கிறதா?",
+          "th": "คุณมีเที่ยวบินต่อไหม",
+          "ja": "乗り継ぎ便はございますか？"
+        }
+      },
+      {
+        "id": "wheelchair",
+        "group": "arrival",
+        "yes_no": true,
+        "text": {
+          "en": "Do you need a wheelchair on arrival?",
+          "hi": "क्या उतरने पर आपको व्हीलचेयर चाहिए?",
+          "ta": "தரையிறங்கியதும் உங்களுக்குச் சக்கர நாற்காலி வேண்டுமா?",
+          "th": "ต้องการรถเข็นตอนถึงไหม",
+          "ja": "到着時に車椅子は必要ですか？"
+        }
+      }
+    ]
+  }
 }

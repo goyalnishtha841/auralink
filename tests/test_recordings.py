@@ -95,4 +95,21 @@ def test_every_prompt_uses_known_intents():
     lex = Lexicon()
     for p in recordings.prompts():
         assert all(lex.has(i) for i in p["intents"]), p["id"]
-        assert p["kind"] in {"free", "read"} and p["text"]["en"] and p["text"]["hi"]
+        assert p["kind"] in {"free", "read"} and p["text"]["en"], p["id"]
+        assert all(p["text"].get(code) for code in p.get("for", ["en", "hi", "ta", "th"])), p["id"]
+        assert set(p.get("for", [])) <= {"en", "hi", "ta", "th"}, p["id"]
+
+
+def test_each_language_gets_a_full_session():
+    for code in ("en", "hi", "ta", "th"):
+        mine = [p for p in recordings.prompts() if code in p.get("for", [code])]
+        assert len(mine) >= 20 and {"free", "read"} <= {p["kind"] for p in mine}, code
+
+
+def test_clip_records_the_text_shown():
+    sid = client.post("/api/recordings/speakers", json=PROFILE).json()["speaker_id"]
+    r = client.post("/api/recordings/clips", json={"speaker_id": sid, "prompt_id": "r_ta_thanni", "environment": "quiet",
+                                                   "page_lang": "ta", "audio_b64": tone()})
+    assert r.status_code == 200
+    rows = (recordings.RECORDINGS_DIR / "manifest.csv").read_text("utf-8")
+    assert "கொஞ்சம் தண்ணீர் கொடுங்க." in rows

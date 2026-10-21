@@ -12,7 +12,12 @@ def fresh_cabin(monkeypatch):
     monkeypatch.setattr(main, "cabin", Cabin(Lexicon()))
 
 
-client = TestClient(main.app)
+@pytest.fixture(scope="module")
+def client(crew_login):
+    """One client for the module, so the crew and passenger sockets share an event loop
+    (separate loops can deadlock when the hub sends from one socket's loop to another's)."""
+    with crew_login(TestClient(main.app)) as c:
+        yield c
 
 
 def crew_state(crew):
@@ -22,7 +27,7 @@ def crew_state(crew):
             return msg
 
 
-def test_split_request_reaches_crew_after_confirm():
+def test_split_request_reaches_crew_after_confirm(client):
     with client.websocket_connect("/ws/crew") as crew, client.websocket_connect("/ws/passenger/34K") as pax:
         crew_state(crew)
         pax.send_json({"type": "hello", "lang": "hi"})
@@ -47,7 +52,7 @@ def test_split_request_reaches_crew_after_confirm():
         assert reply == {"type": "reply", "card_id": water["id"], "text": "अभी लेकर आ रहे हैं।"}
 
 
-def test_two_failed_rounds_escalate_to_needs_human():
+def test_two_failed_rounds_escalate_to_needs_human(client):
     with client.websocket_connect("/ws/passenger/30A") as pax:
         pax.send_json({"type": "text", "text": "hmm"})
         assert pax.receive_json()["type"] == "grid"
@@ -56,7 +61,7 @@ def test_two_failed_rounds_escalate_to_needs_human():
         assert msg["type"] == "status" and msg["card"]["status"] == "needs_human"
 
 
-def test_safety_heatmap():
+def test_safety_heatmap(client):
     with client.websocket_connect("/ws/crew") as crew, client.websocket_connect("/ws/passenger/31C") as pax:
         crew.send_json({"type": "broadcast", "template_id": "turbulence"})
         safety = pax.receive_json()
@@ -71,7 +76,7 @@ def test_safety_heatmap():
         assert state["heatmap"]["30A"] == "offline"
 
 
-def test_bad_card_id_does_not_drop_socket():
+def test_bad_card_id_does_not_drop_socket(client):
     with client.websocket_connect("/ws/passenger/32D") as pax:
         pax.send_json({"type": "confirm", "card_id": "nope", "intent": "water"})
         assert pax.receive_json()["type"] == "error"
@@ -90,7 +95,7 @@ def _clip_pcm(name: str) -> bytes:
         return w.readframes(w.getnframes())
 
 
-def test_voice_request_end_to_end():
+def test_voice_request_end_to_end(client):
     pytest.importorskip("faster_whisper")
     with client.websocket_connect("/ws/passenger/33H") as pax:
         pax.send_bytes(_clip_pcm("rishi_water_blanket"))  # "Madam, thoda wotter and kambal please"
@@ -100,7 +105,7 @@ def test_voice_request_end_to_end():
         assert [c["options"][0]["intent"] for c in msg["cards"]] == ["water", "blanket"]
 
 
-def test_silence_goes_to_icon_grid():
+def test_silence_goes_to_icon_grid(client):
     pytest.importorskip("faster_whisper")
     with client.websocket_connect("/ws/passenger/33J") as pax:
         pax.send_bytes(bytes(16_000 * 2))  # one second of silence
@@ -108,7 +113,7 @@ def test_silence_goes_to_icon_grid():
         assert pax.receive_json() == {"type": "grid", "reason": "empty"}
 
 
-def test_interpret_endpoint_is_stateless():
+def test_interpret_endpoint_is_stateless(client):
     r = client.post("/api/interpret", json={"text": "thoda wotter and kambal", "lang": "hi"})
     body = r.json()
     assert body["rule"] == "split"
@@ -119,7 +124,7 @@ def test_interpret_endpoint_is_stateless():
     assert client.post("/api/interpret", json={"text": "tea", "phase": "landed"}).status_code == 422
 
 
-def test_explain_endpoint_shows_the_reasoning():
+def test_explain_endpoint_shows_the_reasoning(client):
     pytest.importorskip("phonemizer")
     body = client.post("/api/explain", json={"text": "madam thoda wotter and kambal"}).json()["explain"]
     assert body["rule"] == "split"
@@ -133,11 +138,11 @@ def test_explain_endpoint_shows_the_reasoning():
     assert body["thresholds"]["t1"] == 0.7
 
 
-def test_judge_gets_explanation_for_voice():
+def test_judge_gets_explanation_for_voice(crew_login):
     pytest.importorskip("faster_whisper")
     # one shared event loop for both sockets, as on the real server (separate TestClient portals stall
     # when one connection's handler sends a large message to the other)
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/judge") as judge, \
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/judge") as judge, \
             shared.websocket_connect("/ws/passenger/33K") as pax:
         pax.send_bytes(_clip_pcm("rishi_water_blanket"))
         msg = judge.receive_json()
@@ -147,8 +152,8 @@ def test_judge_gets_explanation_for_voice():
         assert msg["explain"]["stages"]["speech_to_text"] > 0
 
 
-def test_exit_row_check():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+def test_exit_row_check(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
             shared.websocket_connect("/ws/passenger/30A") as ok, shared.websocket_connect("/ws/passenger/30K") as unsure:
         ok.send_json({"type": "hello", "lang": "hi"})
         crew.send_json({"type": "exit_check"})
@@ -168,7 +173,7 @@ def test_exit_row_check():
         assert results["30A"] == "pass" and results["30K"] == "talk" and results["30B"] == "pending"
 
 
-def test_demo_kit_endpoints():
+def test_demo_kit_endpoints(client):
     info = client.get("/api/hub-info").json()
     assert info["public_url"].startswith("http")
     svg = client.get("/api/qr", params={"data": "http://192.168.1.5:8000/passenger.html?seat=34K"})
@@ -177,8 +182,8 @@ def test_demo_kit_endpoints():
     assert client.get("/api/qr", params={"data": "x" * 301}).status_code == 422
 
 
-def test_picture_mode_reaches_crew_card():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+def test_picture_mode_reaches_crew_card(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
             shared.websocket_connect("/ws/passenger/32D") as pax:
         pax.send_json({"type": "hello", "lang": "en", "pictures": True})
         pax.send_json({"type": "icon", "intent": "water"})
@@ -189,8 +194,8 @@ def test_picture_mode_reaches_crew_card():
         assert state["cards"][0]["pictures"] is True and state["cards"][0]["intent"] == "water"
 
 
-def test_presenter_backup_reset_and_status():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+def test_presenter_backup_reset_and_status(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
             shared.websocket_connect("/ws/passenger/34K") as pax:
         r = shared.post("/api/presenter/say", json={"seat": "34K", "text": "I have chest pain"}).json()
         assert r["seat_has_screen"] is True
@@ -210,7 +215,7 @@ def test_presenter_backup_reset_and_status():
         assert st["open_requests"] == 0 and st["briefing"] is None and "34K" in st["seats_connected"]
 
 
-def test_ca_certificate_is_public_part_only(tmp_path, monkeypatch):
+def test_ca_certificate_is_public_part_only(client, tmp_path, monkeypatch):
     monkeypatch.setenv("AURALINK_CA_ROOT", str(tmp_path))
     assert client.get("/api/ca.pem").status_code == 404
     (tmp_path / "rootCA.pem").write_text("-----BEGIN CERTIFICATE-----\nPUBLIC\n-----END CERTIFICATE-----\n")
@@ -219,3 +224,30 @@ def test_ca_certificate_is_public_part_only(tmp_path, monkeypatch):
     assert r.status_code == 200 and b"PUBLIC" in r.content and b"SECRET" not in r.content
     info = client.get("/api/hub-info").json()
     assert info["ca_available"] is True and info["this_page_https"] is False
+
+
+def test_medical_request_asks_for_symptom(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
+            shared.websocket_connect("/ws/passenger/34K") as pax:
+        pax.send_json({"type": "hello", "lang": "hi"})
+        pax.send_json({"type": "icon", "intent": "medical"})
+        assert pax.receive_json()["type"] == "status"
+        ask = pax.receive_json()
+        assert ask["type"] == "triage" and ask["triage"]["title"] == "क्या तकलीफ़ है? एक पर टैप करें।"
+        assert [x["id"] for x in ask["triage"]["symptoms"]][:2] == ["chest_pain", "breathing"]
+        pax.send_json({"type": "symptom", "card_id": ask["card_id"], "symptom": "nowhere"})
+        assert pax.receive_json()["type"] == "error"
+        pax.send_json({"type": "symptom", "card_id": ask["card_id"], "symptom": "chest_pain"})
+        assert pax.receive_json()["type"] == "triage_done"
+        state = crew_state(crew)
+        while not state["cards"] or "symptom_ja" not in state["cards"][0]:
+            state = crew_state(crew)
+        assert state["cards"][0]["symptom_ja"] == "胸の痛み" and state["cards"][0]["urgent"]
+
+
+def test_non_medical_request_never_asks_for_symptom(client):
+    with client.websocket_connect("/ws/passenger/31A") as pax:
+        pax.send_json({"type": "icon", "intent": "water"})
+        assert pax.receive_json()["type"] == "status"
+        pax.send_json({"type": "text", "text": "blanket"})
+        assert pax.receive_json()["type"] == "confirm"   # the next message is the confirm, not a triage

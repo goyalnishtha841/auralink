@@ -9,10 +9,11 @@ import json
 import logging
 import os
 import threading
+import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -21,7 +22,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import checkin, demo, languages, recordings
+from . import auth, checkin, demo, languages, pa, persist, recordings, rounds
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -71,6 +72,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Auralink cabin hub", lifespan=lifespan)
+CREW = [Depends(auth.require_crew)]       # crew-only routes: see hub/auth.py
 
 
 @app.middleware("http")
@@ -83,10 +85,14 @@ async def revalidate_static(request, call_next):
     return response
 lexicon = Lexicon()
 templates = Templates()
+pa_library = pa.Library()
 cabin = Cabin(lexicon)
 for _seat, _prefs in checkin.load().items():          # check-ins survive a hub restart
     if _seat in cabin.seats:
         cabin.seats[_seat] = cabin.seats[_seat].model_copy(update={**_prefs, "checked_in": True})
+restored_at = persist.restore(cabin)                    # crash recovery: requests, briefings, exit checks
+if restored_at:
+    log.warning("restored cabin state saved at %s", time.strftime("%H:%M:%S", time.localtime(restored_at)))
 
 passengers: dict[str, set[WebSocket]] = defaultdict(set)
 crew: set[WebSocket] = set()
@@ -122,6 +128,8 @@ def card_for_crew(card: Card) -> dict:
         for c in card.candidates
     ]
     data["lang"] = cabin.seats[card.seat].lang
+    if (sym := templates.symptom(card.symptom)):
+        data["symptom_ja"], data["symptom_en"], data["symptom_icon"] = sym["label"]["ja"], sym["label"]["en"], sym["icon"]
     data["pictures"] = cabin.seats[card.seat].pictures
     return data
 
@@ -149,6 +157,9 @@ def crew_state() -> dict:
         "broadcast": briefing,
         "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
                         for c in cabin.exit_checks.values()],
+        "round_plan": rounds.plan(cabin),
+        "round": cabin.round,
+        "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
         "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "checked_in", "connected"})
                        for s in cabin.seats.values() if s.lang != "en" or s.senior or s.pictures or s.read],
     }
@@ -169,6 +180,11 @@ async def to_seat(seat: str, msg: dict) -> None:
 
 
 async def push_crew() -> None:
+    """Every change ends here, so this is where the cabin state is saved for crash recovery."""
+    try:
+        persist.save(cabin)
+    except OSError as e:  # a full or read-only disk must never stop the cabin
+        log.error("could not save cabin state: %s", e)
     await _send(crew, crew_state())
 
 
@@ -228,7 +244,7 @@ class SayIn(BaseModel):
     text: str = Field(min_length=1, max_length=200)
 
 
-@app.get("/api/status")
+@app.get("/api/status", dependencies=CREW)
 def status() -> dict:
     from engine.matcher import default_similarity
 
@@ -243,10 +259,11 @@ def status() -> dict:
         "open_requests": len(open_cards),
         "urgent_open": sum(1 for c in open_cards if c.urgent and c.status != "acknowledged"),
         "briefing": cabin.broadcast.template_id if cabin.broadcast else None,
+        "restored_from": restored_at,
     }
 
 
-@app.post("/api/presenter/reset")
+@app.post("/api/presenter/reset", dependencies=CREW)
 async def presenter_reset() -> dict:
     cabin.reset()
     for sockets in passengers.values():
@@ -255,7 +272,7 @@ async def presenter_reset() -> dict:
     return {"reset": True}
 
 
-@app.post("/api/presenter/say")
+@app.post("/api/presenter/say", dependencies=CREW)
 async def presenter_say(body: SayIn) -> dict:
     """Send a request as if a passenger typed it at `seat` (backup when a phone or microphone fails)."""
     if body.seat not in cabin.seats:
@@ -265,11 +282,12 @@ async def presenter_say(body: SayIn) -> dict:
     return {"sent": True, "seat_has_screen": cabin.seats[body.seat].connected}
 
 
-@app.post("/api/presenter/crew")
+@app.post("/api/presenter/crew", dependencies=CREW)
 async def presenter_crew(msg: dict) -> dict:
     """Trigger a crew action (broadcast, exit_check, phase, end_broadcast) as if tapped on the crew tablet."""
-    if msg.get("type") not in {"broadcast", "exit_check", "phase", "end_broadcast"}:
-        raise HTTPException(400, "Allowed: broadcast, exit_check, phase, end_broadcast")
+    allowed = {"broadcast", "exit_check", "phase", "end_broadcast", "start_round", "stop_done", "end_round"}
+    if msg.get("type") not in allowed:
+        raise HTTPException(400, f"Allowed: {', '.join(sorted(allowed))}")
     try:
         await handle_crew(msg)
     except (KeyError, ValueError) as e:
@@ -277,14 +295,76 @@ async def presenter_crew(msg: dict) -> dict:
     return {"done": msg["type"]}
 
 
-@app.get("/api/report")
+# --- live PA captions --------------------------------------------------------------------------------
+
+PA_MAX_S = 30
+
+
+class PaHeardIn(BaseModel):
+    text: str | None = Field(None, max_length=600)   # typed (presenter backup, tests) ...
+    audio_b64: str | None = None                       # ... or the crew's announcement, 16 kHz mono int16
+
+
+@app.post("/api/pa/match", dependencies=CREW)
+async def pa_match(body: PaHeardIn) -> dict:
+    """What did the crew announce? Speech is decoded as Japanese and English; every reading is matched
+    against the library and the best one wins. Nothing is sent to passengers until the crew tap Send."""
+    import base64
+
+    import numpy as np
+
+    if body.audio_b64:
+        pcm = base64.b64decode(body.audio_b64)
+        if len(pcm) > PA_MAX_S * 16_000 * 2:
+            raise HTTPException(413, f"Announcement longer than {PA_MAX_S} s: send it in parts")
+        audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
+        try:
+            tr = await asyncio.to_thread(run_asr, audio, ("ja", "en"))
+        except ImportError:
+            raise HTTPException(503, "voice unavailable: faster-whisper not installed") from None
+        readings = [h.text for h in tr.hypotheses] or [""]
+        latency = tr.latency_ms
+    else:
+        readings, latency = [body.text or ""], {}
+    t = time.perf_counter()
+    results = [pa_library.match(r) for r in readings]
+    best = max(results, key=lambda r: r["matches"][0]["score"] if r["matches"] else 0.0)
+    latency = {**latency, "match": round((time.perf_counter() - t) * 1000, 1)}
+    for m in best["matches"]:
+        m.update(pa_library.caption(m["id"], "en", m["n"]))
+    return {**best, "readings": readings, "latency_ms": latency}
+
+
+class PaSendIn(BaseModel):
+    id: str
+    n: str | None = Field(None, max_length=4, pattern=r"^[0-9]{1,3}[A-Z]?$")
+
+
+@app.post("/api/pa/send", dependencies=CREW)
+async def pa_send(body: PaSendIn) -> dict:
+    """Caption one announcement on every connected seat, each in its own language."""
+    pa_library.reload_if_changed()
+    if body.id not in pa_library.items:
+        raise HTTPException(404, f"No announcement {body.id!r}")
+    entry = cabin.add_pa(body.id, body.n)
+    seats = 0
+    for seat, sockets in passengers.items():
+        if sockets:
+            seats += 1
+            await _send(sockets, {"type": "pa", "pa_id": entry["pa_id"],
+                                  "caption": pa_library.caption(body.id, cabin.seats[seat].lang, body.n)})
+    await push_crew()
+    return {"sent": body.id, "seats": seats}
+
+
+@app.get("/api/report", dependencies=CREW)
 def report() -> dict:
     """Flight report since the last cabin reset (report.html)."""
     templates.reload_if_changed()
     return flight_report.build(cabin, templates)
 
 
-@app.get("/api/report.csv")
+@app.get("/api/report.csv", dependencies=CREW)
 def report_csv() -> Response:
     return Response(flight_report.to_csv(cabin), media_type="text/csv",
                     headers={"Content-Disposition": 'attachment; filename="auralink-flight-report.csv"'})
@@ -337,6 +417,8 @@ def config() -> dict:
         "intents": [{"id": i.id, "icon": i.icon, "label": i.label, "urgent": i.urgent} for i in lexicon.intents],
         "replies": templates.data["replies"],
         "safety": [{"id": s["id"], "title": s["title"]} for s in templates.data["safety"]],
+        "phrasebook": {k: v for k, v in templates.data["phrasebook"].items() if not k.startswith("_")},
+        "announcements": pa_library.menu(),
         "exit_seats": exit_seats(),
         "languages": [{"code": lang["code"], "name": lang["name"]} for lang in languages.registry()],
     }
@@ -417,6 +499,13 @@ async def handle_audio(seat: str, pcm: bytes) -> None:
     await push_crew()
 
 
+async def ask_symptom(card: Card) -> None:
+    """A confirmed medical request: ask the passenger what is wrong, with pictures, so crew know before arriving."""
+    if card.intent == "medical" and card.symptom is None:
+        await to_seat(card.seat, {"type": "triage", "card_id": card.id,
+                                  "triage": templates.triage_view(cabin.seats[card.seat].lang)})
+
+
 async def handle_passenger(seat: str, msg: dict) -> None:
     s = cabin.seats[seat]
     kind = msg.get("type")
@@ -436,10 +525,16 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         else:
             card = cabin.icon_request(seat, msg["intent"])
         await send_status(card, "urgent" if card.urgent else "sent")
+        await ask_symptom(card)
 
     elif kind == "confirm":
         card = cabin.confirm(msg["card_id"], msg["intent"])
         await send_status(card, "urgent" if card.urgent else "sent")
+        await ask_symptom(card)
+
+    elif kind == "symptom":
+        card = cabin.set_symptom(msg["card_id"], msg.get("symptom"), templates.symptom_ids)
+        await to_seat(seat, {"type": "triage_done", "message": templates.triage_view(s.lang)["done"]})
 
     elif kind == "reject":
         card = cabin.reject(msg["card_id"])
@@ -462,7 +557,8 @@ async def handle_passenger(seat: str, msg: dict) -> None:
 
 @app.websocket("/ws/crew")
 async def crew_ws(ws: WebSocket) -> None:
-    await ws.accept()
+    if not await auth.crew_socket_ok(ws):
+        return
     crew.add(ws)
     await ws.send_json(crew_state())
     try:
@@ -497,6 +593,19 @@ async def handle_crew(msg: dict) -> None:
             await _send(sockets, {"type": "safety", "broadcast_id": b.id, "template": view})
     elif kind == "end_broadcast":
         cabin.end_broadcast()
+    elif kind == "start_round":
+        r = cabin.start_round(rounds.plan(cabin))
+        for pos, stop in enumerate(r["stops"], 1):
+            for cid in stop["cards"]:
+                card = cabin.cards[cid]
+                lang = cabin.seats[card.seat].lang
+                await to_seat(card.seat, {"type": "status", "card": card_for_passenger(card, lang),
+                                          "message": templates.status("on_round", lang).format(pos=pos, n=len(r["stops"]))})
+    elif kind == "stop_done":
+        for card in cabin.finish_stop(msg["seat"]):
+            await send_status(card, "closed")
+    elif kind == "end_round":
+        cabin.end_round()
     elif kind == "exit_check":
         templates.reload_if_changed()
         for check in cabin.start_exit_check(exit_seats()):
@@ -507,7 +616,8 @@ async def handle_crew(msg: dict) -> None:
 
 @app.websocket("/ws/judge")
 async def judge_ws(ws: WebSocket) -> None:
-    await ws.accept()
+    if not await auth.crew_socket_ok(ws):      # live explanations quote real seats' words
+        return
     judges.add(ws)
     try:
         while True:
@@ -516,6 +626,7 @@ async def judge_ws(ws: WebSocket) -> None:
         judges.discard(ws)
 
 
+app.include_router(auth.router)
 app.include_router(recordings.router)
 app.include_router(demo.router)
 app.include_router(languages.router)

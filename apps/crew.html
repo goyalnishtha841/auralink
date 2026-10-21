@@ -43,9 +43,64 @@
     .need { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
     .need b { font: 700 18px "Outfit", system-ui, sans-serif; min-width: 44px; }
     .need .dot { width: 9px; height: 9px; }
+    /* face-to-face phrasebook */
+    .pb { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow: auto; display: flex; flex-direction: column; }
+    .pb-top { position: sticky; top: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+    .pb-top h2 { margin: 0; flex: 1; font: 700 20px "Outfit", system-ui, sans-serif; }
+    .pb-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; max-width: 1000px; width: 100%; margin: 0 auto; }
+    .pb-group h3 { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+    .pb-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+    .pb-list button { text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
+    .pb-list button b { font-size: 17px; }
+    .pb-list button small { color: var(--muted); }
+    .pb-list button .yn { color: var(--info); font-size: 12px; }
+    .show { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 24px; text-align: center; }
+    .show .hint { color: var(--muted); font-size: 14px; }
+    .show .big { font: 700 clamp(34px, 6vw, 60px)/1.25 "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", system-ui, sans-serif; }
+    .show .small { color: var(--muted); font-size: 16px; }
+    .answers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .answers button { min-height: 96px; font-size: 26px; font-weight: 700; border-radius: 20px; }
+    .answers .yes { border-color: var(--ok); color: var(--ok); } .answers .no { border-color: var(--bad); color: var(--bad); }
+    .answer-out { font-size: 22px; font-weight: 700; }
+    .pb-log { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
     .what .icon .ic { width: 26px; height: 26px; color: var(--info); }
     .guess { display: inline-flex; align-items: center; gap: 4px; }
     .guess .icon .ic { width: 18px; height: 18px; }
+    .pill.symptom { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; }
+    .pill.symptom .icon .ic { width: 16px; height: 16px; }
+    /* care round */
+    .load { display: flex; gap: 8px; flex-wrap: wrap; }
+    .load span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); font-weight: 700; }
+    .load .icon .ic { width: 20px; height: 20px; color: var(--info); }
+    .stops { display: flex; flex-direction: column; gap: 6px; counter-reset: stop; }
+    .stop { display: grid; grid-template-columns: 30px 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
+    .stop::before { counter-increment: stop; content: counter(stop); font: 700 14px "Outfit", system-ui, sans-serif; color: var(--muted); text-align: center; }
+    .stop b { font: 700 18px "Outfit", system-ui, sans-serif; }
+    .stop .what { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .stop .what .pill { display: inline-flex; align-items: center; gap: 4px; }
+    .stop .icon .ic { width: 18px; height: 18px; color: var(--info); }
+    .stop.care { border: 1px dashed #c4a6ff; }
+    .stop.done { opacity: .45; }
+    .aisle { font-size: 12px; color: var(--muted); margin: 6px 0 0; letter-spacing: .04em; }
+    .saving { color: var(--ok); font-weight: 600; }
+    /* live PA captions */
+    .pa-mic.recording { background: var(--bad); border-color: var(--bad); color: #fff; animation: seatPulse 1.4s ease-in-out infinite; }
+    .pa-mic .icon .ic { width: 20px; height: 20px; vertical-align: -4px; }
+    #paPanel > .row { flex-wrap: wrap; }
+    #paForm { flex: 1 1 280px; display: flex; gap: 8px; }
+    #paForm input { flex: 1; min-width: 0; }
+    .pa-result { display: flex; flex-direction: column; gap: 8px; }
+    .pa-heard { font-size: 14px; color: var(--muted); }
+    .pa-opt { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; text-align: left; padding: 10px 12px; }
+    .pa-opt[aria-pressed="true"] { border-color: var(--accent); background: rgba(255, 181, 71, .1); }
+    .pa-opt .icon .ic { width: 28px; height: 28px; color: var(--info); }
+    .pa-opt small { display: block; color: var(--muted); }
+    .pa-send { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .pa-send input { width: 84px; }
+    .pa-lib summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+    .pa-lib .row { margin-top: 8px; }
+    .pa-log { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+    .pa-log .icon .ic { width: 16px; height: 16px; vertical-align: -3px; }
   </style>
 </head>
 <body>
@@ -54,6 +109,7 @@
     <h1>客室乗務員パネル <span class="muted">Crew panel</span></h1>
     <label class="row muted">飛行フェーズ Phase <select id="phase"></select></label>
     <button id="sound" class="muted-btn" aria-pressed="true" title="Sound for urgent requests">🔔 音 Sound on</button>
+    <button id="pbOpen" class="muted-btn">💬 会話帳 Phrasebook</button>
     <label class="row muted" id="readWrap" hidden><input type="checkbox" id="read"> 読み上げ Read aloud</label>
   </header>
   <main>
@@ -63,6 +119,10 @@
         <section class="panel">
           <h2>リクエスト Requests</h2>
           <div class="list" id="cards"></div>
+        </section>
+        <section class="panel" id="roundPanel">
+          <h2>ケアラウンド Care round</h2>
+          <div id="round"></div>
         </section>
         <section class="panel">
           <h2>乗客のニーズ Passenger needs</h2>
@@ -79,6 +139,19 @@
           <div class="seatmap" id="seatmap"></div>
           <div class="goto" id="goto"></div>
         </section>
+        <section class="panel" id="paPanel">
+          <h2>機内アナウンス字幕 Live PA captions</h2>
+          <p class="muted">Make the announcement as usual, with the tablet listening. Every seat sees it in its own language. Only announcements in the library are captioned; nothing is machine-translated.</p>
+          <div class="row">
+            <button class="primary pa-mic" id="paMic"><span class="icon" id="paMicIcon"></span> <span id="paMicLabel">録音 Record announcement</span></button>
+            <form class="row grow" id="paForm"><label class="sr-only" for="paText">Typed announcement</label>
+              <input class="grow" id="paText" autocomplete="off" placeholder="…or type it: We have started our descent, 20 minutes">
+              <button type="submit">照合 Match</button></form>
+          </div>
+          <div id="paResult" class="pa-result" aria-live="polite"></div>
+          <details class="pa-lib"><summary>一覧から選ぶ · Pick from the library</summary><div class="row" id="paLib"></div></details>
+          <div class="pa-log" id="paLog"></div>
+        </section>
         <section class="panel">
           <h2>非常口座席の確認 Exit-row check</h2>
           <p class="muted">Picture check at boarding. Supports your own briefing and confirmation; it does not replace it.</p>
@@ -90,7 +163,7 @@
   </main>
 
 <script type="module">
-import { connect, el, loadConfig } from "./common.js";
+import { Recorder, connect, crewFetch, el, loadConfig } from "./common.js";
 import { pictogram } from "./pictograms.js";
 import { icon } from "./icons.js";
 import { canSpeak, speak } from "./speech.js";
@@ -133,6 +206,56 @@ $("sound").addEventListener("click", () => {
   $("sound").textContent = soundOn ? "🔔 音 Sound on" : "🔕 消音 Muted";
 });
 
+// --- face-to-face phrasebook: fixed phrases shown big in the passenger's language, read aloud,
+// with Yes / No / Not clear for the passenger to tap on the tablet ------------------------------------
+const PB = config.phrasebook;
+const LANGS = Object.fromEntries(config.languages.map((l) => [l.code, l.name]));
+const pbLog = [];
+async function openPhrasebook(seat, lang) {
+  const ui = await (await fetch(`/api/i18n/${lang}`)).json();
+  const voice = await canSpeak(lang);
+  const root = el("div", { class: "pb", role: "dialog", "aria-label": "Phrasebook" });
+  const close = () => { root.remove(); };
+  const langSel = el("select", { "aria-label": "Passenger language", onchange: (e) => { close(); openPhrasebook(seat, e.target.value); } },
+    ...config.languages.map((l) => el("option", { value: l.code, ...(l.code === lang ? { selected: "" } : {}) }, l.name)));
+  const top = () => el("div", { class: "pb-top" },
+    el("h2", {}, `${seat ? `${seat} · ` : ""}会話帳 Phrasebook`), langSel, el("button", { onclick: close }, "閉じる Close"));
+
+  function list() {
+    root.replaceChildren(top(), el("div", { class: "pb-body" },
+      pbLog.length ? el("div", { class: "pb-log" }, el("strong", {}, "回答 Answers"), ...pbLog.slice(-5).reverse().map((x) => el("span", {}, x))) : null,
+      ...PB.groups.map((g) => el("section", { class: "pb-group" }, el("h3", {}, `${g.ja} · ${g.en}`),
+        el("div", { class: "pb-list" }, ...PB.phrases.filter((p) => p.group === g.id).map((p) =>
+          el("button", { onclick: () => show(p) }, el("b", {}, p.text.ja), el("small", {}, p.text.en),
+            p.yes_no ? el("span", { class: "yn" }, "はい / いいえ · Yes / No") : null)))))));
+  }
+
+  function show(p) {
+    const text = p.text[lang] || p.text.en;
+    if (voice) speak(text, lang);
+    const out = el("p", { class: "answer-out", role: "status" });
+    const answer = (code, ja, en) => {
+      out.textContent = `回答: ${ja} · ${en}`;
+      pbLog.push(`${seat || ""} ${p.text.ja} → ${ja} (${en})`);
+      if (voice) speak(ui.thanks || "", lang);
+    };
+    root.replaceChildren(top(), el("div", { class: "show" },
+      el("p", { class: "hint" }, "タブレットをお客様に向けてください · Turn the tablet to the passenger"),
+      el("p", { class: "big", lang }, text),
+      el("p", { class: "small" }, `${p.text.ja} · ${p.text.en}`),
+      voice ? el("div", {}, el("button", { onclick: () => speak(text, lang) }, "🔊 もう一度 Again")) : null,
+      p.yes_no ? el("div", { class: "answers" },
+        el("button", { class: "yes", onclick: () => answer("yes", "はい", "Yes") }, ui.yes || "Yes"),
+        el("button", { class: "no", onclick: () => answer("no", "いいえ", "No") }, ui.no || "No"),
+        el("button", { onclick: () => answer("unclear", "分からない", "Not clear") }, ui.stillUnclear || "Not clear")) : null,
+      out,
+      el("div", {}, el("button", { class: "primary", onclick: list }, "← 一覧へ Back to phrases"))));
+  }
+  list();
+  document.body.append(root);
+}
+$("pbOpen").addEventListener("click", () => openPhrasebook(null, "hi"));
+
 const socket = connect("/ws/crew", render, (on) => $("dot").classList.toggle("on", on));
 
 $("phase").replaceChildren(...config.phases.map((p) => el("option", { value: p }, p)));
@@ -151,13 +274,15 @@ function cardView(c) {
     el("span", { class: "who" }, c.seat),
     el("div", { class: "body" },
       el("div", { class: "what" }, ...what, el("span", { class: `pill ${tone}` }, `${ja} · ${en}`),
+        c.symptom_ja ? el("span", { class: "pill bad symptom" }, icon(c.symptom_icon), `症状 ${c.symptom_ja} · ${c.symptom_en}`) : null,
         c.pictures ? el("span", { class: "pill violet", title: "This passenger uses picture-only mode: answer with gestures or go to the seat" }, "絵のみ · Pictures only") : null),
       c.heard ? el("span", { class: "muted" }, `“${c.heard}” · ${c.lang}`) : null,
       el("div", { class: "acts" },
         c.status !== "acknowledged"
           ? el("button", { class: "primary", onclick: () => socket.send({ type: "ack", card_id: c.id }) }, "了解 Acknowledge") : null,
         ...config.replies.map((r) => el("button", { title: r.en, onclick: () => socket.send({ type: "reply", card_id: c.id, reply_id: r.id }) }, r.ja)),
-        el("button", { onclick: () => socket.send({ type: "close", card_id: c.id }) }, "完了 Done"))));
+        el("button", { onclick: () => socket.send({ type: "close", card_id: c.id }) }, "完了 Done"),
+        el("button", { onclick: () => openPhrasebook(c.seat, c.lang) }, "💬 話す Talk"))));
 }
 
 function renderAlarm(cards) {
@@ -166,7 +291,8 @@ function renderAlarm(cards) {
   const open = cards.filter((c) => c.urgent && c.status !== "acknowledged");
   if (fresh.length) beep();
   $("alarm").replaceChildren(...open.map((c) => el("div", { class: "alarm", role: "alert" },
-    el("b", {}, c.seat), `【至急】${c.crew_ja || "体調不良の可能性"} · Urgent: ${c.label_en || "possible medical"}`)));
+    el("b", {}, c.seat), `${(c.crew_ja || "体調不良の可能性").startsWith("【至急】") ? "" : "【至急】"}${c.crew_ja || "体調不良の可能性"} · Urgent: ${c.label_en || "possible medical"}`,
+    c.symptom_ja ? el("strong", {}, ` — 症状: ${c.symptom_ja} · ${c.symptom_en}`) : null)));
 }
 
 function renderSafety(state) {
@@ -214,7 +340,11 @@ function renderExit(checks) {
 let readAloud = false, announced = null;
 canSpeak("ja").then((ok) => { $("readWrap").hidden = !ok; });
 $("read").addEventListener("change", (e) => { readAloud = e.target.checked; });
+const announcedSymptom = new Set();
 function announce(cards) {
+  const symptoms = cards.filter((c) => c.symptom_ja && !announcedSymptom.has(c.id));
+  symptoms.forEach((c) => announcedSymptom.add(c.id));
+  if (readAloud && symptoms.length) speak(symptoms.map((c) => `${c.seat}、症状は${c.symptom_ja}です`), "ja");
   const fresh = cards.filter((c) => !announced.has(c.id) && c.status !== "acknowledged");
   cards.forEach((c) => announced.add(c.id));
   if (!readAloud || !fresh.length) return;
@@ -233,12 +363,119 @@ function renderNeeds(needs) {
       n.pictures ? el("span", { class: "pill violet" }, "絵のみ · Pictures only") : null,
       n.senior ? el("span", { class: "pill ok" }, "大きな文字 · Large text") : null,
       n.read ? el("span", { class: "pill dim" }, "読み上げ · Read aloud") : null,
-      n.checked_in ? el("span", { class: "muted" }, "チェックイン時 · set at check-in") : null))
+      n.checked_in ? el("span", { class: "muted" }, "チェックイン時 · set at check-in") : null,
+      el("button", { onclick: () => openPhrasebook(n.id, n.lang) }, "💬 話す Talk")))
     : [el("p", { class: "muted" }, "特記事項なし · Everyone uses English with default settings.")]));
+}
+
+// --- live PA captions: record or type the announcement, check the match, tap Send -----------------
+const PA = Object.fromEntries((config.announcements || []).map((a) => [a.id, a]));
+const VERDICT = { sure: ["一致 Matched", "ok"], check: ["要確認 Please check", "call"], none: ["該当なし Not in library", "bad"] };
+let paRec = null;
+$("paMicIcon").append(icon("mic"));
+async function paMatch(body) {
+  $("paResult").replaceChildren(el("span", { class: "muted" }, "照合中… Matching…"));
+  try {
+    const res = await crewFetch("/api/pa/match", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.detail || res.status);
+    paShow(r);
+  } catch (err) { $("paResult").replaceChildren(el("span", { class: "pill bad" }, `エラー Error: ${err.message}`)); }
+}
+function paShow(r) {
+  const [label, tone] = VERDICT[r.verdict];
+  let pick = r.verdict === "none" ? null : r.matches[0];
+  const nInput = el("input", { type: "text", inputmode: "numeric", "aria-label": "Number (minutes or gate)", maxlength: "4", value: pick?.n || "" });
+  const send = el("button", { class: "primary" }, "全席に送信 Send to all seats");
+  send.disabled = !pick;
+  const opts = r.matches.map((m) => {
+    const b = el("button", { class: "pa-opt", "aria-pressed": String(m === pick), onclick: () => {
+      pick = m; nInput.value = m.n || "";
+      opts.forEach((o) => o.setAttribute("aria-pressed", String(o === b))); send.disabled = false; slot();
+    } }, icon(m.icon), el("span", {}, el("b", {}, `${m.title_ja} · ${m.title_en}`), el("small", {}, m.text_en)),
+      el("span", { class: "mono muted", title: `key phrases heard: ${m.keys.join(", ")}` }, m.score.toFixed(1)));
+    return b;
+  });
+  const slotWrap = el("label", { class: "row muted" }, "", nInput);
+  const slot = () => { const k = PA[pick?.id]?.slot; slotWrap.hidden = !k; slotWrap.firstChild.textContent = k === "gate" ? "ゲート Gate " : "分 Minutes "; };
+  send.addEventListener("click", async () => {
+    send.disabled = true;
+    const n = nInput.value.trim().toUpperCase() || null;
+    const res = await crewFetch("/api/pa/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: pick.id, n }) });
+    const out = await res.json();
+    $("paResult").replaceChildren(res.ok ? el("span", { class: "pill ok" }, `送信済み Sent to ${out.seats} seats`) : el("span", { class: "pill bad" }, JSON.stringify(out.detail)));
+  });
+  $("paResult").replaceChildren(
+    el("div", { class: "row" }, el("span", { class: `pill ${tone}` }, label),
+      r.latency_ms ? el("span", { class: "mono muted" }, Object.entries(r.latency_ms).map(([k, v]) => `${k} ${v} ms`).join(" · ")) : null),
+    r.heard ? el("p", { class: "pa-heard" }, `聞き取り Heard: “${r.heard}”`) : null,
+    ...(r.verdict === "none" ? [el("p", {}, "この案内は字幕にできません。必要ならお客様へ直接お伝えください。 · Not in the library, so no caption was made. Pick one below if it fits, or tell passengers in person.")] : opts),
+    el("div", { class: "pa-send" }, slotWrap, send));
+  slot();
+}
+$("paLib").replaceChildren(...Object.values(PA).map((a) => el("button", { onclick: () =>
+  paShow({ verdict: "sure", heard: "", matches: [{ id: a.id, icon: a.icon, title_ja: a.title.ja, title_en: a.title.en, text_en: a.text_en, score: 0, keys: [], n: null }] }) },
+  icon(a.icon), ` ${a.title.ja} · ${a.title.en}`)));
+$("paForm").addEventListener("submit", (e) => { e.preventDefault(); const text = $("paText").value.trim(); if (text) paMatch({ text }); });
+$("paMic").addEventListener("click", async () => {
+  if (!paRec) {
+    if (!Recorder.supported()) { $("paResult").replaceChildren(el("span", { class: "pill bad" }, "マイク不可 Microphone needs https or localhost")); return; }
+    paRec = new Recorder();
+    try { await paRec.start(28, () => paRec && $("paMic").click()); } catch { paRec = null; return; }
+    $("paMic").classList.add("recording"); $("paMicLabel").textContent = "停止 Stop";
+  } else {
+    const pcm = await paRec.stop(); paRec = null;
+    $("paMic").classList.remove("recording"); $("paMicLabel").textContent = "録音 Record announcement";
+    const b64 = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(fr.result.split(",", 2)[1]); fr.readAsDataURL(new Blob([pcm])); });
+    paMatch({ audio_b64: b64 });
+  }
+});
+function renderPaLog(log) {
+  $("paLog").replaceChildren(...(log.length ? [el("strong", {}, "送信履歴 Sent")] : []), ...log.map((a) =>
+    el("span", {}, icon(a.icon), ` ${new Date(a.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ${a.title_ja} · ${a.text_en}`)));
+}
+
+// --- care round: one trolley loop for everything open, plus check-ins for quiet passengers -------
+const LABEL = Object.fromEntries(config.intents.map((i) => [i.id, i.label]));
+function stopView(st, active) {
+  const items = Object.entries(st.items.reduce((m, i) => ({ ...m, [i]: (m[i] || 0) + 1 }), {}));
+  return el("div", { class: `stop ${st.care ? "care" : ""} ${st.done ? "done" : ""}` },
+    el("b", {}, st.seat),
+    el("span", { class: "what" },
+      ...items.map(([i, n]) => el("span", { class: "pill dim" }, icon(i), `${LABEL[i].ja}${n > 1 ? ` ×${n}` : ""}`)),
+      st.care ? el("span", { class: "pill violet", title: "Has not asked for anything for a while. Older and deaf passengers often do not ask." },
+        `声かけ Check-in · ${st.care.minutes} 分 min quiet${st.care.pictures ? " · 絵のみ" : st.care.senior ? " · 大きな文字" : ""}`) : null),
+    active && !st.done ? el("button", { onclick: () => socket.send({ type: "stop_done", seat: st.seat }) }, "完了 Done") : el("span"));
+}
+function renderRound(state) {
+  const r = state.round, p = state.round_plan;
+  if (r) {
+    const left = r.stops.filter((s) => !s.done).length;
+    $("round").replaceChildren(
+      el("p", {}, el("span", { class: "pill ok" }, "ラウンド中 On round"), ` 残り ${left} / ${r.stops.length} stops left`),
+      el("div", { class: "stops" }, ...r.stops.map((st) => stopView(st, true))),
+      el("div", { class: "row" }, el("button", { onclick: () => socket.send({ type: "end_round" }) }, "ラウンド終了 End round")));
+    return;
+  }
+  if (!p.stops.length) { $("round").replaceChildren(el("p", { class: "muted" }, "お届け待ちなし · Nothing to bring, nobody waiting for a check-in.")); return; }
+  const leftAisle = p.stops.filter((s) => "ABCDE".includes(s.seat.slice(-1)));
+  const saved = p.walk_rows.separate ? Math.round(100 * (1 - p.walk_rows.round / p.walk_rows.separate)) : 0;
+  $("round").replaceChildren(
+    el("p", { class: "muted" }, "Everything open that you carry, as one loop from the front galley: down the left aisle, back up the right."),
+    el("div", { class: "load", "aria-label": "Trolley load" }, el("strong", {}, "積載 Load"),
+      ...Object.entries(p.load).map(([i, n]) => el("span", {}, icon(i), `${LABEL[i].ja} · ${LABEL[i].en} ×${n}`))),
+    leftAisle.length ? el("p", { class: "aisle" }, "左通路 LEFT AISLE ↓") : null,
+    el("div", { class: "stops" }, ...p.stops.map((st, k) => [
+      k === leftAisle.length ? el("p", { class: "aisle" }, "右通路 RIGHT AISLE ↑") : null, stopView(st, false)]).flat().filter(Boolean)),
+    p.requests > 1 ? el("p", { class: "saving" }, `1回で ${p.requests} 件 · ${p.requests} requests in one trip, not ${p.requests} separate walks: about ${saved}% less walking`) : null,
+    el("div", { class: "row" }, el("button", { class: "primary", onclick: () => socket.send({ type: "start_round" }) },
+      `ラウンド開始 Start round (${p.stops.length} stops${p.care_stops ? `, ${p.care_stops} check-in` : ""})`)));
 }
 
 function render(msg) {
   if (msg.type !== "state") return;
+  renderRound(msg);
+  renderPaLog(msg.pa_log || []);
   renderNeeds(msg.seat_needs || []);
   if (announced === null) announced = new Set(msg.cards.map((c) => c.id));   // don't read out what was already there
   announce(msg.cards);

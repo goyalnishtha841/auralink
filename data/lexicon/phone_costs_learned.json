@@ -1,0 +1,198 @@
+{
+ "_note": "Learned by scripts/learn_costs.py from synthetic voices only (24 of 42 recordings usable). Hand-set table + cheaper learned pairs.",
+ "default_sub": 1.0,
+ "default_indel": 1.0,
+ "vowel_sub": 0.5,
+ "vowel_indel": 0.6,
+ "vowel_groups": [
+  [
+   "a",
+   "ɑ",
+   "æ",
+   "ʌ",
+   "ɐ",
+   "ə",
+   "aɪ",
+   "aʊ"
+  ],
+  [
+   "e",
+   "ɛ",
+   "eɪ",
+   "æ"
+  ],
+  [
+   "i",
+   "ɪ",
+   "iə"
+  ],
+  [
+   "o",
+   "ɔ",
+   "oʊ",
+   "ɒ",
+   "ɔɪ"
+  ],
+  [
+   "u",
+   "ʊ",
+   "ʉ"
+  ]
+ ],
+ "vowel_group_sub": 0.2,
+ "indel": {
+  "ə": 0.25,
+  "h": 0.5,
+  "j": 0.5,
+  "ɪ": 0.35,
+  "r": 0.4
+ },
+ "groups": [
+  {
+   "phones": [
+    "w",
+    "v",
+    "ʋ",
+    "β"
+   ],
+   "cost": 0.15,
+   "why": "v/w merge in Indian English; Hindi व"
+  },
+  {
+   "phones": [
+    "t",
+    "ʈ",
+    "θ",
+    "ɾ"
+   ],
+   "cost": 0.2,
+   "why": "retroflex t, th-stopping, American flap"
+  },
+  {
+   "phones": [
+    "d",
+    "ɖ",
+    "ð",
+    "ɾ"
+   ],
+   "cost": 0.2,
+   "why": "retroflex d, voiced th, flap"
+  },
+  {
+   "phones": [
+    "r",
+    "ɾ",
+    "ɽ",
+    "ɻ"
+   ],
+   "cost": 0.15,
+   "why": "rhotic variants, Tamil ழ"
+  },
+  {
+   "phones": [
+    "r",
+    "l",
+    "ɾ"
+   ],
+   "cost": 0.4,
+   "why": "r/l for Japanese speakers"
+  },
+  {
+   "phones": [
+    "s",
+    "ʃ",
+    "ʂ"
+   ],
+   "cost": 0.25,
+   "why": "s/sh, Hindi श and ष"
+  },
+  {
+   "phones": [
+    "tʃ",
+    "c",
+    "ʃ"
+   ],
+   "cost": 0.2,
+   "why": "Hindi च is c; ch/sh"
+  },
+  {
+   "phones": [
+    "dʒ",
+    "ɟ",
+    "ʒ",
+    "z"
+   ],
+   "cost": 0.3,
+   "why": "Hindi ज is ɟ; z/j merge"
+  },
+  {
+   "phones": [
+    "n",
+    "ɳ",
+    "ŋ",
+    "ɲ"
+   ],
+   "cost": 0.25,
+   "why": "nasal place"
+  },
+  {
+   "phones": [
+    "k",
+    "q",
+    "x"
+   ],
+   "cost": 0.3,
+   "why": "Urdu-origin q and kh"
+  },
+  {
+   "phones": [
+    "g",
+    "ɣ"
+   ],
+   "cost": 0.3,
+   "why": "Urdu-origin gh"
+  },
+  {
+   "phones": [
+    "p",
+    "f"
+   ],
+   "cost": 0.4,
+   "why": "ph read as aspirated p"
+  },
+  {
+   "phones": [
+    "b",
+    "v",
+    "β"
+   ],
+   "cost": 0.4,
+   "why": "b/v in Bengali-accented English"
+  },
+  {
+   "phones": [
+    "k",
+    "g"
+   ],
+   "cost": 0.5,
+   "why": "voicing"
+  },
+  {
+   "phones": [
+    "t",
+    "d"
+   ],
+   "cost": 0.5,
+   "why": "voicing"
+  },
+  {
+   "phones": [
+    "p",
+    "b"
+   ],
+   "cost": 0.5,
+   "why": "voicing"
+  }
+ ],
+ "_changes": "2026-10-21: vowel costs raised (0.3/0.1/0.4 -> 0.5/0.2/0.6) after short words over-matched on the dev set; dropped final r made cheap (0.4)."
+}

@@ -97,6 +97,7 @@ class ClipIn(BaseModel):
     speaker_id: str = Field(pattern=r"^S-[A-Z2-9]{4}$")
     prompt_id: str
     environment: Literal["quiet", "some_noise", "noisy"]
+    page_lang: str = Field(default="en", pattern=r"^[a-z]{2}$")   # the language the prompt was shown in
     audio_b64: str  # 16 kHz mono int16 little-endian PCM
 
 
@@ -160,7 +161,8 @@ def save_clip(body: ClipIn) -> dict:
         _append_csv(RECORDINGS_DIR / "manifest.csv", CLIP_FIELDS, {
             "file": str(path.relative_to(RECORDINGS_DIR)), "speaker_id": body.speaker_id,
             "prompt_id": prompt["id"], "kind": prompt["kind"], "intents": "+".join(prompt["intents"]),
-            "prompt_text": prompt["text"]["en"], "environment": body.environment,
+            # what this volunteer actually saw (and, for read prompts, said), e.g. Devanagari or Tamil script
+            "prompt_text": prompt["text"].get(body.page_lang, prompt["text"]["en"]), "environment": body.environment,
             "duration_s": round(duration, 2), "peak": round(peak, 3), "split": speaker["split"],
             "recorded_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
         })
