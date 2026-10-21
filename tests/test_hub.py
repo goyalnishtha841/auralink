@@ -208,3 +208,14 @@ def test_presenter_backup_reset_and_status():
             msg = pax.receive_json()
         st = shared.get("/api/status").json()
         assert st["open_requests"] == 0 and st["briefing"] is None and "34K" in st["seats_connected"]
+
+
+def test_ca_certificate_is_public_part_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("AURALINK_CA_ROOT", str(tmp_path))
+    assert client.get("/api/ca.pem").status_code == 404
+    (tmp_path / "rootCA.pem").write_text("-----BEGIN CERTIFICATE-----\nPUBLIC\n-----END CERTIFICATE-----\n")
+    (tmp_path / "rootCA-key.pem").write_text("SECRET KEY")
+    r = client.get("/api/ca.pem")
+    assert r.status_code == 200 and b"PUBLIC" in r.content and b"SECRET" not in r.content
+    info = client.get("/api/hub-info").json()
+    assert info["ca_available"] is True and info["this_page_https"] is False

@@ -31,7 +31,15 @@ everything runs offline. Choose another model with `AURALINK_ASR_MODEL=small scr
 
 Run the tests with `.venv/bin/python -m pytest -q`.
 
-### On phones (week 1 task for Member C)
+### On phones
+
+Run `scripts/setup_https.sh` once on the laptop (it asks before adding mkcert's local certificate
+authority to the Mac's trusted list; undo with `mkcert -uninstall`), start the hub with
+`scripts/demo.sh`, then open `https://<laptop-ip>:8000/phone-setup.html` on each phone. That page
+walks through installing the certificate on iPhone or Android and has a live microphone test.
+The manual steps below do the same thing.
+
+#### Manual steps
 
 Phones only allow the microphone over HTTPS. Create a local certificate once:
 

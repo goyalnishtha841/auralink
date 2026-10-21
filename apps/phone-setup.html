@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Phone setup</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 760px; }
+    .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .st { padding: 14px; border-radius: var(--radius); background: var(--surface-2); display: flex; flex-direction: column; gap: 4px; }
+    .st span { font-size: 13px; color: var(--muted); }
+    .st b { font: 600 18px "Outfit", system-ui, sans-serif; }
+    .st.ok b { color: var(--ok); } .st.bad b { color: var(--bad); } .st.warn b { color: var(--warn); }
+    .tabs { display: flex; gap: 8px; }
+    .tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); }
+    ol.steps { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 14px; }
+    ol.steps li { padding-left: 4px; }
+    ol.steps b { display: block; margin-bottom: 4px; font-size: 17px; }
+    ol.steps p { margin: 4px 0; color: var(--muted); }
+    .path { font: 13px ui-monospace, Menlo, monospace; color: var(--fg); background: var(--surface-2); padding: 2px 6px; border-radius: 6px; }
+    .qr { width: 180px; height: 180px; background: #fff; border-radius: 12px; padding: 8px; }
+    .level { height: 18px; border-radius: 9px; background: var(--surface-2); overflow: hidden; }
+    .level i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .2s; }
+    .banner { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--warn); color: var(--warn); }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="dot on"></span>
+    <h1>Phone setup <span class="muted">so the microphone works</span></h1>
+    <a href="./"><button>Home</button></a>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>This phone right now</h2>
+      <div class="status" id="status"></div>
+      <button class="primary" id="micTest">Test the microphone (speak for 2 seconds)</button>
+      <div class="level" aria-hidden="true"><i id="level"></i></div>
+      <p class="muted" id="micResult" role="status"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Why this is needed</h2>
+      <p class="muted">Phones only let a web page use the microphone if the page is secure (https). The hub makes its
+        own certificate with mkcert, so each phone has to trust it once. Typing and pictures work without this; only
+        voice needs it. Do this once per phone, before the demo.</p>
+      <p class="banner" id="noCa" hidden>The laptop has no certificate yet. On the laptop run <span class="path">scripts/setup_https.sh</span>, then <span class="path">scripts/demo.sh</span>, and reload this page.</p>
+    </section>
+
+    <section class="panel">
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-os="ios">iPhone</button>
+        <button role="tab" aria-selected="false" data-os="android">Android</button>
+      </div>
+
+      <ol class="steps" id="ios">
+        <li><b>Join the same Wi-Fi as the laptop</b><p>The hub laptop is at <span class="path" id="ip1"></span>.</p></li>
+        <li><b>Open this page in Safari on the phone</b>
+          <p>Scan this code with the camera:</p><img class="qr" id="qr1" alt="QR code for this page">
+          <p>If Safari says the connection is not private: tap <span class="path">Show Details</span> → <span class="path">visit this website</span>. This is expected the first time.</p></li>
+        <li><b>Download the certificate</b>
+          <p><a href="/api/ca.pem"><button>Download certificate</button></a> then tap <span class="path">Allow</span>.</p></li>
+        <li><b>Install it</b><p>Open <span class="path">Settings</span> → <span class="path">Profile Downloaded</span> (near the top) → <span class="path">Install</span>, enter your passcode.</p></li>
+        <li><b>Trust it</b><p><span class="path">Settings → General → About → Certificate Trust Settings</span> → turn on the switch for <span class="path">mkcert</span>.</p></li>
+        <li><b>Check</b><p>Reload this page. "Secure page" should be green, then tap <span class="path">Test the microphone</span>.</p></li>
+      </ol>
+
+      <ol class="steps" id="android" hidden>
+        <li><b>Join the same Wi-Fi as the laptop</b><p>The hub laptop is at <span class="path" id="ip2"></span>.</p></li>
+        <li><b>Open this page in Chrome on the phone</b>
+          <p>Scan this code with the camera:</p><img class="qr" id="qr2" alt="QR code for this page">
+          <p>If Chrome says the connection is not private: tap <span class="path">Advanced</span> → <span class="path">Proceed</span>. This is expected the first time.</p></li>
+        <li><b>Download the certificate</b><p><a href="/api/ca.pem"><button>Download certificate</button></a></p></li>
+        <li><b>Install it</b><p><span class="path">Settings → Security &amp; privacy → More security settings → Encryption &amp; credentials → Install a certificate → CA certificate</span>, then pick <span class="path">auralink-hub.pem</span>. Menu names differ a little between phone brands; search Settings for "certificate".</p></li>
+        <li><b>Check</b><p>Reload this page. "Secure page" should be green, then tap <span class="path">Test the microphone</span>.</p></li>
+        <li><b>No-certificate shortcut (Android Chrome only)</b><p>Open <span class="path">chrome://flags</span>, search "Insecure origins treated as secure", add <span class="path" id="httpOrigin"></span>, set it to Enabled and relaunch. Then use the http address. Remove it after the demo.</p></li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <h2>After the hackathon: remove it</h2>
+      <p class="muted">iPhone: <span class="path">Settings → General → VPN &amp; Device Management</span> → the mkcert profile → Remove.
+        Android: <span class="path">Encryption &amp; credentials → Trusted credentials → User</span> → remove it.
+        Laptop: run <span class="path">mkcert -uninstall</span>.</p>
+    </section>
+  </main>
+
+<script type="module">
+import { Recorder, el } from "./common.js";
+
+const $ = (id) => document.getElementById(id);
+const info = await (await fetch("/api/hub-info")).json();
+const here = `${info.public_url}/phone-setup.html`;
+const host = new URL(info.public_url).host;
+
+function status() {
+  const secure = window.isSecureContext;
+  const cells = [
+    ["Secure page (https, or opened on the laptop itself)", secure ? "Yes" : "No", secure ? "ok" : "bad"],
+    ["Microphone allowed here", Recorder.supported() ? "Yes" : "No, needs https", Recorder.supported() ? "ok" : "bad"],
+    ["Certificate on the laptop", info.ca_available ? "Ready" : "Not made yet", info.ca_available ? "ok" : "warn"],
+  ];
+  $("status").replaceChildren(...cells.map(([k, v, tone]) => el("div", { class: `st ${tone}` }, el("span", {}, k), el("b", {}, v))));
+}
+
+$("ip1").textContent = $("ip2").textContent = host;
+$("httpOrigin").textContent = `http://${host}`;
+for (const id of ["qr1", "qr2"]) $(id).src = `/api/qr?data=${encodeURIComponent(here)}`;
+$("noCa").hidden = info.ca_available;
+for (const tab of document.querySelectorAll("[role=tab]")) {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll("[role=tab]").forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+    $("ios").hidden = tab.dataset.os !== "ios";
+    $("android").hidden = tab.dataset.os !== "android";
+  });
+}
+if (/android/i.test(navigator.userAgent)) document.querySelector('[data-os="android"]').click();
+
+$("micTest").addEventListener("click", async () => {
+  if (!Recorder.supported()) {
+    $("micResult").textContent = "This page is not secure yet, so the phone blocks the microphone. Follow the steps below.";
+    return;
+  }
+  const rec = new Recorder();
+  try {
+    await rec.start(3, () => {});
+  } catch {
+    $("micResult").textContent = "The microphone was refused. Allow it for this site in the browser settings and try again.";
+    return;
+  }
+  $("micResult").textContent = "Listening… say something.";
+  $("micTest").disabled = true;
+  await new Promise((r) => setTimeout(r, 2000));
+  const pcm = new Int16Array(await rec.stop());
+  const peak = pcm.reduce((m, v) => Math.max(m, Math.abs(v)), 0) / 32768;
+  $("level").style.width = `${Math.min(100, peak * 140)}%`;
+  $("micResult").textContent = peak > 0.03
+    ? "Microphone works. This phone is ready for the passenger screen."
+    : "We could not hear anything. Check the phone is not muted, speak closer, and try again.";
+  $("micTest").disabled = false;
+});
+
+status();
+</script>
+</body>
+</html>
