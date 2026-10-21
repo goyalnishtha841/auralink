@@ -12,7 +12,7 @@ import threading
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from fastapi.staticfiles import StaticFiles
 
@@ -212,6 +212,62 @@ def explain_text(body: InterpretIn) -> dict:
     result = interpret([Hypothesis(text=body.text)], Context(seat="demo", phase=body.phase), lexicon)
     return {"source": "typed", "seat": None, "phase": body.phase,
             "explain": explain(result, lexicon, default_similarity(), body.phase)}
+
+
+# --- presenter console (demo control): same code paths as the real screens -----------------------
+
+class SayIn(BaseModel):
+    seat: str
+    text: str = Field(min_length=1, max_length=200)
+
+
+@app.get("/api/status")
+def status() -> dict:
+    from engine.matcher import default_similarity
+
+    open_cards = cabin.crew_cards()
+    return {
+        "speech_model": ASR_MODEL if _asr is not None else None,
+        "matcher": getattr(default_similarity(), "name", "text"),
+        "phase": cabin.phase,
+        "seats_connected": sorted(sid for sid, seat in cabin.seats.items() if seat.connected),
+        "crew_screens": len(crew),
+        "judge_screens": len(judges),
+        "open_requests": len(open_cards),
+        "urgent_open": sum(1 for c in open_cards if c.urgent and c.status != "acknowledged"),
+        "briefing": cabin.broadcast.template_id if cabin.broadcast else None,
+    }
+
+
+@app.post("/api/presenter/reset")
+async def presenter_reset() -> dict:
+    cabin.reset()
+    for sockets in passengers.values():
+        await _send(sockets, {"type": "reset"})
+    await push_crew()
+    return {"reset": True}
+
+
+@app.post("/api/presenter/say")
+async def presenter_say(body: SayIn) -> dict:
+    """Send a request as if a passenger typed it at `seat` (backup when a phone or microphone fails)."""
+    if body.seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {body.seat}")
+    await interpret_and_reply(body.seat, body.text)
+    await push_crew()
+    return {"sent": True, "seat_has_screen": cabin.seats[body.seat].connected}
+
+
+@app.post("/api/presenter/crew")
+async def presenter_crew(msg: dict) -> dict:
+    """Trigger a crew action (broadcast, exit_check, phase, end_broadcast) as if tapped on the crew tablet."""
+    if msg.get("type") not in {"broadcast", "exit_check", "phase", "end_broadcast"}:
+        raise HTTPException(400, "Allowed: broadcast, exit_check, phase, end_broadcast")
+    try:
+        await handle_crew(msg)
+    except (KeyError, ValueError) as e:
+        raise HTTPException(400, str(e)) from None
+    return {"done": msg["type"]}
 
 
 @app.get("/api/config")

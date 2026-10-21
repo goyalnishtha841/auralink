@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Presenter</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 1240px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+    .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .clock { font: 700 64px/1 "Outfit", system-ui, sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+    .clock.late { color: var(--warn); } .clock.over { color: var(--bad); }
+    .steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .steps li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px;
+                border-radius: 12px; border: 1px solid var(--line); }
+    .steps li.now { border-color: var(--accent); background: rgba(255, 181, 71, .08); }
+    .steps li.done { opacity: .5; }
+    .steps .t { font: 600 13px ui-monospace, Menlo, monospace; color: var(--muted); }
+    .steps .what b { display: block; }
+    .steps .what span { font-size: 13px; color: var(--muted); }
+    .health { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+    .h { padding: 10px 12px; border-radius: 12px; background: var(--surface-2); display: flex; flex-direction: column; gap: 2px; }
+    .h span { font-size: 12px; color: var(--muted); }
+    .h b { font: 600 17px "Outfit", system-ui, sans-serif; }
+    .h.bad b { color: var(--bad); } .h.ok b { color: var(--ok); } .h.warn b { color: var(--warn); }
+    .actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+    .actions button { text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
+    .actions button small { color: var(--muted); font-size: 12px; }
+    .actions button.urgent { border-color: rgba(255, 107, 107, .55); }
+    .say { display: flex; gap: 8px; flex-wrap: wrap; }
+    .say input { flex: 1 1 200px; min-width: 0; }
+    .links { display: flex; flex-wrap: wrap; gap: 8px; }
+    .toast { min-height: 22px; font-size: 14px; color: var(--muted); }
+    .danger { border-color: var(--bad); color: var(--bad); }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="dot" id="dot"></span>
+    <h1>Presenter console <span class="muted">keep this on your laptop, not the projector</span></h1>
+    <a href="./"><button>Home</button></a>
+  </header>
+  <main>
+    <div class="layout">
+      <div class="col">
+        <section class="panel">
+          <div class="row"><span class="clock grow" id="clock">0:00</span>
+            <button class="primary" id="go">Start</button><button id="zero">Reset timer</button></div>
+          <ol class="steps" id="steps"></ol>
+        </section>
+      </div>
+      <div class="col">
+        <section class="panel">
+          <h2>Health</h2>
+          <div class="health" id="health"></div>
+        </section>
+        <section class="panel">
+          <h2>Backup buttons</h2>
+          <p class="muted">If a phone or the microphone fails, send the request from here. Screens react exactly as if it was live.</p>
+          <div class="actions" id="actions"></div>
+          <form class="say" id="say">
+            <label class="sr-only" for="saySeat">Seat</label>
+            <select id="saySeat"></select>
+            <label class="sr-only" for="sayText">Request text</label>
+            <input id="sayText" placeholder="Any request, e.g. pani aur takiya" autocomplete="off">
+            <button type="submit">Send as passenger</button>
+          </form>
+          <p class="toast" id="toast" role="status"></p>
+        </section>
+        <section class="panel">
+          <h2>Between rehearsals</h2>
+          <div class="row">
+            <button class="danger" id="reset">Reset cabin</button>
+            <span class="muted grow" id="resetNote">Clears all requests, briefings and exit checks. Phones stay connected.</span>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Open screens</h2>
+          <div class="links">
+            <a href="passenger.html?seat=34K&lang=hi" target="_blank"><button>Passenger 34K (Hindi)</button></a>
+            <a href="crew.html" target="_blank"><button>Crew tablet</button></a>
+            <a href="judge.html" target="_blank"><button>Under the hood</button></a>
+            <a href="noise.html" target="_blank"><button>Cabin noise</button></a>
+            <a href="seats.html" target="_blank"><button>Seat cards</button></a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+<script type="module">
+import { el, loadConfig } from "./common.js";
+
+const $ = (id) => document.getElementById(id);
+const config = await loadConfig();
+
+// the pitch from the project guide, as a checklist (seconds from the start)
+const STEPS = [
+  [0, "Mrs. Sharma's story", "Landing page hero. Start the cabin noise."],
+  [40, "The problem", "Nothing repairs a misheard request; nobody checks understanding."],
+  [70, "She scans and speaks", "Passenger phone, with noise playing.", "say-wotter"],
+  [110, "Crew card and reply", "Crew tablet: Japanese card, one-tap reply, Hindi answer."],
+  [130, "Under the hood", "Guesses, fillers, sound alignment, score above t1."],
+  [170, "Urgent", "\"I have chest pain\": red alarm before she confirms.", "say-pain"],
+  [190, "Turbulence briefing", "Explain again, Still not clear, red seat with the step.", "brief-turbulence"],
+  [220, "Unplug the internet", "Everything keeps working."],
+  [240, "Results", "First-try accuracy vs baseline; real-voice test in progress."],
+  [270, "Close", "Add a language by data. Invite a judge to try it."],
+];
+const LIMIT = 300;
+
+let started = 0, elapsed = 0, timer = 0;
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+function tick() {
+  const now = started ? elapsed + (Date.now() - started) / 1000 : elapsed;
+  $("clock").textContent = fmt(now);
+  $("clock").className = `clock grow ${now > LIMIT ? "over" : now > LIMIT - 30 ? "late" : ""}`;
+  const idx = STEPS.findLastIndex(([at]) => now >= at);
+  [...$("steps").children].forEach((li, i) => { li.classList.toggle("now", i === idx); li.classList.toggle("done", i < idx); });
+}
+$("go").addEventListener("click", () => {
+  if (started) { elapsed += (Date.now() - started) / 1000; started = 0; clearInterval(timer); $("go").textContent = "Start"; }
+  else { started = Date.now(); timer = setInterval(tick, 250); $("go").textContent = "Pause"; }
+  tick();
+});
+$("zero").addEventListener("click", () => { started = 0; elapsed = 0; clearInterval(timer); $("go").textContent = "Start"; tick(); });
+
+// backup actions
+const ACTIONS = {
+  "say-wotter": ["34K says “thoda wotter and kambal”", "Two cards, confirm in Hindi", () => say("34K", "thoda wotter and kambal")],
+  "say-pain": ["34K says “I have chest pain”", "Urgent alarm on the crew tablet", () => say("34K", "I have chest pain"), "urgent"],
+  "say-toilet": ["30A says “Shawchale kaha hai”", "Accent match, good for Under the hood", () => say("30A", "Shawchale kaha hai")],
+  "say-tamil": ["35A says “konjam thanni venum”", "Tamil request (open 35A in Tamil first)", () => say("35A", "konjam thanni venum")],
+  "say-unsure": ["34K says “hmm”", "Not sure: picture grid instead of guessing", () => say("34K", "hmm")],
+  "brief-turbulence": ["Send turbulence briefing", "Pictures on every passenger screen", () => crew({ type: "broadcast", template_id: "turbulence" })],
+  "exit-check": ["Start exit-row check", "Row 30 gets three picture questions", () => crew({ type: "exit_check" })],
+  "phase-meal": ["Set phase: meal service", "Food requests get a small boost", () => crew({ type: "phase", phase: "meal" })],
+};
+
+async function post(path, body) {
+  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Error ${res.status}`);
+  return data;
+}
+function toast(text) { $("toast").textContent = text; }
+async function say(seat, text) {
+  try {
+    const r = await post("/api/presenter/say", { seat, text });
+    toast(`Sent “${text}” from ${seat}.${r.seat_has_screen ? "" : ` No passenger screen is open for ${seat}, so only the crew and Under the hood will show it.`}`);
+  } catch (e) { toast(e.message); }
+  refresh();
+}
+async function crew(msg) {
+  try { await post("/api/presenter/crew", msg); toast(`Done: ${msg.type}${msg.template_id ? ` (${msg.template_id})` : ""}.`); }
+  catch (e) { toast(e.message); }
+  refresh();
+}
+
+$("steps").replaceChildren(...STEPS.map(([at, title, hint, action]) => el("li", {},
+  el("span", { class: "t" }, fmt(at)),
+  el("span", { class: "what" }, el("b", {}, title), el("span", {}, hint)),
+  action ? el("button", { onclick: ACTIONS[action][2] }, "Backup") : el("span"))));
+$("actions").replaceChildren(...Object.values(ACTIONS).map(([label, sub, fn, cls]) =>
+  el("button", { class: cls || "", onclick: fn }, el("span", {}, label), el("small", {}, sub))));
+$("saySeat").replaceChildren(...config.seats.map((s) => el("option", { value: s, ...(s === "34K" ? { selected: "" } : {}) }, s)));
+$("say").addEventListener("submit", (e) => { e.preventDefault(); const t = $("sayText").value.trim(); if (t) say($("saySeat").value, t); });
+
+// reset: two taps, so it can't happen by accident on stage
+let armed = 0;
+$("reset").addEventListener("click", async () => {
+  if (!armed) {
+    $("reset").textContent = "Tap again to reset"; $("resetNote").textContent = "This clears everything on the crew tablet.";
+    armed = setTimeout(() => { armed = 0; $("reset").textContent = "Reset cabin"; $("resetNote").textContent = "Clears all requests, briefings and exit checks. Phones stay connected."; }, 4000);
+    return;
+  }
+  clearTimeout(armed); armed = 0;
+  try { await post("/api/presenter/reset", {}); toast("Cabin reset."); } catch (e) { toast(e.message); }
+  $("reset").textContent = "Reset cabin"; $("resetNote").textContent = "Clears all requests, briefings and exit checks. Phones stay connected.";
+  refresh();
+});
+
+// health, every 2 seconds
+async function refresh() {
+  try {
+    const s = await (await fetch("/api/status")).json();
+    $("dot").classList.add("on");
+    const cells = [
+      ["Hub", "online", "ok"],
+      ["Speech-to-text", s.speech_model ? `Whisper ${s.speech_model} ready` : "loads on first voice request", s.speech_model ? "ok" : "warn"],
+      ["Matcher", s.matcher, s.matcher === "hybrid" ? "ok" : "warn"],
+      ["Passenger screens", s.seats_connected.length ? s.seats_connected.join(", ") : "none", s.seats_connected.length ? "ok" : "warn"],
+      ["Crew tablets", String(s.crew_screens), s.crew_screens ? "ok" : "bad"],
+      ["Under the hood", String(s.judge_screens), s.judge_screens ? "ok" : "warn"],
+      ["Open requests", String(s.open_requests), ""],
+      ["Urgent waiting", String(s.urgent_open), s.urgent_open ? "bad" : "ok"],
+      ["Phase / briefing", `${s.phase}${s.briefing ? ` · ${s.briefing}` : ""}`, ""],
+    ];
+    $("health").replaceChildren(...cells.map(([k, v, tone]) => el("div", { class: `h ${tone}` }, el("span", {}, k), el("b", {}, v))));
+  } catch {
+    $("dot").classList.remove("on");
+    $("health").replaceChildren(el("div", { class: "h bad" }, el("span", {}, "Hub"), el("b", {}, "offline")));
+  }
+}
+refresh();
+setInterval(refresh, 2000);
+tick();
+</script>
+</body>
+</html>

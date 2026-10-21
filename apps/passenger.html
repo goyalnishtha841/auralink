@@ -59,7 +59,11 @@ let config;
 const requests = new Map();  // card id -> {intent, label, message, state, urgent}
 
 const t = (k) => STRINGS[k] ?? FALLBACK[k] ?? k;
-const socket = connect(`/ws/passenger/${seat}`, onMessage, (on) => {
+// Messages can arrive before the language file has loaded (e.g. a phone reconnecting just as a
+// request lands); hold them until the screen text is ready, then handle them in order.
+let markReady;
+const ready = new Promise((resolve) => (markReady = resolve));
+const socket = connect(`/ws/passenger/${seat}`, (msg) => ready.then(() => onMessage(msg)), (on) => {
   $("dot").classList.toggle("on", on);
   if (on) socket.send({ type: "hello", lang, senior, pictures });
 });
@@ -185,6 +189,8 @@ function onMessage(msg) {
   } else if (msg.type === "exit_check") {
     attention();
     showExitCheck(msg.check);
+  } else if (msg.type === "reset") {   // presenter reset between demo runs
+    pending = []; requests.clear(); renderRequests(); closeSheet();
   } else if (msg.type === "exit_done") {
     sheet(el("h2", {}, t("thanks")), el("p", {}, msg.message),
       el("button", { class: "primary", onclick: closeSheet }, t("ok")));
@@ -271,6 +277,7 @@ $("senior").checked = senior;
 $("pictures").checked = pictures;
 $("micIcon").replaceWith(icon("mic"));
 applyStrings();
+markReady();
 </script>
 </body>
 </html>

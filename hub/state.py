@@ -78,6 +78,15 @@ class Cabin:
         self.exit_checks: dict[str, ExitCheck] = {}
         self._ids = itertools.count(1)
 
+    def reset(self) -> None:
+        """Clear requests, briefings and exit checks between demo runs. Connections and languages stay."""
+        self.cards.clear()
+        self.broadcast = None
+        self.exit_checks.clear()
+        self.phase = "cruise"
+        for seat in self.seats.values():
+            seat.failed_attempts = 0
+
     # passenger side
 
     def handle_text(self, seat: str, text: str, nbest: list[Hypothesis] | None = None
