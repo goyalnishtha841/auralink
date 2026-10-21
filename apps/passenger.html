@@ -11,10 +11,7 @@
     <span class="dot" id="dot" title="Connection"></span>
     <h1 id="title">How can we help?</h1>
     <span class="muted" id="seat"></span>
-    <select id="lang" aria-label="Language">
-      <option value="en">English</option>
-      <option value="hi">हिन्दी</option>
-    </select>
+    <select id="lang" aria-label="Language"></select>
     <label class="row muted"><input type="checkbox" id="senior"> <span id="seniorLabel">Large mode</span></label>
     <label class="row muted"><input type="checkbox" id="pictures"> <span id="picturesLabel">Pictures only</span></label>
   </header>
@@ -44,29 +41,12 @@ import { Recorder, connect, el, loadConfig } from "./common.js";
 import { pictogram } from "./pictograms.js";
 import { icon } from "./icons.js";
 
-const STRINGS = {
-  en: { title: "How can we help?", typeHint: "Type or say what you need", send: "Send", orTap: "Or tap a picture",
-        requestsLabel: "Your requests", seniorLabel: "Large mode", confirmQ: "Did you mean this?",
-        pickOne: "Which one did you mean?", yes: "Yes", no: "No", none: "None of these",
-        together: "Let's find it together. Tap what you need.", understood: "I understood",
-        explain: "Explain again", ok: "OK", seat: "Seat", gotIt: "Got it", stillUnclear: "Still not clear",
-        step: "Step", of: "of", question: "Question", crewComing: "A crew member is coming to explain in person.",
-        thanks: "Thank you!", reexplain: "Let's go one step at a time.", speak: "Tap to speak", stop: "Listening… tap when done",
-        thinking: "Understanding…", micOff: "Voice needs a secure (https) connection. Please type or tap a picture.",
-        micDenied: "Microphone not allowed. Please type or tap a picture.", picturesLabel: "Pictures only",
-        tapNeed: "Tap what you need", sent: "sent", seen: "seen by crew", replied: "crew replied" },
-  hi: { title: "हम आपकी कैसे मदद करें?", typeHint: "जो चाहिए, लिखें या बोलें", send: "भेजें",
-        orTap: "या तस्वीर पर टैप करें", requestsLabel: "आपके अनुरोध", seniorLabel: "बड़ा मोड",
-        confirmQ: "क्या आपका मतलब यह था?", pickOne: "आपका मतलब कौन-सा था?", yes: "हाँ", no: "नहीं",
-        none: "इनमें से कोई नहीं", together: "चलिए साथ में ढूँढते हैं। जो चाहिए उस पर टैप करें।",
-        understood: "मैं समझ गया/गई", explain: "फिर से समझाइए", ok: "ठीक है", seat: "सीट",
-        gotIt: "समझ गया/गई", stillUnclear: "अब भी समझ नहीं आया", step: "चरण", of: "/", question: "सवाल",
-        crewComing: "एक क्रू सदस्य आपको खुद समझाने आ रहे हैं।", thanks: "धन्यवाद!", reexplain: "चलिए, एक-एक करके देखते हैं।",
-        speak: "बोलने के लिए टैप करें", stop: "सुन रहे हैं… बोलकर टैप करें", thinking: "समझ रहे हैं…",
-        micOff: "आवाज़ के लिए सुरक्षित (https) कनेक्शन चाहिए। कृपया लिखें या तस्वीर पर टैप करें।",
-        micDenied: "माइक की अनुमति नहीं है। कृपया लिखें या तस्वीर पर टैप करें।", picturesLabel: "सिर्फ़ तस्वीरें",
-        tapNeed: "जो चाहिए उस पर टैप करें", sent: "भेजा गया", seen: "क्रू ने देखा", replied: "क्रू का जवाब" },
-};
+// Screen text comes from data/i18n/<code>.json via the hub; missing keys fall back to English.
+let STRINGS = {}, FALLBACK = {};
+async function loadStrings(code) {
+  const get = (c) => fetch(`/api/i18n/${c}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({}));
+  [FALLBACK, STRINGS] = await Promise.all([get("en"), get(code)]);
+}
 
 const params = new URLSearchParams(location.search);
 const seat = params.get("seat") || "34K";
@@ -78,7 +58,7 @@ let pictures = params.get("mode") === "pictures";
 let config;
 const requests = new Map();  // card id -> {intent, label, message, state, urgent}
 
-const t = (k) => STRINGS[lang][k] ?? STRINGS.en[k];
+const t = (k) => STRINGS[k] ?? FALLBACK[k] ?? k;
 const socket = connect(`/ws/passenger/${seat}`, onMessage, (on) => {
   $("dot").classList.toggle("on", on);
   if (on) socket.send({ type: "hello", lang, senior, pictures });
@@ -272,11 +252,19 @@ $("form").addEventListener("submit", (e) => {
   socket.send({ type: "text", text });
   $("text").value = "";
 });
-$("lang").addEventListener("change", (e) => { lang = e.target.value; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
+$("lang").addEventListener("change", async (e) => {
+  lang = e.target.value;
+  await loadStrings(lang);
+  applyStrings();
+  socket.send({ type: "hello", lang, senior, pictures });
+});
 $("pictures").addEventListener("change", (e) => { pictures = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
 $("senior").addEventListener("change", (e) => { senior = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
 
 config = await loadConfig();
+$("lang").replaceChildren(...config.languages.map((l) => el("option", { value: l.code }, l.name)));
+if (!config.languages.some((l) => l.code === lang)) lang = "en";
+await loadStrings(lang);
 if (!Recorder.supported()) { micState = "off"; micNote("micOff"); }
 $("lang").value = lang;
 $("senior").checked = senior;

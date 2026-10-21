@@ -53,6 +53,18 @@ Open `/record.html` on a phone connected to the hub (HTTPS needed for the microp
 Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
 `data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
 
+## Adding a language (no code, no retraining)
+
+1. `data/languages.json`: add `{"code": "bn", "name": "বাংলা", "asr": ["en", "bn"]}`, and the script's
+   character range + eSpeak-NG voice under `scripts` if it has its own writing system.
+2. `data/i18n/bn.json`: the passenger screen text (copy `en.json`, translate the values).
+3. `data/lexicon/intents.json`: a `bn` label and spoken words for each of the 8 intents.
+4. `data/templates/messages.json`: `bn` for crew replies, statuses, safety steps and the exit-row check.
+5. Run `.venv/bin/python -m pytest -q tests/test_languages.py`: it lists anything still missing.
+
+The hub reloads the word list as soon as it is saved. Tamil (`ta`) was added this way. All Hindi,
+Tamil and Japanese text is a draft until a native speaker has checked it.
+
 ## Contracts (change only as a team)
 
 - **Engine types** – `engine/types.py`: `Hypothesis`, `Context`, `Candidate`, `CardDraft`, `Result`.

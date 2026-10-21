@@ -20,7 +20,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import demo, recordings
+from . import demo, languages, recordings
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
 from .templates import Templates
@@ -44,10 +44,10 @@ def get_asr():
         return _asr
 
 
-def run_asr(audio):
+def run_asr(audio, langs: tuple[str, ...] = ("en", "hi")):
     asr = get_asr()
     with _asr_lock:  # one decode at a time; CPU-bound anyway
-        return asr.transcribe(audio)
+        return asr.transcribe(audio, langs=langs)
 
 
 def warm_matcher() -> None:
@@ -176,7 +176,7 @@ async def send_status(card: Card, key: str) -> None:
 class InterpretIn(BaseModel):
     text: str = Field(max_length=200)
     phase: Phase = "cruise"
-    lang: str = Field("en", pattern=r"^(en|hi|ja)$")
+    lang: str = Field("en", pattern=r"^[a-z]{2,3}$")
 
 
 @app.post("/api/interpret")
@@ -225,6 +225,7 @@ def config() -> dict:
         "replies": templates.data["replies"],
         "safety": [{"id": s["id"], "title": s["title"]} for s in templates.data["safety"]],
         "exit_seats": exit_seats(),
+        "languages": [{"code": lang["code"], "name": lang["name"]} for lang in languages.registry()],
     }
 
 
@@ -291,7 +292,7 @@ async def handle_audio(seat: str, pcm: bytes) -> None:
     await to_seat(seat, {"type": "thinking"})
     audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
     try:
-        tr = await asyncio.to_thread(run_asr, audio)
+        tr = await asyncio.to_thread(run_asr, audio, languages.asr_languages(cabin.seats[seat].lang))
     except ImportError:
         await to_seat(seat, {"type": "error", "detail": "voice unavailable: faster-whisper not installed"})
         await to_seat(seat, {"type": "grid", "reason": "voice_unavailable"})
@@ -403,4 +404,5 @@ async def judge_ws(ws: WebSocket) -> None:
 
 app.include_router(recordings.router)
 app.include_router(demo.router)
+app.include_router(languages.router)
 app.mount("/", StaticFiles(directory=ROOT / "apps", html=True), name="apps")

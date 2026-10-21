@@ -128,7 +128,24 @@
     "can't",
     "cant",
     "dont",
-    "don't"
+    "don't",
+    "konjam",
+    "koncham",
+    "venum",
+    "vendum",
+    "enakku",
+    "oru",
+    "kodunga",
+    "kudunga",
+    "enga",
+    "irukku",
+    "கொஞ்சம்",
+    "வேண்டும்",
+    "வேணும்",
+    "எனக்கு",
+    "ஒரு",
+    "கொடுங்க",
+    "எங்கே"
   ],
   "intents": [
     {
@@ -137,7 +154,8 @@
       "label": {
         "en": "Water",
         "hi": "पानी",
-        "ja": "お水"
+        "ja": "お水",
+        "ta": "தண்ணீர்"
       },
       "variants": {
         "en": [
@@ -152,6 +170,13 @@
           "pani",
           "jal",
           "पानी"
+        ],
+        "ta": [
+          "தண்ணீர்",
+          "தண்ணி",
+          "thanni",
+          "thanneer",
+          "tanni"
         ]
       },
       "crew_ja": "お水をご希望です",
@@ -166,7 +191,8 @@
       "label": {
         "en": "Tea or coffee",
         "hi": "चाय या कॉफ़ी",
-        "ja": "お茶・コーヒー"
+        "ja": "お茶・コーヒー",
+        "ta": "டீ / காபி"
       },
       "variants": {
         "en": [
@@ -180,6 +206,12 @@
           "chay",
           "चाय",
           "कॉफ़ी"
+        ],
+        "ta": [
+          "டீ",
+          "காபி",
+          "kaapi",
+          "coffee"
         ]
       },
       "crew_ja": "お茶またはコーヒーをご希望です",
@@ -194,7 +226,8 @@
       "label": {
         "en": "Blanket",
         "hi": "कंबल",
-        "ja": "毛布"
+        "ja": "毛布",
+        "ta": "போர்வை"
       },
       "variants": {
         "en": [
@@ -209,6 +242,11 @@
           "kammal",
           "thand",
           "कंबल"
+        ],
+        "ta": [
+          "போர்வை",
+          "porvai",
+          "kuliru"
         ]
       },
       "crew_ja": "毛布をご希望です",
@@ -222,7 +260,8 @@
       "label": {
         "en": "Pillow",
         "hi": "तकिया",
-        "ja": "枕"
+        "ja": "枕",
+        "ta": "தலையணை"
       },
       "variants": {
         "en": [
@@ -234,6 +273,11 @@
           "takiya",
           "takia",
           "तकिया"
+        ],
+        "ta": [
+          "தலையணை",
+          "thalaiyanai",
+          "talayanai"
         ]
       },
       "crew_ja": "枕をご希望です",
@@ -247,7 +291,8 @@
       "label": {
         "en": "Toilet",
         "hi": "शौचालय",
-        "ja": "お手洗い"
+        "ja": "お手洗い",
+        "ta": "கழிப்பறை"
       },
       "variants": {
         "en": [
@@ -263,6 +308,11 @@
           "shauchalay",
           "bathroom kahan",
           "शौचालय"
+        ],
+        "ta": [
+          "கழிப்பறை",
+          "kazhipparai",
+          "toilet enga"
         ]
       },
       "crew_ja": "お手洗いの場所をお尋ねです",
@@ -276,7 +326,8 @@
       "label": {
         "en": "Food",
         "hi": "खाना",
-        "ja": "お食事"
+        "ja": "お食事",
+        "ta": "சாப்பாடு"
       },
       "variants": {
         "en": [
@@ -293,6 +344,12 @@
           "bhook",
           "shakahari",
           "खाना"
+        ],
+        "ta": [
+          "சாப்பாடு",
+          "saapadu",
+          "saappaadu",
+          "pasi"
         ]
       },
       "crew_ja": "お食事についてのご依頼です",
@@ -309,7 +366,8 @@
       "label": {
         "en": "I feel unwell",
         "hi": "तबीयत ठीक नहीं",
-        "ja": "体調不良"
+        "ja": "体調不良",
+        "ta": "உடம்பு சரியில்லை"
       },
       "variants": {
         "en": [
@@ -332,6 +390,13 @@
           "tabiyat",
           "दवाई",
           "दर्द"
+        ],
+        "ta": [
+          "மருந்து",
+          "வலி",
+          "marundhu",
+          "vali",
+          "udambu sariyilla"
         ]
       },
       "crew_ja": "【至急】体調不良のお客様です",
@@ -343,7 +408,8 @@
       "label": {
         "en": "Call crew",
         "hi": "क्रू को बुलाएँ",
-        "ja": "乗務員の呼び出し"
+        "ja": "乗務員の呼び出し",
+        "ta": "உதவி தேவை"
       },
       "variants": {
         "en": [
@@ -358,6 +424,11 @@
           "sahayata",
           "suniye",
           "मदद"
+        ],
+        "ta": [
+          "உதவி",
+          "udhavi",
+          "udavi"
         ]
       },
       "crew_ja": "乗務員をお呼びです",

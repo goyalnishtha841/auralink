@@ -1,0 +1,43 @@
+{
+  "_note": "Passenger languages. Adding one = an entry here + data/i18n/<code>.json + words in data/lexicon/intents.json + messages in data/templates/messages.json. No code or retraining. 'asr' = the languages Whisper decodes for that passenger; 'scripts' tells the phonetic matcher which eSpeak-NG voice reads which writing system.",
+  "languages": [
+    {
+      "code": "en",
+      "name": "English",
+      "asr": [
+        "en",
+        "hi"
+      ]
+    },
+    {
+      "code": "hi",
+      "name": "हिन्दी",
+      "asr": [
+        "en",
+        "hi"
+      ]
+    },
+    {
+      "code": "ta",
+      "name": "தமிழ்",
+      "asr": [
+        "en",
+        "ta"
+      ]
+    }
+  ],
+  "scripts": [
+    {
+      "name": "Devanagari",
+      "from": "0900",
+      "to": "097F",
+      "espeak": "hi"
+    },
+    {
+      "name": "Tamil",
+      "from": "0B80",
+      "to": "0BFF",
+      "espeak": "ta"
+    }
+  ]
+}

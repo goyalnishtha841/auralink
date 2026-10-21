@@ -9,7 +9,7 @@
     ["e", "ɛ", "eɪ", "æ"],
     ["i", "ɪ", "iə"],
     ["o", "ɔ", "oʊ", "ɒ", "ɔɪ"],
-    ["u", "ʊ"]
+    ["u", "ʊ", "ʉ"]
   ],
   "vowel_group_sub": 0.2,
   "indel": {"ə": 0.25, "h": 0.5, "j": 0.5, "ɪ": 0.35, "r": 0.4},
@@ -17,7 +17,7 @@
     {"phones": ["w", "v", "ʋ", "β"], "cost": 0.15, "why": "v/w merge in Indian English; Hindi व"},
     {"phones": ["t", "ʈ", "θ", "ɾ"], "cost": 0.2, "why": "retroflex t, th-stopping, American flap"},
     {"phones": ["d", "ɖ", "ð", "ɾ"], "cost": 0.2, "why": "retroflex d, voiced th, flap"},
-    {"phones": ["r", "ɾ", "ɽ"], "cost": 0.15, "why": "rhotic variants"},
+    {"phones": ["r", "ɾ", "ɽ", "ɻ"], "cost": 0.15, "why": "rhotic variants, Tamil ழ"},
     {"phones": ["r", "l", "ɾ"], "cost": 0.4, "why": "r/l for Japanese speakers"},
     {"phones": ["s", "ʃ", "ʂ"], "cost": 0.25, "why": "s/sh, Hindi श and ष"},
     {"phones": ["tʃ", "c", "ʃ"], "cost": 0.2, "why": "Hindi च is c; ch/sh"},
