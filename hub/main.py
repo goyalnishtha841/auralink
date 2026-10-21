@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import threading
+import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
@@ -21,7 +22,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import checkin, demo, languages, recordings
+from . import checkin, demo, languages, persist, recordings
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -87,6 +88,9 @@ cabin = Cabin(lexicon)
 for _seat, _prefs in checkin.load().items():          # check-ins survive a hub restart
     if _seat in cabin.seats:
         cabin.seats[_seat] = cabin.seats[_seat].model_copy(update={**_prefs, "checked_in": True})
+restored_at = persist.restore(cabin)                    # crash recovery: requests, briefings, exit checks
+if restored_at:
+    log.warning("restored cabin state saved at %s", time.strftime("%H:%M:%S", time.localtime(restored_at)))
 
 passengers: dict[str, set[WebSocket]] = defaultdict(set)
 crew: set[WebSocket] = set()
@@ -171,6 +175,11 @@ async def to_seat(seat: str, msg: dict) -> None:
 
 
 async def push_crew() -> None:
+    """Every change ends here, so this is where the cabin state is saved for crash recovery."""
+    try:
+        persist.save(cabin)
+    except OSError as e:  # a full or read-only disk must never stop the cabin
+        log.error("could not save cabin state: %s", e)
     await _send(crew, crew_state())
 
 
@@ -245,6 +254,7 @@ def status() -> dict:
         "open_requests": len(open_cards),
         "urgent_open": sum(1 for c in open_cards if c.urgent and c.status != "acknowledged"),
         "briefing": cabin.broadcast.template_id if cabin.broadcast else None,
+        "restored_from": restored_at,
     }
 
 

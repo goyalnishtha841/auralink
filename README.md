@@ -66,6 +66,13 @@ Open `/record.html` on a phone connected to the hub (HTTPS needed for the microp
 Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
 `data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
 
+## Crash recovery
+
+The hub saves the cabin state after every change (`data/flight/cabin_state.json`, git-ignored,
+written atomically) and restores it on start: requests, briefing answers, exit-row checks and the
+flight report survive a restart, and screens reconnect by themselves. The presenter console shows
+when state was restored. Start clean with `AURALINK_FRESH=1 scripts/run.sh` or use Reset cabin.
+
 ## Check-in (the airport stage)
 
 `/checkin.html` is a kiosk page for the airport or boarding gate: the passenger picks language, seat

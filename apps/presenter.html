@@ -200,6 +200,7 @@ async function refresh() {
       ["Open requests", String(s.open_requests), ""],
       ["Urgent waiting", String(s.urgent_open), s.urgent_open ? "bad" : "ok"],
       ["Phase / briefing", `${s.phase}${s.briefing ? ` · ${s.briefing}` : ""}`, ""],
+      ...(s.restored_from ? [["Crash recovery", `restored state from ${new Date(s.restored_from * 1000).toLocaleTimeString()}`, "warn"]] : []),
     ];
     $("health").replaceChildren(...cells.map(([k, v, tone]) => el("div", { class: `h ${tone}` }, el("span", {}, k), el("b", {}, v))));
   } catch {
