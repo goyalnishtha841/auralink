@@ -43,6 +43,26 @@
     .need { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
     .need b { font: 700 18px "Outfit", system-ui, sans-serif; min-width: 44px; }
     .need .dot { width: 9px; height: 9px; }
+    /* face-to-face phrasebook */
+    .pb { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow: auto; display: flex; flex-direction: column; }
+    .pb-top { position: sticky; top: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+    .pb-top h2 { margin: 0; flex: 1; font: 700 20px "Outfit", system-ui, sans-serif; }
+    .pb-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; max-width: 1000px; width: 100%; margin: 0 auto; }
+    .pb-group h3 { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+    .pb-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+    .pb-list button { text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
+    .pb-list button b { font-size: 17px; }
+    .pb-list button small { color: var(--muted); }
+    .pb-list button .yn { color: var(--info); font-size: 12px; }
+    .show { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; padding: 24px; text-align: center; }
+    .show .hint { color: var(--muted); font-size: 14px; }
+    .show .big { font: 700 clamp(34px, 6vw, 60px)/1.25 "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", system-ui, sans-serif; }
+    .show .small { color: var(--muted); font-size: 16px; }
+    .answers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .answers button { min-height: 96px; font-size: 26px; font-weight: 700; border-radius: 20px; }
+    .answers .yes { border-color: var(--ok); color: var(--ok); } .answers .no { border-color: var(--bad); color: var(--bad); }
+    .answer-out { font-size: 22px; font-weight: 700; }
+    .pb-log { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
     .what .icon .ic { width: 26px; height: 26px; color: var(--info); }
     .guess { display: inline-flex; align-items: center; gap: 4px; }
     .guess .icon .ic { width: 18px; height: 18px; }
@@ -56,6 +76,7 @@
     <h1>客室乗務員パネル <span class="muted">Crew panel</span></h1>
     <label class="row muted">飛行フェーズ Phase <select id="phase"></select></label>
     <button id="sound" class="muted-btn" aria-pressed="true" title="Sound for urgent requests">🔔 音 Sound on</button>
+    <button id="pbOpen" class="muted-btn">💬 会話帳 Phrasebook</button>
     <label class="row muted" id="readWrap" hidden><input type="checkbox" id="read"> 読み上げ Read aloud</label>
   </header>
   <main>
@@ -135,6 +156,56 @@ $("sound").addEventListener("click", () => {
   $("sound").textContent = soundOn ? "🔔 音 Sound on" : "🔕 消音 Muted";
 });
 
+// --- face-to-face phrasebook: fixed phrases shown big in the passenger's language, read aloud,
+// with Yes / No / Not clear for the passenger to tap on the tablet ------------------------------------
+const PB = config.phrasebook;
+const LANGS = Object.fromEntries(config.languages.map((l) => [l.code, l.name]));
+const pbLog = [];
+async function openPhrasebook(seat, lang) {
+  const ui = await (await fetch(`/api/i18n/${lang}`)).json();
+  const voice = await canSpeak(lang);
+  const root = el("div", { class: "pb", role: "dialog", "aria-label": "Phrasebook" });
+  const close = () => { root.remove(); };
+  const langSel = el("select", { "aria-label": "Passenger language", onchange: (e) => { close(); openPhrasebook(seat, e.target.value); } },
+    ...config.languages.map((l) => el("option", { value: l.code, ...(l.code === lang ? { selected: "" } : {}) }, l.name)));
+  const top = () => el("div", { class: "pb-top" },
+    el("h2", {}, `${seat ? `${seat} · ` : ""}会話帳 Phrasebook`), langSel, el("button", { onclick: close }, "閉じる Close"));
+
+  function list() {
+    root.replaceChildren(top(), el("div", { class: "pb-body" },
+      pbLog.length ? el("div", { class: "pb-log" }, el("strong", {}, "回答 Answers"), ...pbLog.slice(-5).reverse().map((x) => el("span", {}, x))) : null,
+      ...PB.groups.map((g) => el("section", { class: "pb-group" }, el("h3", {}, `${g.ja} · ${g.en}`),
+        el("div", { class: "pb-list" }, ...PB.phrases.filter((p) => p.group === g.id).map((p) =>
+          el("button", { onclick: () => show(p) }, el("b", {}, p.text.ja), el("small", {}, p.text.en),
+            p.yes_no ? el("span", { class: "yn" }, "はい / いいえ · Yes / No") : null)))))));
+  }
+
+  function show(p) {
+    const text = p.text[lang] || p.text.en;
+    if (voice) speak(text, lang);
+    const out = el("p", { class: "answer-out", role: "status" });
+    const answer = (code, ja, en) => {
+      out.textContent = `回答: ${ja} · ${en}`;
+      pbLog.push(`${seat || ""} ${p.text.ja} → ${ja} (${en})`);
+      if (voice) speak(ui.thanks || "", lang);
+    };
+    root.replaceChildren(top(), el("div", { class: "show" },
+      el("p", { class: "hint" }, "タブレットをお客様に向けてください · Turn the tablet to the passenger"),
+      el("p", { class: "big", lang }, text),
+      el("p", { class: "small" }, `${p.text.ja} · ${p.text.en}`),
+      voice ? el("div", {}, el("button", { onclick: () => speak(text, lang) }, "🔊 もう一度 Again")) : null,
+      p.yes_no ? el("div", { class: "answers" },
+        el("button", { class: "yes", onclick: () => answer("yes", "はい", "Yes") }, ui.yes || "Yes"),
+        el("button", { class: "no", onclick: () => answer("no", "いいえ", "No") }, ui.no || "No"),
+        el("button", { onclick: () => answer("unclear", "分からない", "Not clear") }, ui.stillUnclear || "Not clear")) : null,
+      out,
+      el("div", {}, el("button", { class: "primary", onclick: list }, "← 一覧へ Back to phrases"))));
+  }
+  list();
+  document.body.append(root);
+}
+$("pbOpen").addEventListener("click", () => openPhrasebook(null, "hi"));
+
 const socket = connect("/ws/crew", render, (on) => $("dot").classList.toggle("on", on));
 
 $("phase").replaceChildren(...config.phases.map((p) => el("option", { value: p }, p)));
@@ -160,7 +231,8 @@ function cardView(c) {
         c.status !== "acknowledged"
           ? el("button", { class: "primary", onclick: () => socket.send({ type: "ack", card_id: c.id }) }, "了解 Acknowledge") : null,
         ...config.replies.map((r) => el("button", { title: r.en, onclick: () => socket.send({ type: "reply", card_id: c.id, reply_id: r.id }) }, r.ja)),
-        el("button", { onclick: () => socket.send({ type: "close", card_id: c.id }) }, "完了 Done"))));
+        el("button", { onclick: () => socket.send({ type: "close", card_id: c.id }) }, "完了 Done"),
+        el("button", { onclick: () => openPhrasebook(c.seat, c.lang) }, "💬 話す Talk"))));
 }
 
 function renderAlarm(cards) {
@@ -241,7 +313,8 @@ function renderNeeds(needs) {
       n.pictures ? el("span", { class: "pill violet" }, "絵のみ · Pictures only") : null,
       n.senior ? el("span", { class: "pill ok" }, "大きな文字 · Large text") : null,
       n.read ? el("span", { class: "pill dim" }, "読み上げ · Read aloud") : null,
-      n.checked_in ? el("span", { class: "muted" }, "チェックイン時 · set at check-in") : null))
+      n.checked_in ? el("span", { class: "muted" }, "チェックイン時 · set at check-in") : null,
+      el("button", { onclick: () => openPhrasebook(n.id, n.lang) }, "💬 話す Talk")))
     : [el("p", { class: "muted" }, "特記事項なし · Everyone uses English with default settings.")]));
 }
 

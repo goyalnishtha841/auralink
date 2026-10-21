@@ -339,6 +339,7 @@ def config() -> dict:
         "intents": [{"id": i.id, "icon": i.icon, "label": i.label, "urgent": i.urgent} for i in lexicon.intents],
         "replies": templates.data["replies"],
         "safety": [{"id": s["id"], "title": s["title"]} for s in templates.data["safety"]],
+        "phrasebook": {k: v for k, v in templates.data["phrasebook"].items() if not k.startswith("_")},
         "exit_seats": exit_seats(),
         "languages": [{"code": lang["code"], "name": lang["name"]} for lang in languages.registry()],
     }
