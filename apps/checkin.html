@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Check-in</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 760px; }
+    .kiosk h1 { font: 700 28px/1.2 "Outfit", system-ui, sans-serif; margin: 0; }
+    .langs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .langs button { min-height: 64px; font-size: 20px; font-weight: 600; }
+    .langs button[aria-pressed="true"], .opt[aria-pressed="true"] { border-color: var(--accent); background: rgba(255, 181, 71, .1); }
+    .opts { display: grid; gap: 10px; }
+    .opt { display: grid; grid-template-columns: 52px minmax(0, 1fr) 28px; gap: 14px; align-items: center; text-align: left; padding: 14px 16px; }
+    .opt .icon .ic { width: 36px; height: 36px; color: var(--info); }
+    .opt b { display: block; font-size: 18px; }
+    .opt small { color: var(--muted); font-size: 14px; }
+    .tick { width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; }
+    .opt[aria-pressed="true"] .tick { background: var(--accent); border-color: var(--accent); }
+    .opt[aria-pressed="true"] .tick::after { content: ""; width: 10px; height: 6px; border: solid var(--accent-ink); border-width: 0 0 3px 3px; transform: rotate(-45deg) translate(1px, -1px); }
+    .big-a { font: 800 30px "Outfit", system-ui, sans-serif; color: var(--info); text-align: center; }
+    .seatpick { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .seatpick select { font-size: 22px; min-height: 52px; }
+    .save { min-height: 60px; font-size: 20px; }
+    .done { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; align-items: center; }
+    @media (max-width: 560px) { .done { grid-template-columns: 1fr; } }
+    .done img { width: 180px; height: 180px; background: #fff; border-radius: 12px; padding: 8px; }
+    .summary { display: flex; flex-wrap: wrap; gap: 8px; }
+    .summary span { padding: 4px 10px; border-radius: 999px; background: var(--surface-2); font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="dot on"></span>
+    <h1>Auralink <span class="muted">Airport · boarding gate</span></h1>
+    <a href="./"><button>Home</button></a>
+  </header>
+  <main class="kiosk">
+    <section class="panel" id="form">
+      <h1 id="checkinTitle">Set up Auralink for your flight</h1>
+      <p class="muted" id="checkinIntro"></p>
+      <h2 id="languageLabel">Language</h2>
+      <div class="langs" id="langs"></div>
+      <h2 id="yourSeat">Your seat</h2>
+      <div class="seatpick"><label class="sr-only" for="seat">Seat</label><select id="seat"></select></div>
+      <div class="opts" id="opts"></div>
+      <button class="primary save" id="save">Save for my seat</button>
+      <p class="muted" id="error" role="alert"></p>
+    </section>
+    <section class="panel" id="doneBox" hidden>
+      <div class="done">
+        <img id="qr" alt="QR code for your seat">
+        <div class="list">
+          <p id="savedSeat"></p>
+          <div class="summary" id="summary"></div>
+          <p class="muted"><span id="scanAtSeat"></span>: <span id="link" class="mono"></span></p>
+          <button id="next">Next passenger</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<script type="module">
+import { el, loadConfig } from "./common.js";
+import { icon } from "./icons.js";
+import { canSpeak } from "./speech.js";
+
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const [config, info] = await Promise.all([loadConfig(), fetch("/api/hub-info").then((r) => r.json())]);
+let S = {}, EN = {};
+const t = (k) => S[k] ?? EN[k] ?? k;
+const state = { lang: "en", senior: false, pictures: false, read: false };
+
+async function setLang(code) {
+  state.lang = code;
+  const get = (c) => fetch(`/api/i18n/${c}`).then((r) => r.json());
+  [EN, S] = await Promise.all([get("en"), get(code)]);
+  document.documentElement.lang = code;
+  for (const id of ["checkinTitle", "checkinIntro", "yourSeat", "savedSeat", "scanAtSeat"]) $(id).textContent = t(id);
+  $("languageLabel").textContent = t("language");
+  $("save").textContent = t("saveSeat");
+  $("next").textContent = t("nextPassenger");
+  [...$("langs").children].forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.code === code)));
+  const voice = await canSpeak(code);
+  if (!voice) state.read = false;
+  renderOpts(voice);
+}
+
+function renderOpts(voice) {
+  const big = el("span", { class: "big-a", "aria-hidden": "true" }, "A");
+  const opts = [
+    ["senior", big, t("seniorLabel"), t("largeDesc")],
+    ["pictures", icon("hand"), t("picturesLabel"), t("picturesDesc")],
+    ...(voice ? [["read", icon("speaker"), t("readLabel"), t("readDesc")]] : []),
+  ];
+  $("opts").replaceChildren(...opts.map(([key, ic, title, desc]) =>
+    el("button", { class: "opt", "aria-pressed": String(state[key]), onclick: (e) => {
+      state[key] = !state[key];
+      if (key === "pictures" && state.pictures) state.read = false;   // pictures-only is for passengers who may not hear
+      if (key === "read" && state.read) state.pictures = false;
+      renderOpts(voice);
+    } }, ic, el("span", {}, el("b", {}, title), el("small", {}, desc)), el("span", { class: "tick", "aria-hidden": "true" }))));
+}
+
+$("langs").replaceChildren(...config.languages.map((l) =>
+  el("button", { "data-code": l.code, "aria-pressed": "false", onclick: () => setLang(l.code) }, l.name)));
+$("seat").replaceChildren(...config.seats.map((s) => el("option", { value: s }, s)));
+$("seat").value = params.get("seat") || "34K";
+
+$("save").addEventListener("click", async () => {
+  $("error").textContent = "";
+  const res = await fetch("/api/checkin", { method: "POST", headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ seat: $("seat").value, ...state }) });
+  const r = await res.json();
+  if (!res.ok) { $("error").textContent = typeof r.detail === "string" ? r.detail : "Could not save. Try again."; return; }
+  const url = `${info.public_url}${r.passenger_path}`;
+  $("qr").src = `/api/qr?data=${encodeURIComponent(url)}`;
+  $("link").textContent = url;
+  const name = config.languages.find((l) => l.code === r.lang)?.name || r.lang;
+  $("summary").replaceChildren(el("span", {}, `${t("yourSeat")}: ${r.seat}`), el("span", {}, name),
+    ...(r.senior ? [el("span", {}, t("seniorLabel"))] : []), ...(r.pictures ? [el("span", {}, t("picturesLabel"))] : []),
+    ...(r.read ? [el("span", {}, t("readLabel"))] : []));
+  $("form").hidden = true;
+  $("doneBox").hidden = false;
+});
+$("next").addEventListener("click", () => {
+  Object.assign(state, { senior: false, pictures: false, read: false });
+  $("doneBox").hidden = true; $("form").hidden = false;
+  setLang("en");
+});
+
+await setLang(params.get("lang") || "en");
+</script>
+</body>
+</html>

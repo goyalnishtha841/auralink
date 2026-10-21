@@ -92,7 +92,7 @@ def main() -> None:
     https = (ROOT / "certs" / "hub.pem").exists() and (ROOT / "certs" / "hub-key.pem").exists()
     report(True if https else None, "HTTPS certificate", "phones can use the microphone" if https else
            "phones will block the microphone (typing and pictures still work)",
-           "see 'Use it on a real phone' in the README (mkcert)")
+           "run scripts/setup_https.sh, then open /phone-setup.html on each phone")
 
     with socket.socket() as s:
         free = s.connect_ex(("127.0.0.1", port)) != 0

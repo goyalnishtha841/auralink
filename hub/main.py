@@ -12,15 +12,17 @@ import threading
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import demo, recordings
+from . import checkin, demo, languages, recordings
+from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
 from .templates import Templates
@@ -44,10 +46,10 @@ def get_asr():
         return _asr
 
 
-def run_asr(audio):
+def run_asr(audio, langs: tuple[str, ...] = ("en", "hi")):
     asr = get_asr()
     with _asr_lock:  # one decode at a time; CPU-bound anyway
-        return asr.transcribe(audio)
+        return asr.transcribe(audio, langs=langs)
 
 
 def warm_matcher() -> None:
@@ -82,6 +84,9 @@ async def revalidate_static(request, call_next):
 lexicon = Lexicon()
 templates = Templates()
 cabin = Cabin(lexicon)
+for _seat, _prefs in checkin.load().items():          # check-ins survive a hub restart
+    if _seat in cabin.seats:
+        cabin.seats[_seat] = cabin.seats[_seat].model_copy(update={**_prefs, "checked_in": True})
 
 passengers: dict[str, set[WebSocket]] = defaultdict(set)
 crew: set[WebSocket] = set()
@@ -144,6 +149,8 @@ def crew_state() -> dict:
         "broadcast": briefing,
         "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
                         for c in cabin.exit_checks.values()],
+        "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "checked_in", "connected"})
+                       for s in cabin.seats.values() if s.lang != "en" or s.senior or s.pictures or s.read],
     }
 
 
@@ -176,7 +183,7 @@ async def send_status(card: Card, key: str) -> None:
 class InterpretIn(BaseModel):
     text: str = Field(max_length=200)
     phase: Phase = "cruise"
-    lang: str = Field("en", pattern=r"^(en|hi|ja)$")
+    lang: str = Field("en", pattern=r"^[a-z]{2,3}$")
 
 
 @app.post("/api/interpret")
@@ -214,6 +221,112 @@ def explain_text(body: InterpretIn) -> dict:
             "explain": explain(result, lexicon, default_similarity(), body.phase)}
 
 
+# --- presenter console (demo control): same code paths as the real screens -----------------------
+
+class SayIn(BaseModel):
+    seat: str
+    text: str = Field(min_length=1, max_length=200)
+
+
+@app.get("/api/status")
+def status() -> dict:
+    from engine.matcher import default_similarity
+
+    open_cards = cabin.crew_cards()
+    return {
+        "speech_model": ASR_MODEL if _asr is not None else None,
+        "matcher": getattr(default_similarity(), "name", "text"),
+        "phase": cabin.phase,
+        "seats_connected": sorted(sid for sid, seat in cabin.seats.items() if seat.connected),
+        "crew_screens": len(crew),
+        "judge_screens": len(judges),
+        "open_requests": len(open_cards),
+        "urgent_open": sum(1 for c in open_cards if c.urgent and c.status != "acknowledged"),
+        "briefing": cabin.broadcast.template_id if cabin.broadcast else None,
+    }
+
+
+@app.post("/api/presenter/reset")
+async def presenter_reset() -> dict:
+    cabin.reset()
+    for sockets in passengers.values():
+        await _send(sockets, {"type": "reset"})
+    await push_crew()
+    return {"reset": True}
+
+
+@app.post("/api/presenter/say")
+async def presenter_say(body: SayIn) -> dict:
+    """Send a request as if a passenger typed it at `seat` (backup when a phone or microphone fails)."""
+    if body.seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {body.seat}")
+    await interpret_and_reply(body.seat, body.text)
+    await push_crew()
+    return {"sent": True, "seat_has_screen": cabin.seats[body.seat].connected}
+
+
+@app.post("/api/presenter/crew")
+async def presenter_crew(msg: dict) -> dict:
+    """Trigger a crew action (broadcast, exit_check, phase, end_broadcast) as if tapped on the crew tablet."""
+    if msg.get("type") not in {"broadcast", "exit_check", "phase", "end_broadcast"}:
+        raise HTTPException(400, "Allowed: broadcast, exit_check, phase, end_broadcast")
+    try:
+        await handle_crew(msg)
+    except (KeyError, ValueError) as e:
+        raise HTTPException(400, str(e)) from None
+    return {"done": msg["type"]}
+
+
+@app.get("/api/report")
+def report() -> dict:
+    """Flight report since the last cabin reset (report.html)."""
+    templates.reload_if_changed()
+    return flight_report.build(cabin, templates)
+
+
+@app.get("/api/report.csv")
+def report_csv() -> Response:
+    return Response(flight_report.to_csv(cabin), media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="auralink-flight-report.csv"'})
+
+
+class CheckinIn(BaseModel):
+    seat: str
+    lang: str = "en"
+    senior: bool = False
+    pictures: bool = False
+    read: bool = False
+
+
+@app.post("/api/checkin")
+async def post_checkin(body: CheckinIn) -> dict:
+    """Airport / boarding gate: set how this seat's screen opens. Seat and preferences only, no names."""
+    if body.seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {body.seat}")
+    if body.lang not in languages.codes():
+        raise HTTPException(422, f"Unknown language {body.lang!r}")
+    prefs = body.model_dump(include=set(checkin.FIELDS))
+    seat = cabin.seats[body.seat]
+    for k, v in prefs.items():
+        setattr(seat, k, v)
+    seat.checked_in = True
+    saved = checkin.load()
+    saved[body.seat] = prefs
+    checkin.save(saved)
+    await push_crew()
+    query = f"seat={body.seat}&lang={body.lang}" + ("&senior=1" if body.senior else "") + \
+            ("&mode=pictures" if body.pictures else "") + ("&read=1" if body.read else "")
+    return {"seat": body.seat, **prefs, "passenger_path": f"/passenger.html?{query}"}
+
+
+@app.get("/api/seat/{seat}")
+def get_seat(seat: str) -> dict:
+    """What a seat's screen should open with (set at check-in, or by the passenger last time)."""
+    if seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {seat}")
+    return cabin.seats[seat].model_dump(include={"lang", "senior", "pictures", "read", "checked_in"})
+
+
 @app.get("/api/config")
 def config() -> dict:
     lexicon.reload_if_changed()
@@ -225,6 +338,7 @@ def config() -> dict:
         "replies": templates.data["replies"],
         "safety": [{"id": s["id"], "title": s["title"]} for s in templates.data["safety"]],
         "exit_seats": exit_seats(),
+        "languages": [{"code": lang["code"], "name": lang["name"]} for lang in languages.registry()],
     }
 
 
@@ -262,7 +376,7 @@ async def passenger_ws(ws: WebSocket, seat: str) -> None:
 async def interpret_and_reply(seat: str, text: str, nbest: list[Hypothesis] | None = None,
                               asr: dict | None = None) -> None:
     s = cabin.seats[seat]
-    result, cards, escalated = cabin.handle_text(seat, text, nbest)
+    result, cards, escalated = cabin.handle_text(seat, text, nbest, source="voice" if asr else "text")
     if asr:
         result.latency_ms = {**asr["latency_ms"], **result.latency_ms}
     if judges:
@@ -291,7 +405,7 @@ async def handle_audio(seat: str, pcm: bytes) -> None:
     await to_seat(seat, {"type": "thinking"})
     audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
     try:
-        tr = await asyncio.to_thread(run_asr, audio)
+        tr = await asyncio.to_thread(run_asr, audio, languages.asr_languages(cabin.seats[seat].lang))
     except ImportError:
         await to_seat(seat, {"type": "error", "detail": "voice unavailable: faster-whisper not installed"})
         await to_seat(seat, {"type": "grid", "reason": "voice_unavailable"})
@@ -311,6 +425,7 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         s.lang = msg.get("lang", s.lang)
         s.senior = bool(msg.get("senior", s.senior))
         s.pictures = bool(msg.get("pictures", s.pictures))
+        s.read = bool(msg.get("read", s.read))
 
     elif kind == "text":
         await interpret_and_reply(seat, msg.get("text", ""))
@@ -381,7 +496,7 @@ async def handle_crew(msg: dict) -> None:
             view = templates.safety_view(b.template_id, cabin.seats[seat].lang)
             await _send(sockets, {"type": "safety", "broadcast_id": b.id, "template": view})
     elif kind == "end_broadcast":
-        cabin.broadcast = None
+        cabin.end_broadcast()
     elif kind == "exit_check":
         templates.reload_if_changed()
         for check in cabin.start_exit_check(exit_seats()):
@@ -403,4 +518,5 @@ async def judge_ws(ws: WebSocket) -> None:
 
 app.include_router(recordings.router)
 app.include_router(demo.router)
+app.include_router(languages.router)
 app.mount("/", StaticFiles(directory=ROOT / "apps", html=True), name="apps")

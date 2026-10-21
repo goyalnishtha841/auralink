@@ -15,8 +15,13 @@ scripts/run.sh
 
 On demo day use `scripts/demo.sh` instead: it runs a pre-flight check (packages, Whisper downloaded,
 eSpeak-NG, HTTPS certificate, free port, a test sentence), prints the address and a QR code for
-phones, then starts the hub. Demo tools: `/seats.html` (printable seat QR cards) and `/noise.html`
-(cabin-noise player with a level meter).
+phones, then starts the hub. Demo tools: `/presenter.html` (pitch checklist with timer, health,
+backup buttons that send requests as a seat, and a two-tap cabin reset between rehearsals),
+`/seats.html` (printable seat QR cards) and `/noise.html` (cabin-noise player with a level meter).
+`/report.html` is the flight report: requests by outcome, type and language, median time to
+acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row
+results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset.
+The presenter endpoints have no password: fine on the demo network, not for a real aircraft.
 
 Open <http://localhost:8000> and put **Passenger** and **Crew** side by side. Tap the microphone
 and say "thoda wotter and kambal", or type it.
@@ -26,7 +31,15 @@ everything runs offline. Choose another model with `AURALINK_ASR_MODEL=small scr
 
 Run the tests with `.venv/bin/python -m pytest -q`.
 
-### On phones (week 1 task for Member C)
+### On phones
+
+Run `scripts/setup_https.sh` once on the laptop (it asks before adding mkcert's local certificate
+authority to the Mac's trusted list; undo with `mkcert -uninstall`), start the hub with
+`scripts/demo.sh`, then open `https://<laptop-ip>:8000/phone-setup.html` on each phone. That page
+walks through installing the certificate on iPhone or Android and has a live microphone test.
+The manual steps below do the same thing.
+
+#### Manual steps
 
 Phones only allow the microphone over HTTPS. Create a local certificate once:
 
@@ -52,6 +65,43 @@ certificate on each demo phone.
 Open `/record.html` on a phone connected to the hub (HTTPS needed for the microphone on phones).
 Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
 `data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
+
+## Check-in (the airport stage)
+
+`/checkin.html` is a kiosk page for the airport or boarding gate: the passenger picks language, seat
+and any of large text, pictures only and read aloud, in their own language. A plain seat QR
+(`passenger.html?seat=34K`) then opens with those settings, and the crew tablet's **Passenger needs**
+panel lists who reads which language and who needs large text, pictures or read aloud. Only the seat
+and preferences are stored (`data/flight/checkin.json`, git-ignored), never names; in a real
+deployment this would come from the airline's check-in system.
+
+## Read aloud
+
+Passengers can switch on **Read aloud** (or open the seat link with `&read=1`): confirm questions,
+crew replies, safety steps and exit-row questions are spoken by the phone's own offline voice in the
+passenger's language, and a speaker button replays any of them. The crew tablet can announce new
+requests in Japanese. Only the fixed, pre-approved sentences are spoken (`apps/speech.js`); online
+voice services are never used, and it stays off in picture-only mode. If a device has no voice for a
+language, the option is hidden.
+
+## Adding a language (no code, no retraining)
+
+1. `data/languages.json`: add `{"code": "bn", "name": "বাংলা", "asr": ["en", "bn"]}`, and the script's
+   character range + eSpeak-NG voice under `scripts` if it has its own writing system.
+2. `data/i18n/bn.json`: the passenger screen text (copy `en.json`, translate the values).
+3. `data/lexicon/intents.json`: a `bn` label and spoken words for each of the 8 intents.
+4. `data/templates/messages.json`: `bn` for crew replies, statuses, safety steps and the exit-row check.
+5. Run `.venv/bin/python -m pytest -q tests/test_languages.py`: it lists anything still missing.
+
+The hub reloads the word list as soon as it is saved. Tamil (`ta`) and Thai (`th`) were added this way.
+
+Thai shows two general mechanisms, both switched on from `data/languages.json`:
+- `"spaces": false`: Thai has no spaces between words, so text is split by longest match against the
+  lexicon ("ขอน้ำหน่อยครับ" → "ขอ น้ำ หน่อย ครับ"; "ห้องน้ำ" stays toilet, not water).
+- `"espeak": null`: eSpeak-NG's Thai phonemes are unusable, so Thai script is matched by spelling only.
+Keep romanized words long and distinctive: short ones like "mon" (Thai pillow) collided with English
+"son" and raised false alarms; `scripts/evaluate.py` catches this. All Hindi,
+Tamil and Japanese text is a draft until a native speaker has checked it.
 
 ## Contracts (change only as a team)
 

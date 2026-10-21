@@ -19,8 +19,15 @@ from pathlib import Path
 from .lexicon import ROOT
 
 COSTS_FILE = ROOT / "data" / "lexicon" / "phone_costs.json"
-_DEVANAGARI = re.compile(r"[ऀ-ॿ]")
-_VOWEL_CHARS = set("aeiouyɑæʌɐəɛɪɔʊɚɜøœɒɤɯ")
+LANGUAGES_FILE = ROOT / "data" / "languages.json"
+_VOWEL_CHARS = set("aeiouyɑæʌɐəɛɪɔʊɚɜøœɒɤɯʉ")
+
+
+def script_voices() -> list[tuple[re.Pattern, str]]:
+    """(character range, eSpeak voice) per writing system, from data/languages.json. Latin script -> English."""
+    data = json.loads(LANGUAGES_FILE.read_text("utf-8"))
+    return [(re.compile("[" + re.escape(chr(int(s["from"], 16))) + "-" + re.escape(chr(int(s["to"], 16))) + "]"),
+             s["espeak"]) for s in data["scripts"]]
 _STRIP = str.maketrans("", "", "ːʰ̃ʲˑ")
 _SPLIT = {"ɚ": ("ə", "r"), "ɝ": ("ɜ", "r"), "əl": ("ə", "l"), "ɹ": ("r",), "ɡ": ("g",), "ɫ": ("l",)}
 _LIBS = ["/opt/homebrew/lib/libespeak-ng.dylib", "/usr/local/lib/libespeak-ng.dylib",
@@ -181,21 +188,33 @@ class Phonemizer:
             lib = next((p for p in _LIBS if Path(p).exists()), None)
             if lib:
                 EspeakWrapper.set_library(lib)
+        self._make = lambda voice: EspeakBackend(voice, with_stress=False, language_switch="remove-flags")
         self._sep = Separator(phone=" ", word=" | ", syllable="")
-        self._en = EspeakBackend("en-us", with_stress=False, language_switch="remove-flags")
-        self._hi = EspeakBackend("hi", with_stress=False, language_switch="remove-flags")
+        self._scripts = script_voices()
+        self._backends: dict[str, object] = {}
         self._lock = threading.Lock()
         self._cache: dict[str, tuple[str, ...]] = {}
 
+    def voice_for(self, text: str) -> str | None:
+        """eSpeak voice for a string: its writing system's voice (Hindi, Tamil, ...), None if eSpeak cannot
+        read that script reliably (Thai), or English for Latin."""
+        return next((voice for pattern, voice in self._scripts if pattern.search(text)), "en-us")
+
     def warm(self, texts: list[str]) -> None:
-        """Phonemise many strings in two batch calls (much faster than one by one)."""
+        """Phonemise many strings in one batch call per voice (much faster than one by one)."""
         todo = [t for t in dict.fromkeys(texts) if t not in self._cache]
-        for backend, items in ((self._hi, [t for t in todo if _DEVANAGARI.search(t)]),
-                               (self._en, [t for t in todo if not _DEVANAGARI.search(t)])):
-            if items:
-                with self._lock:
-                    raw = backend.phonemize(items, separator=self._sep, strip=True, njobs=1)
-                self._cache.update({t: normalise(r) for t, r in zip(items, raw)})
+        by_voice: dict[str, list[str]] = {}
+        for t in todo:
+            by_voice.setdefault(self.voice_for(t), []).append(t)
+        for voice, items in by_voice.items():
+            if voice is None:
+                self._cache.update({t: () for t in items})
+                continue
+            with self._lock:
+                if voice not in self._backends:
+                    self._backends[voice] = self._make(voice)
+                raw = self._backends[voice].phonemize(items, separator=self._sep, strip=True, njobs=1)
+            self._cache.update({t: normalise(r) for t, r in zip(items, raw)})
 
     def __call__(self, text: str) -> tuple[str, ...]:
         if text not in self._cache:

@@ -187,3 +187,35 @@ def test_picture_mode_reaches_crew_card():
         while not state["cards"]:
             state = crew_state(crew)
         assert state["cards"][0]["pictures"] is True and state["cards"][0]["intent"] == "water"
+
+
+def test_presenter_backup_reset_and_status():
+    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+            shared.websocket_connect("/ws/passenger/34K") as pax:
+        r = shared.post("/api/presenter/say", json={"seat": "34K", "text": "I have chest pain"}).json()
+        assert r["seat_has_screen"] is True
+        assert pax.receive_json()["type"] == "confirm"           # the passenger screen reacts as if typed
+        st = shared.get("/api/status").json()
+        assert st["urgent_open"] == 1 and "34K" in st["seats_connected"] and st["crew_screens"] == 1
+
+        assert shared.post("/api/presenter/crew", json={"type": "broadcast", "template_id": "landing"}).status_code == 200
+        assert shared.post("/api/presenter/crew", json={"type": "ack", "card_id": "c1"}).status_code == 400
+        assert shared.post("/api/presenter/say", json={"seat": "99Z", "text": "water"}).status_code == 404
+
+        shared.post("/api/presenter/reset")
+        msg = pax.receive_json()
+        while msg["type"] != "reset":
+            msg = pax.receive_json()
+        st = shared.get("/api/status").json()
+        assert st["open_requests"] == 0 and st["briefing"] is None and "34K" in st["seats_connected"]
+
+
+def test_ca_certificate_is_public_part_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("AURALINK_CA_ROOT", str(tmp_path))
+    assert client.get("/api/ca.pem").status_code == 404
+    (tmp_path / "rootCA.pem").write_text("-----BEGIN CERTIFICATE-----\nPUBLIC\n-----END CERTIFICATE-----\n")
+    (tmp_path / "rootCA-key.pem").write_text("SECRET KEY")
+    r = client.get("/api/ca.pem")
+    assert r.status_code == 200 and b"PUBLIC" in r.content and b"SECRET" not in r.content
+    info = client.get("/api/hub-info").json()
+    assert info["ca_available"] is True and info["this_page_https"] is False
