@@ -68,6 +68,21 @@
     .guess .icon .ic { width: 18px; height: 18px; }
     .pill.symptom { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; }
     .pill.symptom .icon .ic { width: 16px; height: 16px; }
+    /* care round */
+    .load { display: flex; gap: 8px; flex-wrap: wrap; }
+    .load span { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface-2); font-weight: 700; }
+    .load .icon .ic { width: 20px; height: 20px; color: var(--info); }
+    .stops { display: flex; flex-direction: column; gap: 6px; counter-reset: stop; }
+    .stop { display: grid; grid-template-columns: 30px 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
+    .stop::before { counter-increment: stop; content: counter(stop); font: 700 14px "Outfit", system-ui, sans-serif; color: var(--muted); text-align: center; }
+    .stop b { font: 700 18px "Outfit", system-ui, sans-serif; }
+    .stop .what { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .stop .what .pill { display: inline-flex; align-items: center; gap: 4px; }
+    .stop .icon .ic { width: 18px; height: 18px; color: var(--info); }
+    .stop.care { border: 1px dashed #c4a6ff; }
+    .stop.done { opacity: .45; }
+    .aisle { font-size: 12px; color: var(--muted); margin: 6px 0 0; letter-spacing: .04em; }
+    .saving { color: var(--ok); font-weight: 600; }
     /* live PA captions */
     .pa-mic.recording { background: var(--bad); border-color: var(--bad); color: #fff; animation: seatPulse 1.4s ease-in-out infinite; }
     .pa-mic .icon .ic { width: 20px; height: 20px; vertical-align: -4px; }
@@ -104,6 +119,10 @@
         <section class="panel">
           <h2>リクエスト Requests</h2>
           <div class="list" id="cards"></div>
+        </section>
+        <section class="panel" id="roundPanel">
+          <h2>ケアラウンド Care round</h2>
+          <div id="round"></div>
         </section>
         <section class="panel">
           <h2>乗客のニーズ Passenger needs</h2>
@@ -416,8 +435,46 @@ function renderPaLog(log) {
     el("span", {}, icon(a.icon), ` ${new Date(a.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ${a.title_ja} · ${a.text_en}`)));
 }
 
+// --- care round: one trolley loop for everything open, plus check-ins for quiet passengers -------
+const LABEL = Object.fromEntries(config.intents.map((i) => [i.id, i.label]));
+function stopView(st, active) {
+  const items = Object.entries(st.items.reduce((m, i) => ({ ...m, [i]: (m[i] || 0) + 1 }), {}));
+  return el("div", { class: `stop ${st.care ? "care" : ""} ${st.done ? "done" : ""}` },
+    el("b", {}, st.seat),
+    el("span", { class: "what" },
+      ...items.map(([i, n]) => el("span", { class: "pill dim" }, icon(i), `${LABEL[i].ja}${n > 1 ? ` ×${n}` : ""}`)),
+      st.care ? el("span", { class: "pill violet", title: "Has not asked for anything for a while. Older and deaf passengers often do not ask." },
+        `声かけ Check-in · ${st.care.minutes} 分 min quiet${st.care.pictures ? " · 絵のみ" : st.care.senior ? " · 大きな文字" : ""}`) : null),
+    active && !st.done ? el("button", { onclick: () => socket.send({ type: "stop_done", seat: st.seat }) }, "完了 Done") : el("span"));
+}
+function renderRound(state) {
+  const r = state.round, p = state.round_plan;
+  if (r) {
+    const left = r.stops.filter((s) => !s.done).length;
+    $("round").replaceChildren(
+      el("p", {}, el("span", { class: "pill ok" }, "ラウンド中 On round"), ` 残り ${left} / ${r.stops.length} stops left`),
+      el("div", { class: "stops" }, ...r.stops.map((st) => stopView(st, true))),
+      el("div", { class: "row" }, el("button", { onclick: () => socket.send({ type: "end_round" }) }, "ラウンド終了 End round")));
+    return;
+  }
+  if (!p.stops.length) { $("round").replaceChildren(el("p", { class: "muted" }, "お届け待ちなし · Nothing to bring, nobody waiting for a check-in.")); return; }
+  const leftAisle = p.stops.filter((s) => "ABCDE".includes(s.seat.slice(-1)));
+  const saved = p.walk_rows.separate ? Math.round(100 * (1 - p.walk_rows.round / p.walk_rows.separate)) : 0;
+  $("round").replaceChildren(
+    el("p", { class: "muted" }, "Everything open that you carry, as one loop from the front galley: down the left aisle, back up the right."),
+    el("div", { class: "load", "aria-label": "Trolley load" }, el("strong", {}, "積載 Load"),
+      ...Object.entries(p.load).map(([i, n]) => el("span", {}, icon(i), `${LABEL[i].ja} · ${LABEL[i].en} ×${n}`))),
+    leftAisle.length ? el("p", { class: "aisle" }, "左通路 LEFT AISLE ↓") : null,
+    el("div", { class: "stops" }, ...p.stops.map((st, k) => [
+      k === leftAisle.length ? el("p", { class: "aisle" }, "右通路 RIGHT AISLE ↑") : null, stopView(st, false)]).flat().filter(Boolean)),
+    p.requests > 1 ? el("p", { class: "saving" }, `1回で ${p.requests} 件 · ${p.requests} requests in one trip, not ${p.requests} separate walks: about ${saved}% less walking`) : null,
+    el("div", { class: "row" }, el("button", { class: "primary", onclick: () => socket.send({ type: "start_round" }) },
+      `ラウンド開始 Start round (${p.stops.length} stops${p.care_stops ? `, ${p.care_stops} check-in` : ""})`)));
+}
+
 function render(msg) {
   if (msg.type !== "state") return;
+  renderRound(msg);
   renderPaLog(msg.pa_log || []);
   renderNeeds(msg.seat_needs || []);
   if (announced === null) announced = new Set(msg.cards.map((c) => c.id));   // don't read out what was already there

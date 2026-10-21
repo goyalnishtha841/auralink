@@ -31,6 +31,7 @@ class Card(BaseModel):
     source: Literal["voice", "text", "picture"] = "text"   # how the passenger asked
     symptom: str | None = None                              # medical requests: what the passenger tapped
     lang: str = "en"                                        # passenger's language when asking
+    round_id: str | None = None                             # on a care round (hub/rounds.py)
     created_at: float = Field(default_factory=time.time)
     updated_at: float = Field(default_factory=time.time)
     timeline: dict[str, float] = Field(default_factory=dict)   # status -> when it was first reached (flight report)
@@ -84,6 +85,10 @@ class Cabin:
         self.past_broadcasts: list[Broadcast] = []
         self.exit_checks: dict[str, ExitCheck] = {}
         self.pa_log: list[dict] = []          # captioned announcements: {pa_id, id, n, at}
+        self.round: dict | None = None        # care round in progress (hub/rounds.py)
+        self.past_rounds: list[dict] = []
+        self.last_visit: dict[str, float] = {}   # seat -> when crew last stopped there on a round
+        self.started_at = time.time()
         self._ids = itertools.count(1)
 
     def reset(self) -> None:
@@ -93,6 +98,10 @@ class Cabin:
         self.past_broadcasts.clear()
         self.exit_checks.clear()
         self.pa_log.clear()
+        self.round = None
+        self.past_rounds.clear()
+        self.last_visit.clear()
+        self.started_at = time.time()
         self.phase = "cruise"
         for seat in self.seats.values():
             seat.failed_attempts = 0
@@ -206,6 +215,46 @@ class Cabin:
         entry = {"pa_id": f"pa{next(self._ids)}", "id": announcement_id, "n": n, "at": time.time()}
         self.pa_log.append(entry)
         return entry
+
+    def start_round(self, plan: dict) -> dict:
+        """Take the planned stops onto a round: their requests are acknowledged and leave the plan."""
+        if self.round:
+            raise ValueError("a round is already in progress")
+        if not plan["stops"]:
+            raise ValueError("nothing to do on a round")
+        rid = f"r{next(self._ids)}"
+        self.round = {"id": rid, "started_at": time.time(), "stops": [{**st, "done": False} for st in plan["stops"]]}
+        for st in plan["stops"]:
+            for cid in st["cards"]:
+                card = self.cards[cid]
+                card.round_id = rid
+                self._set(card, "acknowledged")
+        return self.round
+
+    def finish_stop(self, seat: str) -> list[Card]:
+        if not self.round:
+            raise ValueError("no round in progress")
+        stop = next((st for st in self.round["stops"] if st["seat"] == seat), None)
+        if stop is None:
+            raise ValueError(f"seat {seat} is not on this round")
+        stop["done"] = True
+        self.last_visit[seat] = time.time()
+        closed = [self.close(cid) for cid in stop["cards"] if self.cards[cid].status != "closed"]
+        if all(st["done"] for st in self.round["stops"]):
+            self.end_round()
+        return closed
+
+    def end_round(self) -> None:
+        if self.round:
+            self.round["ended_at"] = time.time()
+            self.past_rounds.append(self.round)
+            for st in self.round["stops"]:   # unfinished stops go back into the next plan
+                for cid in st["cards"] if not st["done"] else []:
+                    self.cards[cid].round_id = None
+        self.round = None
+
+    def round_seats(self) -> set[str]:
+        return {st["seat"] for st in self.round["stops"] if not st["done"]} if self.round else set()
 
     def heatmap(self) -> dict[str, str]:
         """Per seat: understood / understood_again / reexplaining / stuck / pending / idle / offline."""

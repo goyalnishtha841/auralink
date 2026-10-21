@@ -22,7 +22,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import checkin, demo, languages, pa, persist, recordings
+from . import checkin, demo, languages, pa, persist, recordings, rounds
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -156,6 +156,8 @@ def crew_state() -> dict:
         "broadcast": briefing,
         "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
                         for c in cabin.exit_checks.values()],
+        "round_plan": rounds.plan(cabin),
+        "round": cabin.round,
         "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
         "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "checked_in", "connected"})
                        for s in cabin.seats.values() if s.lang != "en" or s.senior or s.pictures or s.read],
@@ -282,8 +284,9 @@ async def presenter_say(body: SayIn) -> dict:
 @app.post("/api/presenter/crew")
 async def presenter_crew(msg: dict) -> dict:
     """Trigger a crew action (broadcast, exit_check, phase, end_broadcast) as if tapped on the crew tablet."""
-    if msg.get("type") not in {"broadcast", "exit_check", "phase", "end_broadcast"}:
-        raise HTTPException(400, "Allowed: broadcast, exit_check, phase, end_broadcast")
+    allowed = {"broadcast", "exit_check", "phase", "end_broadcast", "start_round", "stop_done", "end_round"}
+    if msg.get("type") not in allowed:
+        raise HTTPException(400, f"Allowed: {', '.join(sorted(allowed))}")
     try:
         await handle_crew(msg)
     except (KeyError, ValueError) as e:
@@ -588,6 +591,19 @@ async def handle_crew(msg: dict) -> None:
             await _send(sockets, {"type": "safety", "broadcast_id": b.id, "template": view})
     elif kind == "end_broadcast":
         cabin.end_broadcast()
+    elif kind == "start_round":
+        r = cabin.start_round(rounds.plan(cabin))
+        for pos, stop in enumerate(r["stops"], 1):
+            for cid in stop["cards"]:
+                card = cabin.cards[cid]
+                lang = cabin.seats[card.seat].lang
+                await to_seat(card.seat, {"type": "status", "card": card_for_passenger(card, lang),
+                                          "message": templates.status("on_round", lang).format(pos=pos, n=len(r["stops"]))})
+    elif kind == "stop_done":
+        for card in cabin.finish_stop(msg["seat"]):
+            await send_status(card, "closed")
+    elif kind == "end_round":
+        cabin.end_round()
     elif kind == "exit_check":
         templates.reload_if_changed()
         for check in cabin.start_exit_check(exit_seats()):

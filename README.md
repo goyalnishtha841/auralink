@@ -102,6 +102,17 @@ passengers who cannot hear the PA. An announcement that is not in the library is
 the crew are told so: Auralink never machine-translates. Typed text works too (`POST /api/pa/match`
 with `{"text": ...}`, then `POST /api/pa/send` with `{"id": "descent", "n": "20"}`).
 
+## Care rounds
+
+The crew tablet always shows a planned **care round**: every open, non-urgent request for something
+the crew carry (water, tea, blanket, pillow, food), as one loop from the front galley, down the left
+aisle and back up the right, with a trolley load list and how much walking it saves compared with one
+trip per request. Passengers who use large text or pictures only and have not asked for anything for
+90 minutes (`AURALINK_CARE_AFTER_S`; `scripts/demo.sh` sets 2 minutes) are added as check-in stops,
+because older and deaf passengers often do not ask. **Start round** tells each waiting passenger,
+in their language, which stop they are ("stop 3 of 7"); **Done** at each seat closes its requests.
+Urgent and medical requests never wait for a round. Logic: [hub/rounds.py](hub/rounds.py).
+
 ## Adding a language (no code, no retraining)
 
 1. `data/languages.json`: add `{"code": "bn", "name": "বাংলা", "asr": ["en", "bn"]}`, and the script's

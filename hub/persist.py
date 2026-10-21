@@ -34,6 +34,10 @@ def snapshot(cabin: Cabin) -> dict:
         "past_broadcasts": [b.model_dump() for b in cabin.past_broadcasts],
         "exit_checks": [e.model_dump() for e in cabin.exit_checks.values()],
         "pa_log": cabin.pa_log,
+        "round": cabin.round,
+        "past_rounds": cabin.past_rounds,
+        "last_visit": cabin.last_visit,
+        "started_at": cabin.started_at,
     }
 
 
@@ -60,9 +64,13 @@ def restore(cabin: Cabin) -> float | None:
     cabin.past_broadcasts = [Broadcast(**b) for b in data.get("past_broadcasts", [])]
     cabin.exit_checks = {e["seat"]: ExitCheck(**e) for e in data.get("exit_checks", [])}
     cabin.pa_log = data.get("pa_log", [])
+    cabin.round = data.get("round")
+    cabin.past_rounds = data.get("past_rounds", [])
+    cabin.last_visit = data.get("last_visit", {})
+    cabin.started_at = data.get("started_at", cabin.started_at)
     # new ids must continue after the restored ones (c12 -> next card is c13)
     used = [int(m.group()) for key in list(cabin.cards) + [b.id for b in cabin.all_broadcasts()]
-            + [a["pa_id"] for a in cabin.pa_log]
+            + [a["pa_id"] for a in cabin.pa_log] + [r["id"] for r in cabin.past_rounds + [cabin.round] if r]
             if (m := re.search(r"\d+", key))]
     cabin._ids = itertools.count(max(used, default=0) + 1)
     return data.get("saved_at")
