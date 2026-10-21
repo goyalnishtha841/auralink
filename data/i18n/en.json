@@ -35,5 +35,16 @@
   "seen": "seen by crew",
   "replied": "crew replied",
   "readLabel": "Read aloud",
-  "listen": "Listen"
+  "listen": "Listen",
+  "checkinTitle": "Set up Auralink for your flight",
+  "checkinIntro": "Choose how you would like to talk with the cabin crew. Your seat screen will open this way.",
+  "yourSeat": "Your seat",
+  "language": "Language",
+  "largeDesc": "Bigger text and buttons",
+  "picturesDesc": "No speaking or typing, only pictures. Alerts flash instead of making a sound.",
+  "readDesc": "The phone reads questions and replies out loud",
+  "saveSeat": "Save for my seat",
+  "savedSeat": "Saved. On board, scan the code on your seat and Auralink opens like this.",
+  "scanAtSeat": "Your seat link",
+  "nextPassenger": "Next passenger"
 }

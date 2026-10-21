@@ -39,6 +39,10 @@
     .pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); } .pill.dim { color: var(--muted); } .pill.violet { color: #c4a6ff; }
     .brief-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .muted-btn { background: transparent; }
+    .needs { display: flex; flex-direction: column; gap: 6px; }
+    .need { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); }
+    .need b { font: 700 18px "Outfit", system-ui, sans-serif; min-width: 44px; }
+    .need .dot { width: 9px; height: 9px; }
     .what .icon .ic { width: 26px; height: 26px; color: var(--info); }
     .guess { display: inline-flex; align-items: center; gap: 4px; }
     .guess .icon .ic { width: 18px; height: 18px; }
@@ -59,6 +63,11 @@
         <section class="panel">
           <h2>リクエスト Requests</h2>
           <div class="list" id="cards"></div>
+        </section>
+        <section class="panel">
+          <h2>乗客のニーズ Passenger needs</h2>
+          <p class="muted">From check-in and the passengers' own settings. Plan who may need help before take-off.</p>
+          <div class="needs" id="needs"></div>
         </section>
       </div>
       <div class="col">
@@ -213,8 +222,24 @@ function announce(cards) {
   speak(fresh.map((c) => `${c.urgent ? "至急。" : ""}${c.seat}、${c.crew_ja || (c.guesses[0] ? c.guesses[0].label_ja : "ご用件が不明です")}`), "ja");
 }
 
+const LANG_NAME = Object.fromEntries(config.languages.map((l) => [l.code, l.name]));
+function renderNeeds(needs) {
+  const order = (n) => (n.pictures ? 0 : n.senior ? 1 : 2);
+  $("needs").replaceChildren(...(needs.length ? [...needs].sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id)).map((n) =>
+    el("div", { class: "need" },
+      el("span", { class: `dot ${n.connected ? "on" : ""}`, title: n.connected ? "screen connected" : "not connected" }),
+      el("b", {}, n.id),
+      el("span", { class: "pill dim" }, LANG_NAME[n.lang] || n.lang),
+      n.pictures ? el("span", { class: "pill violet" }, "絵のみ · Pictures only") : null,
+      n.senior ? el("span", { class: "pill ok" }, "大きな文字 · Large text") : null,
+      n.read ? el("span", { class: "pill dim" }, "読み上げ · Read aloud") : null,
+      n.checked_in ? el("span", { class: "muted" }, "チェックイン時 · set at check-in") : null))
+    : [el("p", { class: "muted" }, "特記事項なし · Everyone uses English with default settings.")]));
+}
+
 function render(msg) {
   if (msg.type !== "state") return;
+  renderNeeds(msg.seat_needs || []);
   if (announced === null) announced = new Set(msg.cards.map((c) => c.id));   // don't read out what was already there
   announce(msg.cards);
   $("phase").value = msg.phase;

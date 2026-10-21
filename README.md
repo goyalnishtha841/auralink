@@ -66,6 +66,15 @@ Open `/record.html` on a phone connected to the hub (HTTPS needed for the microp
 Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes. Clips land in
 `data/recordings/`; see [data/recordings/README.md](data/recordings/README.md).
 
+## Check-in (the airport stage)
+
+`/checkin.html` is a kiosk page for the airport or boarding gate: the passenger picks language, seat
+and any of large text, pictures only and read aloud, in their own language. A plain seat QR
+(`passenger.html?seat=34K`) then opens with those settings, and the crew tablet's **Passenger needs**
+panel lists who reads which language and who needs large text, pictures or read aloud. Only the seat
+and preferences are stored (`data/flight/checkin.json`, git-ignored), never names; in a real
+deployment this would come from the airline's check-in system.
+
 ## Read aloud
 
 Passengers can switch on **Read aloud** (or open the seat link with `&read=1`): confirm questions,

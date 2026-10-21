@@ -40,6 +40,8 @@ class Seat(BaseModel):
     lang: str = "en"
     senior: bool = False
     pictures: bool = False   # picture-only mode: crew should answer visually or in person
+    read: bool = False       # read aloud on the passenger's phone
+    checked_in: bool = False # preferences set at the airport / gate before boarding
     connected: bool = False
     failed_attempts: int = 0
 

@@ -70,7 +70,8 @@ let markReady;
 const ready = new Promise((resolve) => (markReady = resolve));
 const socket = connect(`/ws/passenger/${seat}`, (msg) => ready.then(() => onMessage(msg)), (on) => {
   $("dot").classList.toggle("on", on);
-  if (on) socket.send({ type: "hello", lang, senior, pictures });
+  // wait for check-in preferences, or this hello would overwrite them with defaults
+  if (on) ready.then(() => socket.send({ type: "hello", lang, senior, pictures, read: readAloud }));
 });
 
 function say(lines) { if (readAloud && voiceOK && !pictures) speak(lines, lang); }
@@ -279,18 +280,29 @@ $("form").addEventListener("submit", (e) => {
   socket.send({ type: "text", text });
   $("text").value = "";
 });
-$("read").addEventListener("change", (e) => { readAloud = e.target.checked; if (readAloud) speak(t("readLabel"), lang); });
+$("read").addEventListener("change", (e) => {
+  readAloud = e.target.checked;
+  if (readAloud) speak(t("readLabel"), lang);
+  socket.send({ type: "hello", lang, senior, pictures, read: readAloud });
+});
 $("lang").addEventListener("change", async (e) => {
   lang = e.target.value;
   await loadStrings(lang);
   voiceOK = await canSpeak(lang);
   applyStrings();
-  socket.send({ type: "hello", lang, senior, pictures });
+  socket.send({ type: "hello", lang, senior, pictures, read: readAloud });
 });
-$("pictures").addEventListener("change", (e) => { pictures = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
-$("senior").addEventListener("change", (e) => { senior = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures }); });
+$("pictures").addEventListener("change", (e) => { pictures = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures, read: readAloud }); });
+$("senior").addEventListener("change", (e) => { senior = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures, read: readAloud }); });
 
 config = await loadConfig();
+// A plain seat QR (no settings in the link) opens with what was chosen at check-in.
+if (!["lang", "senior", "mode", "read"].some((k) => params.has(k))) {
+  try {
+    const p = await (await fetch(`/api/seat/${seat}`)).json();
+    if (p.checked_in) ({ lang, senior, pictures, read: readAloud } = { lang: p.lang, senior: p.senior, pictures: p.pictures, read: p.read });
+  } catch { /* hub unreachable: keep the defaults */ }
+}
 $("lang").replaceChildren(...config.languages.map((l) => el("option", { value: l.code }, l.name)));
 if (!config.languages.some((l) => l.code === lang)) lang = "en";
 await loadStrings(lang);

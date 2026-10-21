@@ -21,7 +21,7 @@ from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.types import Phase
 from engine.lexicon import ROOT
 
-from . import demo, languages, recordings
+from . import checkin, demo, languages, recordings
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -84,6 +84,9 @@ async def revalidate_static(request, call_next):
 lexicon = Lexicon()
 templates = Templates()
 cabin = Cabin(lexicon)
+for _seat, _prefs in checkin.load().items():          # check-ins survive a hub restart
+    if _seat in cabin.seats:
+        cabin.seats[_seat] = cabin.seats[_seat].model_copy(update={**_prefs, "checked_in": True})
 
 passengers: dict[str, set[WebSocket]] = defaultdict(set)
 crew: set[WebSocket] = set()
@@ -146,6 +149,8 @@ def crew_state() -> dict:
         "broadcast": briefing,
         "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
                         for c in cabin.exit_checks.values()],
+        "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "checked_in", "connected"})
+                       for s in cabin.seats.values() if s.lang != "en" or s.senior or s.pictures or s.read],
     }
 
 
@@ -285,6 +290,43 @@ def report_csv() -> Response:
                     headers={"Content-Disposition": 'attachment; filename="auralink-flight-report.csv"'})
 
 
+class CheckinIn(BaseModel):
+    seat: str
+    lang: str = "en"
+    senior: bool = False
+    pictures: bool = False
+    read: bool = False
+
+
+@app.post("/api/checkin")
+async def post_checkin(body: CheckinIn) -> dict:
+    """Airport / boarding gate: set how this seat's screen opens. Seat and preferences only, no names."""
+    if body.seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {body.seat}")
+    if body.lang not in languages.codes():
+        raise HTTPException(422, f"Unknown language {body.lang!r}")
+    prefs = body.model_dump(include=set(checkin.FIELDS))
+    seat = cabin.seats[body.seat]
+    for k, v in prefs.items():
+        setattr(seat, k, v)
+    seat.checked_in = True
+    saved = checkin.load()
+    saved[body.seat] = prefs
+    checkin.save(saved)
+    await push_crew()
+    query = f"seat={body.seat}&lang={body.lang}" + ("&senior=1" if body.senior else "") + \
+            ("&mode=pictures" if body.pictures else "") + ("&read=1" if body.read else "")
+    return {"seat": body.seat, **prefs, "passenger_path": f"/passenger.html?{query}"}
+
+
+@app.get("/api/seat/{seat}")
+def get_seat(seat: str) -> dict:
+    """What a seat's screen should open with (set at check-in, or by the passenger last time)."""
+    if seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {seat}")
+    return cabin.seats[seat].model_dump(include={"lang", "senior", "pictures", "read", "checked_in"})
+
+
 @app.get("/api/config")
 def config() -> dict:
     lexicon.reload_if_changed()
@@ -383,6 +425,7 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         s.lang = msg.get("lang", s.lang)
         s.senior = bool(msg.get("senior", s.senior))
         s.pictures = bool(msg.get("pictures", s.pictures))
+        s.read = bool(msg.get("read", s.read))
 
     elif kind == "text":
         await interpret_and_reply(seat, msg.get("text", ""))
