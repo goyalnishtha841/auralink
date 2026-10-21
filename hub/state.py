@@ -28,8 +28,11 @@ class Card(BaseModel):
     urgent: bool = False
     confident: bool = True   # False: show a choice between close candidates instead of yes/no
     reply_id: str | None = None
+    source: Literal["voice", "text", "picture"] = "text"   # how the passenger asked
+    lang: str = "en"                                        # passenger's language when asking
     created_at: float = Field(default_factory=time.time)
     updated_at: float = Field(default_factory=time.time)
+    timeline: dict[str, float] = Field(default_factory=dict)   # status -> when it was first reached (flight report)
 
 
 class Seat(BaseModel):
@@ -75,6 +78,7 @@ class Cabin:
         self.seats = {s: Seat(id=s) for s in SEAT_IDS}
         self.cards: dict[str, Card] = {}
         self.broadcast: Broadcast | None = None
+        self.past_broadcasts: list[Broadcast] = []
         self.exit_checks: dict[str, ExitCheck] = {}
         self._ids = itertools.count(1)
 
@@ -82,6 +86,7 @@ class Cabin:
         """Clear requests, briefings and exit checks between demo runs. Connections and languages stay."""
         self.cards.clear()
         self.broadcast = None
+        self.past_broadcasts.clear()
         self.exit_checks.clear()
         self.phase = "cruise"
         for seat in self.seats.values():
@@ -89,8 +94,8 @@ class Cabin:
 
     # passenger side
 
-    def handle_text(self, seat: str, text: str, nbest: list[Hypothesis] | None = None
-                    ) -> tuple[Result, list[Card], Card | None]:
+    def handle_text(self, seat: str, text: str, nbest: list[Hypothesis] | None = None,
+                    source: str = "text") -> tuple[Result, list[Card], Card | None]:
         """Interpret one utterance. Returns the result, new draft cards, and an escalation card if any."""
         self.lex.reload_if_changed()
         s = self.seats[seat]
@@ -100,7 +105,7 @@ class Cabin:
         cards = [
             self._new_card(seat, "urgent_unconfirmed" if d.urgent else "awaiting_confirm",
                            candidates=d.candidates, heard=d.span, urgent=d.urgent,
-                           confident=d.status == "confident")
+                           confident=d.status == "confident", source=source)
             for d in result.cards
         ]
         escalated = None
@@ -111,13 +116,13 @@ class Cabin:
             if s.failed_attempts >= MAX_ROUNDS:
                 s.failed_attempts = 0
                 escalated = self._new_card(seat, "needs_human", candidates=result.best_guesses,
-                                           heard=text, rounds=MAX_ROUNDS)
+                                           heard=text, rounds=MAX_ROUNDS, source=source)
         return result, cards, escalated
 
     def icon_request(self, seat: str, intent: str) -> Card:
         self._check_intent(intent)
         self.seats[seat].failed_attempts = 0
-        return self._new_card(seat, "confirmed", intent=intent, urgent=self.lex.is_urgent(intent))
+        return self._new_card(seat, "confirmed", intent=intent, urgent=self.lex.is_urgent(intent), source="picture")
 
     def confirm(self, card_id: str, intent: str) -> Card:
         self._check_intent(intent)
@@ -165,8 +170,17 @@ class Cabin:
         return self._set(self.cards[card_id], "closed")
 
     def start_broadcast(self, template_id: str) -> Broadcast:
+        self.end_broadcast()
         self.broadcast = Broadcast(id=f"b{next(self._ids)}", template_id=template_id)
         return self.broadcast
+
+    def end_broadcast(self) -> None:
+        if self.broadcast:
+            self.past_broadcasts.append(self.broadcast)
+        self.broadcast = None
+
+    def all_broadcasts(self) -> list[Broadcast]:
+        return self.past_broadcasts + ([self.broadcast] if self.broadcast else [])
 
     def start_exit_check(self, seats: list[str]) -> list[ExitCheck]:
         self.exit_checks = {s: ExitCheck(seat=s) for s in seats if s in self.seats}
@@ -191,13 +205,16 @@ class Cabin:
     # helpers
 
     def _new_card(self, seat: str, status: CardStatus, **fields) -> Card:
-        card = Card(id=f"c{next(self._ids)}", seat=seat, status=status, **fields)
+        card = Card(id=f"c{next(self._ids)}", seat=seat, status=status, lang=self.seats[seat].lang, **fields)
+        card.timeline["created"] = card.created_at
+        card.timeline[status] = card.created_at
         self.cards[card.id] = card
         return card
 
     def _set(self, card: Card, status: CardStatus) -> Card:
         card.status = status
         card.updated_at = time.time()
+        card.timeline.setdefault(status, card.updated_at)
         return card
 
     def _check_intent(self, intent: str) -> None:

@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from engine import PHASES, Context, Hypothesis, Lexicon, interpret
@@ -21,6 +22,7 @@ from engine.types import Phase
 from engine.lexicon import ROOT
 
 from . import demo, languages, recordings
+from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
 from .templates import Templates
@@ -270,6 +272,19 @@ async def presenter_crew(msg: dict) -> dict:
     return {"done": msg["type"]}
 
 
+@app.get("/api/report")
+def report() -> dict:
+    """Flight report since the last cabin reset (report.html)."""
+    templates.reload_if_changed()
+    return flight_report.build(cabin, templates)
+
+
+@app.get("/api/report.csv")
+def report_csv() -> Response:
+    return Response(flight_report.to_csv(cabin), media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="auralink-flight-report.csv"'})
+
+
 @app.get("/api/config")
 def config() -> dict:
     lexicon.reload_if_changed()
@@ -319,7 +334,7 @@ async def passenger_ws(ws: WebSocket, seat: str) -> None:
 async def interpret_and_reply(seat: str, text: str, nbest: list[Hypothesis] | None = None,
                               asr: dict | None = None) -> None:
     s = cabin.seats[seat]
-    result, cards, escalated = cabin.handle_text(seat, text, nbest)
+    result, cards, escalated = cabin.handle_text(seat, text, nbest, source="voice" if asr else "text")
     if asr:
         result.latency_ms = {**asr["latency_ms"], **result.latency_ms}
     if judges:
@@ -438,7 +453,7 @@ async def handle_crew(msg: dict) -> None:
             view = templates.safety_view(b.template_id, cabin.seats[seat].lang)
             await _send(sockets, {"type": "safety", "broadcast_id": b.id, "template": view})
     elif kind == "end_broadcast":
-        cabin.broadcast = None
+        cabin.end_broadcast()
     elif kind == "exit_check":
         templates.reload_if_changed()
         for check in cabin.start_exit_check(exit_seats()):

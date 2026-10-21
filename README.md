@@ -18,6 +18,9 @@ eSpeak-NG, HTTPS certificate, free port, a test sentence), prints the address an
 phones, then starts the hub. Demo tools: `/presenter.html` (pitch checklist with timer, health,
 backup buttons that send requests as a seat, and a two-tap cabin reset between rehearsals),
 `/seats.html` (printable seat QR cards) and `/noise.html` (cabin-noise player with a level meter).
+`/report.html` is the flight report: requests by outcome, type and language, median time to
+acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row
+results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset.
 The presenter endpoints have no password: fine on the demo network, not for a real aircraft.
 
 Open <http://localhost:8000> and put **Passenger** and **Crew** side by side. Tap the microphone

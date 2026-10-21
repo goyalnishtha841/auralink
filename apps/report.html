@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auralink · Flight report</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 1180px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .kpi { padding: 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+    .kpi span { font-size: 13px; color: var(--muted); }
+    .kpi b { font: 700 32px/1.1 "Outfit", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+    .kpi small { font-size: 12px; color: var(--muted); }
+    .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+    .stack { display: flex; height: 22px; border-radius: 11px; overflow: hidden; background: var(--surface-2); }
+    .stack i { display: block; height: 100%; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    td.n { font-variant-numeric: tabular-nums; text-align: right; width: 56px; }
+    .barcell { width: 45%; }
+    .bar { height: 10px; border-radius: 5px; background: var(--info); }
+    .type { display: flex; align-items: center; gap: 8px; }
+    .type .icon .ic { width: 20px; height: 20px; color: var(--info); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { padding: 4px 10px; border-radius: 999px; background: var(--surface-2); font-size: 13px; }
+    .brief { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .brief:last-child { border-bottom: 0; }
+    .empty { color: var(--muted); }
+    .top-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    @media print { header .top-actions { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="dot on"></span>
+    <h1>フライトレポート <span class="muted">Flight report</span></h1>
+    <div class="top-actions">
+      <span class="muted" id="when"></span>
+      <button id="refresh">Refresh</button>
+      <a href="/api/report.csv"><button class="primary">Download CSV</button></a>
+    </div>
+  </header>
+  <main>
+    <p class="muted">Everything since the last cabin reset. Times are from the passenger's request to the crew's tap.</p>
+    <section class="kpis" id="kpis"></section>
+    <div class="grid2">
+      <section class="panel">
+        <h2>リクエストの結果 · How requests were resolved</h2>
+        <div class="stack" id="outcomeBar" role="img"></div>
+        <div class="legend" id="outcomeLegend"></div>
+        <h2>伝え方 · How passengers asked</h2>
+        <div class="chips" id="sources"></div>
+        <h2>言語 · Languages</h2>
+        <div class="chips" id="langs"></div>
+      </section>
+      <section class="panel">
+        <h2>リクエストの種類 · Request types</h2>
+        <table><thead><tr><th>Type</th><th class="barcell"></th><th>Count</th></tr></thead><tbody id="types"></tbody></table>
+      </section>
+    </div>
+    <div class="grid2">
+      <section class="panel">
+        <h2>安全案内の理解度 · Safety briefings</h2>
+        <div id="briefings"></div>
+      </section>
+      <section class="panel">
+        <h2>非常口座席 · Exit row</h2>
+        <div id="exit"></div>
+      </section>
+    </div>
+  </main>
+
+<script type="module">
+import { el, loadConfig } from "./common.js";
+import { icon } from "./icons.js";
+
+const $ = (id) => document.getElementById(id);
+const config = await loadConfig();
+const LABEL = Object.fromEntries(config.intents.map((i) => [i.id, i.label.en]));
+const LANG = Object.fromEntries(config.languages.map((l) => [l.code, l.name]));
+const OUTCOMES = [
+  ["first_try", "Understood first try", "var(--ok)"],
+  ["picked_from_two", "Picked from two pictures", "var(--info)"],
+  ["via_grid", "Picked from the picture grid", "#5b8cff"],
+  ["picture", "Tapped a picture", "#a87cff"],
+  ["needs_human", "Crew helped in person", "var(--warn)"],
+  ["urgent_unconfirmed", "Urgent, not confirmed", "var(--bad)"],
+  ["unanswered", "Passenger did not answer", "var(--idle)"],
+];
+const SAFETY = [
+  ["understood", "Understood", "var(--ok)"],
+  ["understood_again", "After explaining again", "#2fb37f"],
+  ["reexplaining", "Being re-explained", "#a87cff"],
+  ["stuck", "Needed a crew visit", "var(--bad)"],
+  ["no_answer", "No answer", "var(--idle)"],
+];
+const secs = (s) => (s == null ? "–" : s < 90 ? `${Math.round(s)} s` : `${(s / 60).toFixed(1)} min`);
+const pct = (x) => (x == null ? "–" : `${Math.round(x * 100)}%`);
+
+function stack(container, parts, total) {
+  container.replaceChildren(...parts.filter(([, , , v]) => v).map(([, label, color, v]) =>
+    el("i", { style: `width:${(v / total) * 100}%;background:${color}`, title: `${label}: ${v}` })));
+  container.setAttribute("aria-label", parts.filter(([, , , v]) => v).map(([, l, , v]) => `${l} ${v}`).join(", ") || "none");
+}
+const legend = (parts) => parts.filter(([, , , v]) => v).map(([, label, color, v]) =>
+  el("span", {}, el("i", { class: "sw", style: `background:${color}` }), `${label}: ${v}`));
+
+function render(r) {
+  const q = r.requests;
+  $("when").textContent = `Updated ${new Date(r.generated_at * 1000).toLocaleTimeString()}`;
+  const answered = r.briefings.reduce((n, b) => n + b.understood + b.understood_again + b.reexplaining + b.stuck, 0);
+  const understood = r.briefings.reduce((n, b) => n + b.understood + b.understood_again, 0);
+  const kpi = (label, value, note) => el("div", { class: "kpi" }, el("span", {}, label), el("b", {}, value), note ? el("small", {}, note) : null);
+  $("kpis").replaceChildren(
+    kpi("Requests", String(q.total), `${q.outcomes.first_try} understood first try`),
+    kpi("Median time to acknowledge", secs(q.time_to_acknowledge_s.median), q.time_to_acknowledge_s.n ? `slowest ${secs(q.time_to_acknowledge_s.max)}` : "none acknowledged yet"),
+    kpi("Recovery rate", pct(q.recovery.rate), q.recovery.unclear ? `${q.recovery.resolved_by_passenger} of ${q.recovery.unclear} unclear requests solved by the passenger` : "no unclear requests yet"),
+    kpi("Urgent requests", String(q.urgent.count), q.urgent.time_to_acknowledge_s.n ? `acknowledged in ${secs(q.urgent.time_to_acknowledge_s.median)} (median)` : "none acknowledged"),
+    kpi("Safety understood", answered ? pct(understood / answered) : "–", `${understood} of ${answered} passengers who answered`),
+    kpi("Exit row passed", r.exit_row.pass + r.exit_row.talk ? `${r.exit_row.pass}/${r.exit_row.pass + r.exit_row.talk}` : "–",
+        r.exit_row.checked ? `${r.exit_row.talk} need a talk · ${r.exit_row.pending} no answer or no phone` : "no check run"));
+
+  const parts = OUTCOMES.map(([k, label, color]) => [k, label, color, q.outcomes[k] || 0]);
+  stack($("outcomeBar"), parts, Math.max(1, q.total));
+  $("outcomeLegend").replaceChildren(...(q.total ? legend(parts) : [el("span", { class: "empty" }, "No requests yet.")]));
+  const SRC = { voice: "Spoke", text: "Typed", picture: "Tapped a picture" };
+  $("sources").replaceChildren(...Object.entries(q.by_source).map(([k, v]) => el("span", { class: "chip" }, `${SRC[k] || k}: ${v}`)));
+  $("langs").replaceChildren(...Object.entries(q.by_language).map(([k, v]) => el("span", { class: "chip" }, `${LANG[k] || k}: ${v}`)));
+
+  const types = Object.entries(q.by_intent).sort((a, b) => b[1] - a[1]);
+  const most = Math.max(1, ...types.map(([, v]) => v));
+  $("types").replaceChildren(...(types.length ? types.map(([k, v]) => el("tr", {},
+    el("td", {}, el("span", { class: "type" }, icon(k), LABEL[k] || k)),
+    el("td", { class: "barcell" }, el("div", { class: "bar", style: `width:${(v / most) * 100}%` })),
+    el("td", { class: "n" }, String(v)))) : [el("tr", {}, el("td", { class: "empty", colspan: "3" }, "No requests yet."))]));
+
+  $("briefings").replaceChildren(...(r.briefings.length ? r.briefings.map((b) => {
+    const parts = SAFETY.map(([k, label, color]) => [k, label, color, b[k] || 0]);
+    const total = Math.max(1, parts.reduce((n, [, , , v]) => n + v, 0));
+    const bar = el("div", { class: "stack", role: "img" }); stack(bar, parts, total);
+    return el("div", { class: "brief" },
+      el("strong", {}, `${b.title_ja} · ${b.title_en}`), bar, el("div", { class: "legend" }, ...legend(parts)),
+      ...b.stuck_by_step.map((s) => el("span", { class: "muted" }, `Step ${s.step} (“${s.en}”): ${s.seats} seat${s.seats > 1 ? "s" : ""} needed a visit`)));
+  }) : [el("p", { class: "empty" }, "No briefing sent yet.")]));
+
+  const e = r.exit_row;
+  $("exit").replaceChildren(...(e.checked ? [
+    el("div", { class: "chips" }, el("span", { class: "chip" }, `Passed: ${e.pass}`), el("span", { class: "chip" }, `Need a talk: ${e.talk}`), el("span", { class: "chip" }, `No answer: ${e.pending}`)),
+    ...e.talk_seats.map((t) => el("p", {}, el("strong", {}, t.seat), ` · ${t.reseat ? "asked for another seat" : `answered No to: ${t.no_to.map((x) => x.replace("_", " ")).join(", ")}`}`)),
+  ] : [el("p", { class: "empty" }, "No exit-row check run yet.")]));
+}
+
+async function load() { render(await (await fetch("/api/report")).json()); }
+$("refresh").addEventListener("click", load);
+load();
+setInterval(load, 10000);
+</script>
+</body>
+</html>
