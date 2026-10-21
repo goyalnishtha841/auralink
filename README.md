@@ -166,7 +166,7 @@ phones, then starts the hub.
 | `/presenter.html` | Pitch checklist with timer, health, backup buttons that send requests as a seat, and a two-tap cabin reset between rehearsals |
 | `/seats.html` | Printable seat QR cards |
 | `/noise.html` | Cabin-noise player with a level meter |
-| `/report.html` | Flight report: requests by outcome, type and language, median time to acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset. |
+| `/report.html` | Flight report: requests by outcome, type and language, median time to acknowledge, recovery rate, urgent handling, safety comprehension per briefing step, exit-row results, PA captions sent and care rounds (requests delivered, check-in visits, walking saved), with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset. |
 
 Crew screens ask for the crew PIN (see [Crew PIN](#crew-pin)).
 
