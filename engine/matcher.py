@@ -25,6 +25,7 @@ T2 = 0.10            # top two candidates on the same words must differ by this 
 URGENT_FLOOR = 0.60  # urgent intents are raised at a lower score, favouring recall
 MATCH_FLOOR = 0.50   # weaker span/intent pairs are ignored entirely
 MAX_NGRAM = 3
+LONGER_MATCH_WINS = 0.85  # a word inside a longer phrase that matched just as well (nam inside hong nam)
 
 _TOKEN = re.compile(r"[^\s.,!?;:()\"।]+")
 _FOLDS = [
@@ -102,7 +103,14 @@ class HybridSimilarity:
     def __init__(self, phonetic):
         self.phonetic = phonetic
         self.name = "hybrid"
-        self._sim = lru_cache(maxsize=65536)(lambda a, b: (phonetic(a, b) + similarity(a, b)) / 2)
+
+        @lru_cache(maxsize=65536)
+        def sim(a: str, b: str) -> float:
+            if not phonetic.phones(a) or not phonetic.phones(b):
+                return similarity(a, b)   # a script eSpeak cannot read (e.g. Thai): spelling evidence only
+            return (phonetic(a, b) + similarity(a, b)) / 2
+
+        self._sim = sim
 
     def warm(self, texts: list[str]) -> None:
         self.phonetic.warm(texts)
@@ -239,7 +247,8 @@ def _segment(hits: list[_Hit], floor: float) -> list[list[_Hit]]:
     so "pain" can compete with "pani" while "wotter" and "kambal" stay separate requests.
     """
     anchors: list[_Hit] = []
-    for h in sorted(hits, key=lambda h: -h.score):
+    # equal scores: the longer phrase claims first ("hong nam" = toilet before "nam" = water)
+    for h in sorted(hits, key=lambda h: (-h.score, -(h.end - h.start))):
         if h.score < floor:
             break
         if not any(h.overlaps(a) for a in anchors):
@@ -249,6 +258,9 @@ def _segment(hits: list[_Hit], floor: float) -> list[list[_Hit]]:
         rivals: dict[str, _Hit] = {}
         for h in hits:
             if h.overlaps(a) and not any(h.overlaps(o) for o in anchors if o is not a):
+                if a.start <= h.start and h.end <= a.end and (h.end - h.start) < (a.end - a.start) and h.score <= a.score:
+                    # a word inside a longer phrase that matched at least as well is weaker evidence
+                    h = _Hit(h.intent, h.score * LONGER_MATCH_WINS, h.start, h.end, h.heard, h.matched)
                 if h.intent not in rivals or h.score > rivals[h.intent].score:
                     rivals[h.intent] = h
         rivals.setdefault(a.intent, a)
@@ -256,10 +268,37 @@ def _segment(hits: list[_Hit], floor: float) -> list[list[_Hit]]:
     return groups
 
 
+def split_unspaced(text: str, lex: Lexicon) -> str:
+    """Thai and similar scripts have no spaces between words. Split each run by longest match against
+    the lexicon's words (dictionary maximal matching), so "ขอน้ำหน่อย" becomes "ขอ น้ำ หน่อย" and
+    "ห้องน้ำ" (toilet) stays whole instead of being read as "น้ำ" (water)."""
+    if not lex.unspaced or not lex.unspaced_vocab:
+        return text
+
+    def seg(m: re.Match) -> str:
+        run, i, out, unknown = m.group(0), 0, [], ""
+        while i < len(run):
+            word = next((w for w in lex.unspaced_vocab if run.startswith(w, i)), None)
+            if word:
+                if unknown:
+                    out.append(unknown)
+                    unknown = ""
+                out.append(word)
+                i += len(word)
+            else:
+                unknown += run[i]
+                i += 1
+        if unknown:
+            out.append(unknown)
+        return f" {' '.join(out)} "
+
+    return lex.unspaced.sub(seg, text)
+
+
 def interpret(nbest: list[Hypothesis], ctx: Context, lex: Lexicon, *, t1: float = T1, t2: float = T2,
               sim: Similarity | None = None) -> Result:
     t0 = time.perf_counter()
-    hyps = [h for h in nbest if h.text.strip()]
+    hyps = [Hypothesis(text=split_unspaced(h.text, lex), conf=h.conf, lang=h.lang) for h in nbest if h.text.strip()]
     if not hyps:
         return Result(seat=ctx.seat, nbest=nbest, cards=[], rule="empty", urgent=False,
                       latency_ms={"match": round((time.perf_counter() - t0) * 1000, 2)})

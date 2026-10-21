@@ -195,8 +195,9 @@ class Phonemizer:
         self._lock = threading.Lock()
         self._cache: dict[str, tuple[str, ...]] = {}
 
-    def voice_for(self, text: str) -> str:
-        """eSpeak voice for a string: its writing system's voice (Hindi, Tamil, ...) or English for Latin."""
+    def voice_for(self, text: str) -> str | None:
+        """eSpeak voice for a string: its writing system's voice (Hindi, Tamil, ...), None if eSpeak cannot
+        read that script reliably (Thai), or English for Latin."""
         return next((voice for pattern, voice in self._scripts if pattern.search(text)), "en-us")
 
     def warm(self, texts: list[str]) -> None:
@@ -206,6 +207,9 @@ class Phonemizer:
         for t in todo:
             by_voice.setdefault(self.voice_for(t), []).append(t)
         for voice, items in by_voice.items():
+            if voice is None:
+                self._cache.update({t: () for t in items})
+                continue
             with self._lock:
                 if voice not in self._backends:
                     self._backends[voice] = self._make(voice)

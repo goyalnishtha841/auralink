@@ -36,7 +36,7 @@ def test_language_is_complete(code):
 
 def test_config_and_strings_endpoints():
     codes = [lang["code"] for lang in client.get("/api/config").json()["languages"]]
-    assert codes == ["en", "hi", "ta"]
+    assert codes == ["en", "hi", "ta", "th"]
     ta = client.get("/api/i18n/ta").json()
     assert ta["yes"] == "ஆம்" and "_note" not in ta
     assert client.get("/api/i18n/xx").status_code == 404
@@ -52,6 +52,11 @@ def test_tamil_speech_languages():
     ("தண்ணீர் வேண்டும்", ["water"]),
     ("enakku oru porvai kodunga", ["blanket"]),
     ("marundhu venum", ["medical"]),
+    ("ขอน้ำหน่อยครับ", ["water"]),                # Thai: no spaces between words
+    ("ห้องน้ำอยู่ที่ไหน", ["toilet"]),             # "toilet" contains the word for water
+    ("ขอผ้าห่มกับหมอนหน่อยค่ะ", ["blanket", "pillow"]),
+    ("hong nam yu thinai", ["toilet"]),           # romanized: the longer phrase wins
+    ("ขอบคุณครับ", []),                            # "thank you" is not a request
 ])
 def test_tamil_requests(text, intents):
     r = interpret([Hypothesis(text=text)], Context(seat="1"), Lexicon())
@@ -66,3 +71,14 @@ def test_tamil_passenger_end_to_end():
         assert card["options"][0]["label"] == "தண்ணீர்"
         pax.send_json({"type": "confirm", "card_id": card["id"], "intent": "water"})
         assert pax.receive_json()["message"] == "பணியாளருக்கு அனுப்பப்பட்டது"
+
+
+def test_thai_is_split_into_words():
+    from engine.matcher import split_unspaced
+    assert split_unspaced("ขอน้ำหน่อยครับ", Lexicon()).split() == ["ขอ", "น้ำ", "หน่อย", "ครับ"]
+    assert split_unspaced("thoda wotter", Lexicon()) == "thoda wotter"   # spaced scripts untouched
+
+
+def test_thai_urgent():
+    r = interpret([Hypothesis(text="ไม่สบายครับ")], Context(seat="1"), Lexicon())
+    assert r.urgent

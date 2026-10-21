@@ -1,8 +1,8 @@
 // Read pre-approved text aloud with the device's own voices (offline on phones and laptops).
 // Only fixed sentences from the hub are ever spoken; nothing is generated.
-const PREFERRED = { en: ["en-IN", "en-GB", "en-US"], hi: ["hi-IN"], ta: ["ta-IN"], ja: ["ja-JP"] };
+const PREFERRED = { en: ["en-IN", "en-GB", "en-US"], hi: ["hi-IN"], ta: ["ta-IN"], th: ["th-TH"], ja: ["ja-JP"] };
 // plain, natural voices first where the device has them (macOS/iOS also ship character voices)
-const NAMES = { en: ["Rishi", "Veena"], hi: ["Lekha"], ta: ["Vani"], ja: ["Kyoko", "O-Ren", "Otoya"] };
+const NAMES = { en: ["Rishi", "Veena"], hi: ["Lekha"], ta: ["Vani"], th: ["Kanya"], ja: ["Kyoko", "O-Ren", "Otoya"] };
 
 let voices = [];
 const ready = new Promise((resolve) => {

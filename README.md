@@ -93,7 +93,14 @@ language, the option is hidden.
 4. `data/templates/messages.json`: `bn` for crew replies, statuses, safety steps and the exit-row check.
 5. Run `.venv/bin/python -m pytest -q tests/test_languages.py`: it lists anything still missing.
 
-The hub reloads the word list as soon as it is saved. Tamil (`ta`) was added this way. All Hindi,
+The hub reloads the word list as soon as it is saved. Tamil (`ta`) and Thai (`th`) were added this way.
+
+Thai shows two general mechanisms, both switched on from `data/languages.json`:
+- `"spaces": false`: Thai has no spaces between words, so text is split by longest match against the
+  lexicon ("ขอน้ำหน่อยครับ" → "ขอ น้ำ หน่อย ครับ"; "ห้องน้ำ" stays toilet, not water).
+- `"espeak": null`: eSpeak-NG's Thai phonemes are unusable, so Thai script is matched by spelling only.
+Keep romanized words long and distinctive: short ones like "mon" (Thai pillow) collided with English
+"son" and raised false alarms; `scripts/evaluate.py` catches this. All Hindi,
 Tamil and Japanese text is a draft until a native speaker has checked it.
 
 ## Contracts (change only as a team)

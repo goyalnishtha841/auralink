@@ -1,5 +1,5 @@
 {
-  "_note": "Passenger languages. Adding one = an entry here + data/i18n/<code>.json + words in data/lexicon/intents.json + messages in data/templates/messages.json. No code or retraining. 'asr' = the languages Whisper decodes for that passenger; 'scripts' tells the phonetic matcher which eSpeak-NG voice reads which writing system.",
+  "_note": "Passenger languages. Adding one = an entry here + data/i18n/<code>.json + words in data/lexicon/intents.json + messages in data/templates/messages.json. No code or retraining. 'asr' = the languages Whisper decodes for that passenger; 'scripts' tells the phonetic matcher which eSpeak-NG voice reads which writing system. 'espeak': null means spelling-only matching for that script; 'spaces': false splits its text into words by longest lexicon match.",
   "languages": [
     {
       "code": "en",
@@ -24,6 +24,14 @@
         "en",
         "ta"
       ]
+    },
+    {
+      "code": "th",
+      "name": "ไทย",
+      "asr": [
+        "en",
+        "th"
+      ]
     }
   ],
   "scripts": [
@@ -38,6 +46,14 @@
       "from": "0B80",
       "to": "0BFF",
       "espeak": "ta"
+    },
+    {
+      "name": "Thai",
+      "from": "0E00",
+      "to": "0E7F",
+      "espeak": null,
+      "spaces": false,
+      "_why": "eSpeak-NG's Thai phonemes are unusable, so Thai script uses spelling matching; Thai has no spaces between words, so text is split by longest lexicon match"
     }
   ]
 }
