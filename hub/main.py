@@ -122,6 +122,8 @@ def card_for_crew(card: Card) -> dict:
         for c in card.candidates
     ]
     data["lang"] = cabin.seats[card.seat].lang
+    if (sym := templates.symptom(card.symptom)):
+        data["symptom_ja"], data["symptom_en"], data["symptom_icon"] = sym["label"]["ja"], sym["label"]["en"], sym["icon"]
     data["pictures"] = cabin.seats[card.seat].pictures
     return data
 
@@ -417,6 +419,13 @@ async def handle_audio(seat: str, pcm: bytes) -> None:
     await push_crew()
 
 
+async def ask_symptom(card: Card) -> None:
+    """A confirmed medical request: ask the passenger what is wrong, with pictures, so crew know before arriving."""
+    if card.intent == "medical" and card.symptom is None:
+        await to_seat(card.seat, {"type": "triage", "card_id": card.id,
+                                  "triage": templates.triage_view(cabin.seats[card.seat].lang)})
+
+
 async def handle_passenger(seat: str, msg: dict) -> None:
     s = cabin.seats[seat]
     kind = msg.get("type")
@@ -436,10 +445,16 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         else:
             card = cabin.icon_request(seat, msg["intent"])
         await send_status(card, "urgent" if card.urgent else "sent")
+        await ask_symptom(card)
 
     elif kind == "confirm":
         card = cabin.confirm(msg["card_id"], msg["intent"])
         await send_status(card, "urgent" if card.urgent else "sent")
+        await ask_symptom(card)
+
+    elif kind == "symptom":
+        card = cabin.set_symptom(msg["card_id"], msg.get("symptom"), templates.symptom_ids)
+        await to_seat(seat, {"type": "triage_done", "message": templates.triage_view(s.lang)["done"]})
 
     elif kind == "reject":
         card = cabin.reject(msg["card_id"])

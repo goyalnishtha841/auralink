@@ -54,6 +54,19 @@ class Templates:
         d = self.data["exit_row"]["done"]["pass" if result == "pass" else "talk"]
         return d.get(lang) or d["en"]
 
+    def triage_view(self, lang: str) -> dict:
+        t = self.data["triage"]
+        pick = lambda d: d.get(lang) or d["en"]  # noqa: E731
+        return {"title": pick(t["title"]), "done": pick(t["done"]),
+                "symptoms": [{"id": s["id"], "icon": s["icon"], "label": pick(s["label"])} for s in t["symptoms"]]}
+
+    def symptom(self, symptom_id: str | None) -> dict | None:
+        return next((s for s in self.data["triage"]["symptoms"] if s["id"] == symptom_id), None) if symptom_id else None
+
+    @property
+    def symptom_ids(self) -> set[str]:
+        return {s["id"] for s in self.data["triage"]["symptoms"]}
+
     @property
     def exit_question_ids(self) -> list[str]:
         return [q["id"] for q in self.data["exit_row"]["questions"]]

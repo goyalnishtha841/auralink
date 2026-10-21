@@ -349,5 +349,90 @@
   },
   "exit_rows": [
     30
-  ]
+  ],
+  "triage": {
+    "_note": "Shown when a passenger confirms they feel unwell. Draft wording: have a native speaker and, ideally, cabin-crew medical training staff check it.",
+    "title": {
+      "en": "What is wrong? Tap one.",
+      "hi": "क्या तकलीफ़ है? एक पर टैप करें।",
+      "ta": "என்ன பிரச்சனை? ஒன்றைத் தொடுங்கள்.",
+      "th": "มีอาการอะไร แตะหนึ่งข้อ",
+      "ja": "どのような症状ですか？"
+    },
+    "done": {
+      "en": "Help is coming. Please stay in your seat.",
+      "hi": "मदद आ रही है। कृपया अपनी सीट पर बैठे रहें।",
+      "ta": "உதவி வருகிறது. உங்கள் இருக்கையிலேயே இருங்கள்.",
+      "th": "ความช่วยเหลือกำลังมา กรุณานั่งอยู่ที่ที่นั่ง",
+      "ja": "ただいま参ります。お席でお待ちください。"
+    },
+    "symptoms": [
+      {
+        "id": "chest_pain",
+        "icon": "medical",
+        "label": {
+          "en": "Chest pain",
+          "hi": "सीने में दर्द",
+          "ta": "நெஞ்சு வலி",
+          "th": "เจ็บหน้าอก",
+          "ja": "胸の痛み"
+        }
+      },
+      {
+        "id": "breathing",
+        "icon": "wind",
+        "label": {
+          "en": "Hard to breathe",
+          "hi": "साँस लेने में तकलीफ़",
+          "ta": "மூச்சு விட கஷ்டம்",
+          "th": "หายใจลำบาก",
+          "ja": "呼吸困難"
+        }
+      },
+      {
+        "id": "dizzy",
+        "icon": "dizzy",
+        "label": {
+          "en": "Dizzy or faint",
+          "hi": "चक्कर या बेहोशी",
+          "ta": "தலைசுற்றல் / மயக்கம்",
+          "th": "เวียนหัว / จะเป็นลม",
+          "ja": "めまい・失神"
+        }
+      },
+      {
+        "id": "nausea",
+        "icon": "nausea",
+        "label": {
+          "en": "Feel sick or vomiting",
+          "hi": "जी मिचलाना या उल्टी",
+          "ta": "குமட்டல் / வாந்தி",
+          "th": "คลื่นไส้ / อาเจียน",
+          "ja": "吐き気・嘔吐"
+        }
+      },
+      {
+        "id": "pain",
+        "icon": "pain",
+        "label": {
+          "en": "Pain somewhere else",
+          "hi": "कहीं और दर्द",
+          "ta": "வேறு இடத்தில் வலி",
+          "th": "ปวดที่อื่น",
+          "ja": "その他の痛み"
+        }
+      },
+      {
+        "id": "other",
+        "icon": "question",
+        "label": {
+          "en": "Something else",
+          "hi": "कुछ और",
+          "ta": "வேறு ஏதோ",
+          "th": "อย่างอื่น",
+          "ja": "その他"
+        }
+      }
+    ]
+  }
 }

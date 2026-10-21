@@ -31,6 +31,8 @@ def test_language_is_complete(code):
     gaps += [f"{s['id']} step {n + 1}" for s in m["safety"] for n, st in enumerate(s["steps"])
              if code not in st["text"] or code not in st["simple"]]
     gaps += [q["id"] for q in m["exit_row"]["questions"] if code not in q["text"]]
+    gaps += [f"triage {k}" for k in ("title", "done") if code not in m["triage"][k]]
+    gaps += [f"symptom {x['id']}" for x in m["triage"]["symptoms"] if code not in x["label"]]
     assert not gaps, f"messages.json is missing {code} for {gaps}"
 
 

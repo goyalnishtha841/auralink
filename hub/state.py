@@ -29,6 +29,7 @@ class Card(BaseModel):
     confident: bool = True   # False: show a choice between close candidates instead of yes/no
     reply_id: str | None = None
     source: Literal["voice", "text", "picture"] = "text"   # how the passenger asked
+    symptom: str | None = None                              # medical requests: what the passenger tapped
     lang: str = "en"                                        # passenger's language when asking
     created_at: float = Field(default_factory=time.time)
     updated_at: float = Field(default_factory=time.time)
@@ -139,6 +140,17 @@ class Cabin:
         if card.rounds >= MAX_ROUNDS:
             return self._set(card, "needs_human")
         card.updated_at = time.time()
+        return card
+
+    def set_symptom(self, card_id: str, symptom: str, known: set[str]) -> Card:
+        if symptom not in known:
+            raise ValueError(f"unknown symptom {symptom!r}")
+        card = self.cards[card_id]
+        if card.intent != "medical":
+            raise ValueError("symptoms are only for medical requests")
+        card.symptom = symptom
+        card.updated_at = time.time()
+        card.timeline.setdefault("symptom", card.updated_at)
         return card
 
     def safety_response(self, seat: str, status: str, step: int | None = None) -> SafetyAnswer:

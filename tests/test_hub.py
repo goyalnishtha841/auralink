@@ -219,3 +219,30 @@ def test_ca_certificate_is_public_part_only(tmp_path, monkeypatch):
     assert r.status_code == 200 and b"PUBLIC" in r.content and b"SECRET" not in r.content
     info = client.get("/api/hub-info").json()
     assert info["ca_available"] is True and info["this_page_https"] is False
+
+
+def test_medical_request_asks_for_symptom():
+    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+            shared.websocket_connect("/ws/passenger/34K") as pax:
+        pax.send_json({"type": "hello", "lang": "hi"})
+        pax.send_json({"type": "icon", "intent": "medical"})
+        assert pax.receive_json()["type"] == "status"
+        ask = pax.receive_json()
+        assert ask["type"] == "triage" and ask["triage"]["title"] == "क्या तकलीफ़ है? एक पर टैप करें।"
+        assert [x["id"] for x in ask["triage"]["symptoms"]][:2] == ["chest_pain", "breathing"]
+        pax.send_json({"type": "symptom", "card_id": ask["card_id"], "symptom": "nowhere"})
+        assert pax.receive_json()["type"] == "error"
+        pax.send_json({"type": "symptom", "card_id": ask["card_id"], "symptom": "chest_pain"})
+        assert pax.receive_json()["type"] == "triage_done"
+        state = crew_state(crew)
+        while not state["cards"] or "symptom_ja" not in state["cards"][0]:
+            state = crew_state(crew)
+        assert state["cards"][0]["symptom_ja"] == "胸の痛み" and state["cards"][0]["urgent"]
+
+
+def test_non_medical_request_never_asks_for_symptom():
+    with client.websocket_connect("/ws/passenger/31A") as pax:
+        pax.send_json({"type": "icon", "intent": "water"})
+        assert pax.receive_json()["type"] == "status"
+        pax.send_json({"type": "text", "text": "blanket"})
+        assert pax.receive_json()["type"] == "confirm"   # the next message is the confirm, not a triage

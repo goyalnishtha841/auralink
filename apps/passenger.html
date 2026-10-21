@@ -115,9 +115,13 @@ const closeSheet = () => $("overlay").replaceChildren();
 
 // One card at a time; split utterances queue the rest.
 let pending = [];
+let waitingTriage = null;   // a symptom question that arrived while other confirmations were open
 function showNextConfirm() {
   const card = pending.shift();
-  if (!card) return closeSheet();
+  if (!card) {
+    if (waitingTriage) { const t = waitingTriage; waitingTriage = null; return showTriage(t); }
+    return closeSheet();
+  }
   if (card.confident) {
     const o = card.options[0];
     say([t("confirmQ"), o.label]);
@@ -206,6 +210,11 @@ function onMessage(msg) {
   } else if (msg.type === "exit_check") {
     attention();
     showExitCheck(msg.check);
+  } else if (msg.type === "triage") {
+    if (pending.length) waitingTriage = msg; else showTriage(msg);
+  } else if (msg.type === "triage_done") {
+    say(msg.message);
+    sheet(el("h2", {}, msg.message), el("button", { class: "primary", onclick: closeSheet }, t("ok")));
   } else if (msg.type === "reset") {   // presenter reset between demo runs
     pending = []; requests.clear(); renderRequests(); closeSheet();
   } else if (msg.type === "exit_done") {
@@ -213,6 +222,16 @@ function onMessage(msg) {
     sheet(el("h2", {}, t("thanks")), el("p", {}, msg.message),
       el("button", { class: "primary", onclick: closeSheet }, t("ok")));
   }
+}
+
+// --- medical: what is wrong? Six big pictures, so crew know before they reach the seat ------------
+function showTriage(msg) {
+  attention();
+  say(msg.triage.title);
+  sheet(el("div", { class: "row" }, el("h2", { class: "grow urgent-title" }, msg.triage.title), listenBtn(msg.triage.title)),
+    el("div", { class: "grid triage" }, msg.triage.symptoms.map((x) =>
+      el("button", { class: "tile", onclick: () => socket.send({ type: "symptom", card_id: msg.card_id, symptom: x.id }) },
+        icon(x.icon), x.label))));
 }
 
 // --- safety briefing: all steps, then "Explain again" goes one simple step at a time -------------

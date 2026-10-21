@@ -46,6 +46,8 @@
     .what .icon .ic { width: 26px; height: 26px; color: var(--info); }
     .guess { display: inline-flex; align-items: center; gap: 4px; }
     .guess .icon .ic { width: 18px; height: 18px; }
+    .pill.symptom { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 4px 10px; }
+    .pill.symptom .icon .ic { width: 16px; height: 16px; }
   </style>
 </head>
 <body>
@@ -151,6 +153,7 @@ function cardView(c) {
     el("span", { class: "who" }, c.seat),
     el("div", { class: "body" },
       el("div", { class: "what" }, ...what, el("span", { class: `pill ${tone}` }, `${ja} · ${en}`),
+        c.symptom_ja ? el("span", { class: "pill bad symptom" }, icon(c.symptom_icon), `症状 ${c.symptom_ja} · ${c.symptom_en}`) : null,
         c.pictures ? el("span", { class: "pill violet", title: "This passenger uses picture-only mode: answer with gestures or go to the seat" }, "絵のみ · Pictures only") : null),
       c.heard ? el("span", { class: "muted" }, `“${c.heard}” · ${c.lang}`) : null,
       el("div", { class: "acts" },
@@ -166,7 +169,8 @@ function renderAlarm(cards) {
   const open = cards.filter((c) => c.urgent && c.status !== "acknowledged");
   if (fresh.length) beep();
   $("alarm").replaceChildren(...open.map((c) => el("div", { class: "alarm", role: "alert" },
-    el("b", {}, c.seat), `【至急】${c.crew_ja || "体調不良の可能性"} · Urgent: ${c.label_en || "possible medical"}`)));
+    el("b", {}, c.seat), `${(c.crew_ja || "体調不良の可能性").startsWith("【至急】") ? "" : "【至急】"}${c.crew_ja || "体調不良の可能性"} · Urgent: ${c.label_en || "possible medical"}`,
+    c.symptom_ja ? el("strong", {}, ` — 症状: ${c.symptom_ja} · ${c.symptom_en}`) : null)));
 }
 
 function renderSafety(state) {
@@ -214,7 +218,11 @@ function renderExit(checks) {
 let readAloud = false, announced = null;
 canSpeak("ja").then((ok) => { $("readWrap").hidden = !ok; });
 $("read").addEventListener("change", (e) => { readAloud = e.target.checked; });
+const announcedSymptom = new Set();
 function announce(cards) {
+  const symptoms = cards.filter((c) => c.symptom_ja && !announcedSymptom.has(c.id));
+  symptoms.forEach((c) => announcedSymptom.add(c.id));
+  if (readAloud && symptoms.length) speak(symptoms.map((c) => `${c.seat}、症状は${c.symptom_ja}です`), "ja");
   const fresh = cards.filter((c) => !announced.has(c.id) && c.status !== "acknowledged");
   cards.forEach((c) => announced.add(c.id));
   if (!readAloud || !fresh.length) return;

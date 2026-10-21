@@ -102,9 +102,9 @@ def to_csv(cabin: Cabin) -> str:
     out = io.StringIO()
     w = csv.writer(out)
     w.writerow(["request", "seat", "language", "asked_by", "request_type", "urgent", "outcome", "clarification_rounds",
-                "created_utc", "seconds_to_acknowledge", "seconds_to_done", "heard"])
+                "created_utc", "seconds_to_acknowledge", "seconds_to_done", "symptom", "heard"])
     for c in sorted(cabin.cards.values(), key=lambda c: c.created_at):
         w.writerow([c.id, c.seat, c.lang, c.source, c.intent or (c.candidates[0].intent if c.candidates else ""),
                     c.urgent, outcome(c), c.rounds, time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(c.created_at)),
-                    seconds(c, "acknowledged") or "", seconds(c, "closed") or "", c.heard])
+                    seconds(c, "acknowledged") or "", seconds(c, "closed") or "", c.symptom or "", c.heard])
     return out.getvalue()
