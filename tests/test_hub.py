@@ -15,10 +15,10 @@ def fresh_cabin(monkeypatch):
 
 
 @pytest.fixture(scope="module")
-def client():
+def client(crew_login):
     """One client for the module, so the crew and passenger sockets share an event loop
     (separate loops can deadlock when the hub sends from one socket's loop to another's)."""
-    with TestClient(main.app) as c:
+    with crew_login(TestClient(main.app)) as c:
         yield c
 
 
@@ -146,11 +146,11 @@ def test_explain_endpoint_shows_the_reasoning(client):
     assert body["thresholds"]["t1"] == 0.7
 
 
-def test_judge_gets_explanation_for_voice():
+def test_judge_gets_explanation_for_voice(crew_login):
     _needs_whisper()
     # one shared event loop for both sockets, as on the real server (separate TestClient portals stall
     # when one connection's handler sends a large message to the other)
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/judge") as judge, \
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/judge") as judge, \
             shared.websocket_connect("/ws/passenger/33K") as pax:
         pax.send_bytes(_clip_pcm("rishi_water_blanket"))
         msg = judge.receive_json()
@@ -160,8 +160,8 @@ def test_judge_gets_explanation_for_voice():
         assert msg["explain"]["stages"]["speech_to_text"] > 0
 
 
-def test_exit_row_check():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+def test_exit_row_check(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
             shared.websocket_connect("/ws/passenger/30A") as ok, shared.websocket_connect("/ws/passenger/30K") as unsure:
         ok.send_json({"type": "hello", "lang": "hi"})
         crew.send_json({"type": "exit_check"})
@@ -190,8 +190,8 @@ def test_demo_kit_endpoints(client):
     assert client.get("/api/qr", params={"data": "x" * 301}).status_code == 422
 
 
-def test_picture_mode_reaches_crew_card():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+def test_picture_mode_reaches_crew_card(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
             shared.websocket_connect("/ws/passenger/32D") as pax:
         pax.send_json({"type": "hello", "lang": "en", "pictures": True})
         pax.send_json({"type": "icon", "intent": "water"})
@@ -202,8 +202,8 @@ def test_picture_mode_reaches_crew_card():
         assert state["cards"][0]["pictures"] is True and state["cards"][0]["intent"] == "water"
 
 
-def test_presenter_backup_reset_and_status():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew"), \
+def test_presenter_backup_reset_and_status(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew"), \
             shared.websocket_connect("/ws/passenger/34K") as pax:
         r = shared.post("/api/presenter/say", json={"seat": "34K", "text": "I have chest pain"}).json()
         assert r["seat_has_screen"] is True
@@ -234,8 +234,8 @@ def test_ca_certificate_is_public_part_only(client, tmp_path, monkeypatch):
     assert info["ca_available"] is True and info["this_page_https"] is False
 
 
-def test_medical_request_asks_for_symptom():
-    with TestClient(main.app) as shared, shared.websocket_connect("/ws/crew") as crew, \
+def test_medical_request_asks_for_symptom(crew_login):
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
             shared.websocket_connect("/ws/passenger/34K") as pax:
         pax.send_json({"type": "hello", "lang": "hi"})
         pax.send_json({"type": "icon", "intent": "medical"})

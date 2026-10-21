@@ -135,6 +135,7 @@ matching, and **1.0–1.2 s** from the end of speech to the confirm screen (targ
 - **Live PA captions** from pre-approved announcements, never machine translation ([PA captions](#live-pa-captions))
 - **Care rounds**: one trolley loop for open requests and check-ins for quiet passengers ([care rounds](#care-rounds))
 - **Crash recovery**: cabin state survives a hub restart ([crash recovery](#crash-recovery))
+- **Crew PIN**: crew, presenter, report and jury screens are locked on the shared cabin Wi-Fi ([crew PIN](#crew-pin))
 - **New languages without code or retraining** ([adding a language](#adding-a-language-no-code-no-retraining)):
   Hindi, Tamil, Thai, English and Hinglish today
 - **Voice collection** for the held-out evaluation set ([collecting voices](#collecting-voices))
@@ -167,7 +168,7 @@ phones, then starts the hub.
 | `/noise.html` | Cabin-noise player with a level meter |
 | `/report.html` | Flight report: requests by outcome, type and language, median time to acknowledge, recovery rate, urgent handling, safety comprehension per briefing step and exit-row results, with a CSV download (`/api/report.csv`). It covers everything since the last cabin reset. |
 
-The presenter endpoints have no password: fine on the demo network, not for a real aircraft.
+Crew screens ask for the crew PIN (see [Crew PIN](#crew-pin)).
 
 ### On phones
 
@@ -194,7 +195,7 @@ certificate on each demo phone.
 ### Testing and CI
 
 ```bash
-.venv/bin/python -m pytest -q    # 92 tests
+.venv/bin/python -m pytest -q    # 99 tests
 .venv/bin/ruff check .
 ```
 
@@ -258,6 +259,19 @@ The hub saves the cabin state after every change (`data/flight/cabin_state.json`
 written atomically) and restores it on start: requests, briefing answers, exit-row checks and the
 flight report survive a restart, and screens reconnect by themselves. The presenter console shows
 when state was restored. Start clean with `AURALINK_FRESH=1 scripts/run.sh` or use Reset cabin.
+
+### Crew PIN
+
+Passengers and crew share the cabin Wi-Fi, so the crew side is locked with a PIN. `/crew.html`,
+`/presenter.html`, `/report.html` and `/judge.html` (Under the hood quotes real seats' words) show
+a small 乗務員PIN / Crew PIN prompt once per device; after that an HttpOnly cookie (derived from the
+PIN, valid 24 h) unlocks `/ws/crew`, `/ws/judge`, `/api/status`, `/api/presenter/*`, `/api/pa/*`
+and `/api/report*`. Without it HTTP answers 401 and sockets close with code 4401. Seat screens,
+check-in, the recording page, the landing page and its "try it" box stay open. Set the PIN with
+`AURALINK_CREW_PIN=482913 scripts/run.sh`; `scripts/demo.sh` prints it (and picks one if unset);
+otherwise the hub makes a 6-digit PIN at startup and logs it once. Five wrong tries from one device
+lock it out for a minute. Logic: [hub/auth.py](hub/auth.py). Not covered (a real aircraft would
+need them): per-crew accounts, HTTPS-only cookies when serving plain HTTP, and the PIN rotating per flight.
 
 ### Adding a language (no code, no retraining)
 
@@ -331,6 +345,7 @@ Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes
 
 #### Crew socket `/ws/crew`
 
+Needs the crew PIN cookie (closes with 4401 without it; same for `/ws/judge`).
 Sends `ack`, `reply {card_id, reply_id}`, `close`, `phase {phase}`, `broadcast {template_id}`.
 Receives `state {phase, cards[], heatmap{seat: understood|explain_again|pending|idle|offline}, broadcast}`
 after every change.

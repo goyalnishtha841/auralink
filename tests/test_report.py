@@ -61,12 +61,12 @@ def test_safety_and_exit_numbers():
     assert rep["exit_row"]["talk"] == 1 and rep["exit_row"]["talk_seats"][0]["reseat"] is True
 
 
-def test_csv_and_endpoint(monkeypatch):
+def test_csv_and_endpoint(monkeypatch, crew_login):
     cabin = scripted_flight()
     lines = flight_report.to_csv(cabin).strip().splitlines()
     assert lines[0].startswith("request,seat,language") and len(lines) == 6
     monkeypatch.setattr(main, "cabin", cabin)
-    client = TestClient(main.app)
+    client = crew_login(TestClient(main.app))
     assert client.get("/api/report").json()["requests"]["total"] == 5
     csv = client.get("/api/report.csv")
     assert csv.headers["content-type"].startswith("text/csv") and "attachment" in csv.headers["content-disposition"]
