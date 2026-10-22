@@ -1,5 +1,5 @@
 {
- "_note": "Cabin announcements (PA) that Auralink can caption. The crew speak as usual, in Japanese or English; the hub matches what it heard to one of these by its key phrases and, after the crew tap Send, shows the pre-written text on every seat in that passenger's language. Nothing is machine-translated: an announcement that is not here is not captioned, and the crew are told so. 'slot' is a number taken from the speech (minutes or gate) and put into text_n as {n}.",
+ "_note": "Cabin announcements (PA) that Auralink can caption. The crew speak as usual, in Japanese or English; the hub matches what it heard to one of these by its key phrases and, after the crew tap Send, shows the pre-written text on every seat in that passenger's language. Nothing is machine-translated: an announcement that is not here is not captioned, and the crew are told so. 'slot' is a number taken from the speech (minutes or gate) and put into text_n as {n}. Some Japanese keys are spellings Whisper writes for the same sound (効果 for 降下 'kōka', 伝統 for 点灯): the announcement is matched by how it sounds, like passenger requests.",
  "announcements": [
   {
    "id": "seatbelt_on",
@@ -16,9 +16,11 @@
      "illuminated"
     ],
     "ja": [
-     "シートベルト",
+     "シートベル",
      "ベルト着用",
+     "着用のサイン",
      "点灯",
+     "伝統しました",
      "お締め"
     ]
    },
@@ -57,7 +59,7 @@
      "keep your seatbelt fastened while seated"
     ],
     "ja": [
-     "シートベルト",
+     "シートベル",
      "消灯",
      "お立ちになる"
     ]
@@ -136,7 +138,10 @@
     "ja": [
      "降下",
      "着陸",
-     "到着予定"
+     "到着予定",
+     "効果を始め",
+     "着陸の予定",
+     "着力"
     ]
    },
    "title": {

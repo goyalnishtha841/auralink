@@ -31,24 +31,27 @@ from .templates import Templates
 log = logging.getLogger("auralink.hub")
 
 ASR_MODEL = os.environ.get("AURALINK_ASR_MODEL", "base")  # base: ~0.7 s on an M1; small: ~2.9 s
+# Crew announcements are long, formal Japanese and not time-critical: `base` misheard 点灯 and 二十分
+# in tests with spoken PAs, `small` heard them right in ~3-5 s. Passenger requests stay on the fast model.
+PA_ASR_MODEL = os.environ.get("AURALINK_PA_ASR_MODEL", "small")
 MAX_AUDIO_S = 10
-_asr = None
+_models: dict[str, object] = {}
 _asr_lock = threading.Lock()
 
 
-def get_asr():
-    """Load Whisper once, on first use (or at startup when AURALINK_PRELOAD_ASR=1)."""
-    global _asr
+def get_asr(model: str | None = None):
+    """Load a Whisper model once, on first use (or at startup when AURALINK_PRELOAD_ASR=1)."""
+    model = model or ASR_MODEL
     with _asr_lock:
-        if _asr is None:
+        if model not in _models:
             from engine.asr import WhisperASR  # heavy import: keep it out of text-only runs and tests
-            log.info("loading Whisper %s", ASR_MODEL)
-            _asr = WhisperASR(ASR_MODEL)
-        return _asr
+            log.info("loading Whisper %s", model)
+            _models[model] = WhisperASR(model)
+        return _models[model]
 
 
-def run_asr(audio, langs: tuple[str, ...] = ("en", "hi")):
-    asr = get_asr()
+def run_asr(audio, langs: tuple[str, ...] = ("en", "hi"), model: str | None = None):
+    asr = get_asr(model)
     with _asr_lock:  # one decode at a time; CPU-bound anyway
         return asr.transcribe(audio, langs=langs)
 
@@ -68,6 +71,7 @@ async def lifespan(_: FastAPI):
     threading.Thread(target=warm_matcher, daemon=True).start()
     if os.environ.get("AURALINK_PRELOAD_ASR") == "1":
         threading.Thread(target=get_asr, daemon=True).start()
+        threading.Thread(target=get_asr, args=(PA_ASR_MODEL,), daemon=True).start()   # first PA is not slow
     yield
 
 
@@ -250,7 +254,7 @@ def status() -> dict:
 
     open_cards = cabin.crew_cards()
     return {
-        "speech_model": ASR_MODEL if _asr is not None else None,
+        "speech_model": ASR_MODEL if ASR_MODEL in _models else None,
         "matcher": getattr(default_similarity(), "name", "text"),
         "phase": cabin.phase,
         "seats_connected": sorted(sid for sid, seat in cabin.seats.items() if seat.connected),
@@ -319,7 +323,7 @@ async def pa_match(body: PaHeardIn) -> dict:
             raise HTTPException(413, f"Announcement longer than {PA_MAX_S} s: send it in parts")
         audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
         try:
-            tr = await asyncio.to_thread(run_asr, audio, ("ja", "en"))
+            tr = await asyncio.to_thread(run_asr, audio, ("ja", "en"), PA_ASR_MODEL)
         except ImportError:
             raise HTTPException(503, "voice unavailable: faster-whisper not installed") from None
         readings = [h.text for h in tr.hypotheses] or [""]
