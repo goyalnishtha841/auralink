@@ -149,7 +149,7 @@ brew install espeak-ng          # phoneme matcher; apt install espeak-ng on Linu
 scripts/run.sh
 ```
 
-**Then open <http://localhost:8000/start.html> on the same laptop.** The Start page explains everything in
+**Then open the Start page address the script prints (usually <http://localhost:8000/start.html>) on the same laptop.** The Start page explains everything in
 plain words: how phones reach the laptop with no internet, the seat QR code to scan, the crew PIN (shown
 only on this laptop), and what every page is for. To try it alone, open **Passenger** and **Crew** side by
 side, choose a language on the passenger screen, and type "thoda wotter and kambal".
