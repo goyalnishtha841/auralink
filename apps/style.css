@@ -139,3 +139,11 @@ button.listen .icon .ic { width: 22px; height: 22px; color: var(--info); }
 @media (max-width: 520px) { .pa-banner { grid-template-columns: 40px minmax(0, 1fr); } .pa-banner .pa-acts { grid-column: 1 / -1; justify-content: flex-end; } .pa-banner .icon .ic { width: 34px; height: 34px; } }
 @keyframes paIn { from { transform: translateY(-120%); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .pa-banner { animation: none; } }
+
+/* first-visit language choice: big buttons, native name with the English name under it */
+.choose-title { font: 700 30px/1.2 "Outfit", system-ui, sans-serif; margin: 0; }
+.choose-sub { margin: 4px 0 0; }
+.choose-langs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+.choose-lang { min-height: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.choose-lang b { font-size: 26px; }
+.choose-lang small { color: var(--muted); font-size: 15px; }

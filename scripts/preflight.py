@@ -97,10 +97,13 @@ def main() -> None:
     with socket.socket() as s:
         free = s.connect_ex(("127.0.0.1", port)) != 0
     report(free, f"Port {port} is free", "" if free else "another hub or app is using it",
-           f"stop the other hub (Ctrl+C in its terminal) or: lsof -ti:{port} | xargs kill")
+           f"start Auralink on a free port instead: PORT={port + 1} scripts/demo.sh "
+           f"(see what holds {port}: lsof -nP -iTCP:{port} -sTCP:LISTEN)")
 
     base = f"{'https' if https else 'http'}://{lan_ip()}:{port}"
-    print(f"\nOpen on this laptop:   {base.replace(lan_ip(), 'localhost')}")
+    print(f"\nSTART HERE (on this laptop): {base.replace(lan_ip(), 'localhost')}/start.html"
+          "   <- QR codes, crew PIN, what every page is for")
+    print(f"Open on this laptop:   {base.replace(lan_ip(), 'localhost')}")
     print(f"Phones on this Wi-Fi:  {base}/passenger.html?seat=34K")
     print(f"Crew tablet:           {base}/crew.html")
     print(f"Under the hood:        {base}/judge.html")

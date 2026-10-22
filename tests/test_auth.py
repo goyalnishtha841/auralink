@@ -62,3 +62,15 @@ def test_passenger_side_stays_open():
         assert client.get(path).status_code == 200, path
     with client.websocket_connect("/ws/passenger/34K") as pax:
         pax.send_json({"type": "hello", "lang": "en"})
+
+
+def test_pin_hint_only_on_the_hub_laptop():
+    other = TestClient(main.app)                                   # TestClient's address is "testclient"
+    assert other.get("/api/crew/pin-hint").status_code == 403       # a passenger on the Wi-Fi never sees it
+    local = TestClient(main.app, client=("127.0.0.1", 50000))
+    assert local.get("/api/crew/pin-hint").json() == {"pin": auth.PIN}
+
+
+def test_languages_have_english_names():
+    langs = TestClient(main.app).get("/api/config").json()["languages"]
+    assert {lang["code"]: lang["english"] for lang in langs} == {"en": "English", "hi": "Hindi", "ta": "Tamil", "th": "Thai"}

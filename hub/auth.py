@@ -82,3 +82,15 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
     response.set_cookie(COOKIE, token(), max_age=24 * 3600, httponly=True, samesite="strict",
                         secure=request.url.scheme == "https")
     return {"ok": True}
+
+
+LOCAL = {"127.0.0.1", "::1", "localhost"}
+
+
+@router.get("/pin-hint")
+def pin_hint(request: Request) -> dict:
+    """The PIN, but only for a browser on the hub laptop itself (the Start page shows it to the presenter).
+    Anyone else on the cabin Wi-Fi gets 403, so a passenger can never read it."""
+    if (request.client.host if request.client else "") not in LOCAL:
+        raise HTTPException(403, "The crew PIN is only shown on the laptop that runs Auralink")
+    return {"pin": PIN}

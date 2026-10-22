@@ -43,6 +43,9 @@ export function askCrewPin() {
         color:var(--fg,#edf2ff);border:1px solid var(--line,rgba(150,175,255,.16));border-radius:16px;padding:20px;
         width:min(340px,100%);display:flex;flex-direction:column;gap:12px">
       <h2 id="crew-pin-title" style="margin:0;font-size:18px">乗務員PIN<br><small style="font-weight:500;color:var(--muted,#a3afcf)">Crew PIN</small></h2>
+      <p style="margin:0;font-size:14px;line-height:1.5;color:var(--muted,#a3afcf)">This screen is for cabin crew only, so passengers on the same Wi-Fi cannot open it.
+        Enter the 6-digit crew PIN.<br><b style="color:var(--fg,#edf2ff)">Where is it?</b> On the laptop running Auralink: open
+        <a href="/start.html" style="color:var(--info,#3ce8c8)">the Start page</a>, or look in its terminal for “Crew PIN”.</p>
       <input name="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="32" required
         aria-label="乗務員PIN / Crew PIN" style="font:600 24px system-ui;letter-spacing:.3em;text-align:center;padding:10px;
         border-radius:10px;border:1px solid var(--line,#334);background:var(--bg,#060915);color:inherit">
