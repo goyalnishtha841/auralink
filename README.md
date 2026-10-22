@@ -170,6 +170,16 @@ phones, then starts the hub.
 
 Crew screens ask for the crew PIN (see [Crew PIN](#crew-pin)).
 
+Before going on stage, with the hub running, run three checks in a second terminal:
+
+```bash
+.venv/bin/python scripts/rehearse.py --pin <crew PIN>    # the whole pitch story through the real sockets: 16 checks
+.venv/bin/python scripts/pa_spoken_check.py              # 9 spoken announcements (Mac voices, or --dir your recordings)
+.venv/bin/python scripts/export_translations.py          # review sheets for native speakers: docs/translation-review/
+```
+
+`rehearse.py` resets the cabin before and after, so never run it during the live demo.
+
 ### On phones
 
 Run `scripts/setup_https.sh` once on the laptop (it asks before adding mkcert's local certificate
@@ -241,6 +251,11 @@ seats**. Every seat shows a banner in its own language, with a screen flash and 
 passengers who cannot hear the PA. An announcement that is not in the library is not captioned and
 the crew are told so: Auralink never machine-translates. Typed text works too (`POST /api/pa/match`
 with `{"text": ...}`, then `POST /api/pa/send` with `{"id": "descent", "n": "20"}`).
+
+Announcements use the larger Whisper `small` model (`AURALINK_PA_ASR_MODEL`, about 3–5 s), passenger
+requests the fast `base` one. With `base`, spoken Japanese PAs came back with sound-alike spellings
+(効果 for 降下, 伝統 for 点灯, 10分 for 二十分); `small` fixed the numbers, and those sound-alike spellings are
+key phrases too, so the announcement is matched by how it sounds. `scripts/pa_spoken_check.py`: 9/9.
 
 ### Care rounds
 
