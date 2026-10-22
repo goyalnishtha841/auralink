@@ -109,6 +109,7 @@ function renderGrid(container, onPick, ids) {
 }
 
 function sheet(...children) {
+  closeCaption();   // a briefing, question or symptom sheet must never sit under an old PA caption
   const o = el("div", { class: "overlay" }, el("div", { class: `sheet ${senior ? "big" : ""}` }, ...children));
   $("overlay").replaceChildren(o);
 }
@@ -229,10 +230,11 @@ function onMessage(msg) {
 
 // --- live PA caption: what the crew just announced, in this passenger's language ------------------
 let captionTimer = 0;
+function closeCaption() { clearTimeout(captionTimer); $("pa").replaceChildren(); }
 function showCaption(c) {
   attention();   // flash + vibration: the passenger may not hear the announcement at all
   say(c.text);
-  const close = () => { clearTimeout(captionTimer); $("pa").replaceChildren(); };
+  const close = closeCaption;
   $("pa").replaceChildren(el("div", { class: "pa-banner", role: "alert" },
     icon(c.icon),
     el("div", {}, el("div", { class: "pa-tag" }, t("announcement")), el("p", { class: "pa-text" }, c.text),
