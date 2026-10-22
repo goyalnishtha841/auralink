@@ -426,7 +426,8 @@ def config() -> dict:
         "phrasebook": {k: v for k, v in templates.data["phrasebook"].items() if not k.startswith("_")},
         "announcements": pa_library.menu(),
         "exit_seats": exit_seats(),
-        "languages": [{"code": lang["code"], "name": lang["name"]} for lang in languages.registry()],
+        "languages": [{"code": lang["code"], "name": lang["name"], "english": lang.get("english", lang["name"])}
+                      for lang in languages.registry()],
     }
 
 

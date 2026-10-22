@@ -1,9 +1,9 @@
 {
-  "_note": "Passenger languages. Adding one = an entry here + data/i18n/<code>.json + words in data/lexicon/intents.json + messages in data/templates/messages.json. No code or retraining. 'asr' = the languages Whisper decodes for that passenger; 'scripts' tells the phonetic matcher which eSpeak-NG voice reads which writing system. 'espeak': null means spelling-only matching for that script; 'spaces': false splits its text into words by longest lexicon match.",
+  "_note": "Passenger languages. Adding one = an entry here + data/i18n/<code>.json + words in data/lexicon/intents.json + messages in data/templates/messages.json. No code or retraining. 'english' = the name in English, shown next to the native name; 'asr' = the languages Whisper decodes for that passenger; 'scripts' tells the phonetic matcher which eSpeak-NG voice reads which writing system. 'espeak': null means spelling-only matching for that script; 'spaces': false splits its text into words by longest lexicon match.",
   "languages": [
     {
       "code": "en",
-      "name": "English",
+      "name": "English", "english": "English",
       "asr": [
         "en",
         "hi"
@@ -11,7 +11,7 @@
     },
     {
       "code": "hi",
-      "name": "हिन्दी",
+      "name": "हिन्दी", "english": "Hindi",
       "asr": [
         "en",
         "hi"
@@ -19,7 +19,7 @@
     },
     {
       "code": "ta",
-      "name": "தமிழ்",
+      "name": "தமிழ்", "english": "Tamil",
       "asr": [
         "en",
         "ta"
@@ -27,7 +27,7 @@
     },
     {
       "code": "th",
-      "name": "ไทย",
+      "name": "ไทย", "english": "Thai",
       "asr": [
         "en",
         "th"

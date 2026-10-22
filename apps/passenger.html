@@ -324,25 +324,50 @@ $("read").addEventListener("change", (e) => {
   if (readAloud) speak(t("readLabel"), lang);
   socket.send({ type: "hello", lang, senior, pictures, read: readAloud });
 });
-$("lang").addEventListener("change", async (e) => {
-  lang = e.target.value;
+async function setLanguage(code) {
+  lang = code;
+  try { localStorage.setItem(`auralink-lang-${seat}`, code); } catch { /* private mode: ask again next time */ }
   await loadStrings(lang);
   voiceOK = await canSpeak(lang);
+  $("lang").value = lang;
   applyStrings();
   socket.send({ type: "hello", lang, senior, pictures, read: readAloud });
-});
+}
+$("lang").addEventListener("change", (e) => setLanguage(e.target.value));
+
+// First visit to this seat: one big, clear choice. Every language is shown in its own script AND in English.
+const langLabel = (l) => (l.english && l.english !== l.name ? `${l.name} · ${l.english}` : l.name);
+function chooseLanguage() {
+  sheet(el("h2", { class: "choose-title" }, "Choose your language"),
+    el("p", { class: "muted choose-sub" }, "अपनी भाषा चुनें · உங்கள் மொழியைத் தேர்ந்தெடுக்கவும் · เลือกภาษาของคุณ"),
+    el("div", { class: "choose-langs" }, ...config.languages.map((l) =>
+      el("button", { class: "choose-lang", lang: l.code, onclick: async () => { closeSheet(); await setLanguage(l.code); } },
+        el("b", {}, l.name), l.english !== l.name ? el("small", { lang: "en" }, l.english) : null))),
+    el("p", { class: "muted choose-sub" }, `Seat ${seat} · You can change it any time at the top of the screen.`));
+}
 $("pictures").addEventListener("change", (e) => { pictures = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures, read: readAloud }); });
 $("senior").addEventListener("change", (e) => { senior = e.target.checked; applyStrings(); socket.send({ type: "hello", lang, senior, pictures, read: readAloud }); });
 
 config = await loadConfig();
 // A plain seat QR (no settings in the link) opens with what was chosen at check-in.
+let checkedIn = false;
 if (!["lang", "senior", "mode", "read"].some((k) => params.has(k))) {
   try {
     const p = await (await fetch(`/api/seat/${seat}`)).json();
-    if (p.checked_in) ({ lang, senior, pictures, read: readAloud } = { lang: p.lang, senior: p.senior, pictures: p.pictures, read: p.read });
+    if (p.checked_in) {
+      checkedIn = true;
+      ({ lang, senior, pictures, read: readAloud } = { lang: p.lang, senior: p.senior, pictures: p.pictures, read: p.read });
+    }
   } catch { /* hub unreachable: keep the defaults */ }
 }
-$("lang").replaceChildren(...config.languages.map((l) => el("option", { value: l.code }, l.name)));
+// Not set at check-in or in the link: use what this phone chose before, or ask.
+let askLanguage = false;
+if (!params.has("lang") && !checkedIn) {
+  let saved = null;
+  try { saved = localStorage.getItem(`auralink-lang-${seat}`); } catch { /* storage blocked */ }
+  if (config.languages.some((l) => l.code === saved)) lang = saved; else askLanguage = true;
+}
+$("lang").replaceChildren(...config.languages.map((l) => el("option", { value: l.code }, langLabel(l))));
 if (!config.languages.some((l) => l.code === lang)) lang = "en";
 await loadStrings(lang);
 voiceOK = await canSpeak(lang);
@@ -354,6 +379,7 @@ $("pictures").checked = pictures;
 $("micIcon").replaceWith(icon("mic"));
 applyStrings();
 markReady();
+if (askLanguage) chooseLanguage();
 </script>
 </body>
 </html>
