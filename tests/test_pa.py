@@ -28,6 +28,9 @@ def fresh(monkeypatch, tmp_path):
     ("お客様の中にお医者様はいらっしゃいますか", "doctor", None),
     ("We are delayed by about 15 minutes due to air traffic.", "delay", "15"),
     ("シートベルト着用サインが点灯しました", "seatbelt_on", None),
+    # what Whisper really wrote for spoken PAs: same sound, other spelling (効果 for 降下, 伝統 for 点灯)
+    ("皆様、登記は、ただいまから効果を始めます。あと20分で、着陸の予定です。シートベルトを、お締めください。", "descent", "20"),
+    ("みなさま、ただいまシートベルと着用のサインが伝統しました。お世紀に、お戻りください。", "seatbelt_on", None),
 ])
 def test_announcements_are_recognised(heard, expected, n):
     r = LIB.match(heard)
