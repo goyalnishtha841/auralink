@@ -3,10 +3,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 HOST="${HOST:-0.0.0.0}"
-PORT="${PORT:-8000}"
+source scripts/_port.sh
 export AURALINK_PRELOAD_ASR="${AURALINK_PRELOAD_ASR:-1}"   # load Whisper at startup, not on the first request
 ARGS=(hub.main:app --host "$HOST" --port "$PORT" --reload)
 if [[ -f certs/hub.pem && -f certs/hub-key.pem ]]; then
   ARGS+=(--ssl-certfile certs/hub.pem --ssl-keyfile certs/hub-key.pem)
 fi
+SCHEME=http; [[ -f certs/hub.pem ]] && SCHEME=https
+echo "Auralink: open ${SCHEME}://localhost:${PORT}/start.html on this laptop"
 exec .venv/bin/uvicorn "${ARGS[@]}"

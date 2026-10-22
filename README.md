@@ -160,8 +160,10 @@ side, choose a language on the passenger screen, and type "thoda wotter and kamb
 | Cabin crew | `/crew.html` | Tablet on the same Wi-Fi; enters the crew PIN once |
 | Jury | `/judge.html` | Under the hood: how each request was understood (crew PIN) |
 
-Port 8000 busy (another app, for example another project's server)? Start on another port:
-`PORT=8001 scripts/run.sh`, then use 8001 in the addresses above.
+Port 8000 busy (another app, for example another project's server)? `scripts/run.sh` and
+`scripts/demo.sh` then pick the next free port by themselves (8001, 8002 ...) and print the exact address,
+for example `Auralink: open http://localhost:8001/start.html`. Use that address: `localhost:8000` would
+show the other app. Force a port with `PORT=8005 scripts/run.sh`.
 
 The first start downloads Whisper `base` (~145 MB) into the Hugging Face cache; after that
 everything runs offline. Choose another model with `AURALINK_ASR_MODEL=small scripts/run.sh`.
