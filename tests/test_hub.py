@@ -201,6 +201,24 @@ def test_seat_by_voice(client):
     assert r.json()["seat"] is None
 
 
+def test_boarding_pass_demo_and_scan(client):
+    gen = client.get("/api/boarding-pass/demo", params={"name": "Yuki Tanaka", "seat": "34K"})
+    assert gen.status_code == 200
+    text = gen.json()["text"]
+    assert len(text) == 60
+
+    scan = client.post("/api/seat/by-boarding-pass", json={"text": text})
+    assert scan.json() == {"seat": "34K", "name": "Yuki Tanaka"}
+
+    bad = client.post("/api/seat/by-boarding-pass", json={"text": "not a boarding pass"})
+    assert bad.json() == {"seat": None, "name": None}
+
+
+def test_boarding_pass_demo_rejects_unknown_seat(client):
+    r = client.get("/api/boarding-pass/demo", params={"name": "A B", "seat": "99Z"})
+    assert r.status_code == 404
+
+
 def test_demo_kit_endpoints(client):
     info = client.get("/api/hub-info").json()
     assert info["public_url"].startswith("http")

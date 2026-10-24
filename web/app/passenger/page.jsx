@@ -1,6 +1,7 @@
 "use client";
 // Passenger seat screen. Same protocol and behaviour as the original apps/passenger.html.
 import { AnimatePresence, motion } from "framer-motion";
+import jsQR from "jsqr";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { Recorder, VadRecorder, connect, loadConfig, params, toBase64 } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
@@ -533,10 +534,24 @@ function SeatGate({ cfg, onConfirm }) {
   const [picked, setPicked] = useState(null);
   const [mic, setMic] = useState("idle");   // idle | recording | thinking
   const [heard, setHeard] = useState(null); // {text, seat} | {text, seat: null} | {error: true} | null
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(null); // {seat, name} | {seat: null} | {error: true} | null
   const micRef = useRef("idle");
   const recorder = useRef(null);
   const known = useRef(new Set());
   known.current = new Set((cfg?.seats) || []);
+
+  async function onBarcodeScanned(text) {
+    setScanning(false);
+    try {
+      const res = await fetch("/api/seat/by-boarding-pass", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }),
+      });
+      const r = await res.json();
+      setScanned(r);
+      if (r.seat && known.current.has(r.seat)) setPicked(r.seat);
+    } catch { setScanned({ error: true }); }
+  }
 
   async function speakSeat() {
     if (micRef.current === "recording") {
@@ -593,6 +608,19 @@ function SeatGate({ cfg, onConfirm }) {
             </p>
           </div>
         ) : null}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <button type="button" className="ghost" style={{ fontSize: 14 }} onClick={() => { setScanned(null); setScanning(true); }}>
+            <Icon id="qr" /> Scan boarding pass
+          </button>
+          {scanned ? (
+            <p className="muted" style={{ margin: 0, fontSize: 13, textAlign: "center" }}>
+              {scanned.error ? "Couldn't use the camera — tap your seat instead."
+                : scanned.seat ? `${scanned.name ? scanned.name + " · " : ""}Seat ${scanned.seat}. Tap Continue, or pick a different seat below.`
+                : "That didn't look like a boarding pass — try again or tap your seat below."}
+            </p>
+          ) : null}
+        </div>
+        {scanning ? <BoardingPassScanner onResult={onBarcodeScanned} onClose={() => setScanning(false)} /> : null}
         <div className="seatgate-map">
           {rows.map((row) => (
             <div className="seatgate-row" key={row}>
@@ -616,6 +644,67 @@ function SeatGate({ cfg, onConfirm }) {
         </button>
       </main>
     </>
+  );
+}
+
+// Live camera read of a boarding pass barcode (IATA BCBP, hub/bcbp.py) -- no airline integration
+// needed, since every boarding pass already carries one. Decodes entirely in the browser (jsQR
+// against video frames drawn to a hidden canvas); only the decoded text, never the image, goes
+// to the hub, which is also the one place that knows which seats exist on this aircraft.
+function BoardingPassScanner({ onResult, onClose }) {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const rafRef = useRef(null);
+  const doneRef = useRef(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    function tick() {
+      const video = videoRef.current, canvas = canvasRef.current;
+      if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height);
+      if (code?.data && !doneRef.current) { doneRef.current = true; onResult(code.data); return; }
+      rafRef.current = requestAnimationFrame(tick);
+    }
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        tick();
+      } catch { if (!cancelled) setError(true); }
+    })();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []); // eslint-disable-line
+
+  return (
+    <motion.div className="bp-scanner" role="dialog" aria-label="Scan boarding pass"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      {error ? (
+        <p className="muted" style={{ textAlign: "center", padding: 24 }}>Couldn't use the camera. Close this and tap your seat instead.</p>
+      ) : (<>
+        <video ref={videoRef} playsInline muted className="bp-video" />
+        <div className="bp-frame" />
+        <p className="muted bp-hint">Point the camera at your boarding pass barcode</p>
+      </>)}
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <button className="ghost bp-close" onClick={onClose}><Icon id="close" /> Cancel</button>
+    </motion.div>
   );
 }
 

@@ -16,7 +16,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 
 import anyio
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ from engine.lexicon import ROOT
 from engine.matcher import tokenize
 from engine.types import Phase
 
-from . import auth, checkin, demo, languages, pa, persist, recordings, rounds, seat_speech
+from . import auth, bcbp, checkin, demo, languages, pa, persist, recordings, rounds, seat_speech
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -644,6 +644,40 @@ async def seat_by_voice(body: SeatVoiceIn) -> dict:
     else:
         heard = body.text or ""
     return {"heard": heard, "seat": seat_speech.parse(heard, set(SEAT_IDS))}
+
+
+class SeatBoardingPassIn(BaseModel):
+    text: str = Field(..., max_length=400)   # raw text decoded from the scanned barcode
+
+
+@app.post("/api/seat/by-boarding-pass")
+def seat_by_boarding_pass(body: SeatBoardingPassIn) -> dict:
+    """The shared scanner's "scan boarding pass" option: the camera already decoded the barcode
+    client-side (no airline integration needed -- every boarding pass already carries one, in
+    the same IATA-standard format); this just parses that text and checks the seat it names is
+    one that exists on this aircraft."""
+    bp = bcbp.decode(body.text)
+    if bp is None or bp.seat not in cabin.seats:
+        return {"seat": None, "name": None}
+    return {"seat": bp.seat, "name": f"{bp.first_name.title()} {bp.last_name.title()}".strip()}
+
+
+DEMO_FLIGHT = {"carrier": "JL", "flight": "6", "origin": "DEL", "destination": "HND"}
+
+
+@app.get("/api/boarding-pass/demo")
+def boarding_pass_demo(name: str = Query(..., max_length=60), seat: str = Query(...)) -> dict:
+    """Presenter/demo-kit tool (web/app/boarding-pass): since nobody at this hackathon has a real
+    JAL ticket to test with, this issues one -- a boarding pass in the same barcode format a real
+    airline's departure-control system would -- so the "scan boarding pass" seat option has
+    something real to scan. Encodes only, never stored: nothing here is a real passenger record."""
+    if seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {seat}")
+    name = name.strip() or "Passenger"
+    first, _, last = name.rpartition(" ")
+    bp = bcbp.BoardingPass(last_name=last, first_name=first or "", pnr=f"AU{seat:0>4}",
+                           seat=seat, **DEMO_FLIGHT)
+    return {"text": bcbp.encode(bp)}
 
 
 @app.get("/api/seat/{seat}")
