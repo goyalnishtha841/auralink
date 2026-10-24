@@ -181,6 +181,17 @@ def test_exit_row_check(crew_login):
         assert results["30A"] == "pass" and results["30K"] == "talk" and results["30B"] == "pending"
 
 
+def test_exit_row_check_resends_on_late_connect(crew_login):
+    """A seat that connects (or reconnects) after crew started the check still gets asked --
+    not just whoever happened to be connected at that moment."""
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew:
+        crew.send_json({"type": "exit_check"})
+        crew_state(crew)   # the state push from starting the check
+        with shared.websocket_connect("/ws/passenger/30B") as late:
+            q = late.receive_json()
+            assert q["type"] == "exit_check" and len(q["check"]["questions"]) == 3
+
+
 def test_demo_kit_endpoints(client):
     info = client.get("/api/hub-info").json()
     assert info["public_url"].startswith("http")

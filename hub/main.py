@@ -656,6 +656,12 @@ async def passenger_ws(ws: WebSocket, seat: str) -> None:
     await ws.accept()
     passengers[seat].add(ws)
     cabin.seats[seat].connected = True
+    check = cabin.exit_checks.get(seat)
+    if check and check.result == "pending":
+        # the passenger's page loaded (or reloaded) after crew started an exit-row check for this
+        # seat: without this they would never see it, since start_exit_check only pushes once, to
+        # whoever was connected at that moment.
+        await ws.send_json({"type": "exit_check", "check": templates.exit_view(cabin.seats[seat].lang)})
     await push_crew()
     try:
         while True:
