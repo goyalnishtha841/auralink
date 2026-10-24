@@ -1,3 +1,13 @@
+---
+title: Auralink
+emoji: ✈️
+colorFrom: red
+colorTo: indigo
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 <div align="center">
   <img src="docs/images/logo.svg" width="84" height="84" alt="Auralink logo" />
 
