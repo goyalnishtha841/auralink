@@ -96,6 +96,44 @@ function Petals() {
   );
 }
 
+/* sakura soundwave divider: sits in the whitespace between two sections only (never above the first
+   section, never inside a card). One glowing coral→white curve, a small cropped branch framing each
+   edge, a few static scattered petals — reused as-is between every major section. */
+const DIVIDER_PETALS = [
+  { s: "9px", left: "16%", top: "28%", r: "-18deg", o: 0.5 },
+  { s: "7px", left: "27%", top: "62%", r: "24deg", o: 0.4 },
+  { s: "11px", left: "46%", top: "18%", r: "8deg", o: 0.45 },
+  { s: "8px", left: "62%", top: "66%", r: "-30deg", o: 0.4 },
+  { s: "10px", left: "78%", top: "32%", r: "16deg", o: 0.5 },
+  { s: "7px", left: "88%", top: "58%", r: "-10deg", o: 0.38 },
+];
+function Divider() {
+  return (
+    <div className="divider" aria-hidden="true">
+      <img className="divider-branch left" src="/sakura-branch.svg" alt="" />
+      <svg className="divider-wave" viewBox="0 0 1200 90" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#ff5b5b" stopOpacity="0" />
+            <stop offset="0.18" stopColor="#ff5b5b" stopOpacity="0.85" />
+            <stop offset="0.5" stopColor="#ffd2c4" stopOpacity="0.95" />
+            <stop offset="0.82" stopColor="#ff5b5b" stopOpacity="0.85" />
+            <stop offset="1" stopColor="#ff5b5b" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d="M0 45 C 150 10, 300 80, 450 45 C 600 14, 750 76, 900 45 C 1000 24, 1100 60, 1200 45"
+          fill="none" stroke="url(#waveGrad)" strokeWidth="10" opacity="0.12" />
+        <path d="M0 45 C 150 10, 300 80, 450 45 C 600 14, 750 76, 900 45 C 1000 24, 1100 60, 1200 45"
+          fill="none" stroke="url(#waveGrad)" strokeWidth="1.6" />
+      </svg>
+      <img className="divider-branch right" src="/sakura-branch.svg" alt="" />
+      {DIVIDER_PETALS.map((p, i) => (
+        <i key={i} className="divider-petal" style={{ left: p.left, top: p.top, "--s": p.s, "--r": p.r, "--o": p.o }} />
+      ))}
+    </div>
+  );
+}
+
 function Rotor() {
   const [i, setI] = useState(0);
   useEffect(() => {
@@ -451,6 +489,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="onboard">
           <div className="wrap story-grid">
             <div>
@@ -462,6 +502,8 @@ export default function Landing() {
             <Reveal delay={0.15}><Story /></Reveal>
           </div>
         </section>
+
+        <Divider />
 
         <section className="section" id="solution">
           <div className="wrap">
@@ -480,6 +522,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="try">
           <div className="wrap">
             <Reveal as="p" className="eyebrow">Try the real engine</Reveal>
@@ -488,6 +532,8 @@ export default function Landing() {
             <Lab />
           </div>
         </section>
+
+        <Divider />
 
         <section className="section" id="safety">
           <div className="wrap safety-grid">
@@ -508,6 +554,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="cabin">
           <div className="wrap">
             <Reveal as="p" className="eyebrow">Built for a real cabin</Reveal>
@@ -523,6 +571,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="proof">
           <div className="wrap">
             <Reveal as="p" className="eyebrow">Measured, not promised</Reveal>
@@ -537,6 +587,8 @@ export default function Landing() {
               We are recording real volunteers, including seniors, to measure accuracy, wrong-action rate and recovery properly.</Reveal>
           </div>
         </section>
+
+        <Divider />
 
         <section className="section launch" id="launch">
           <div className="wrap">

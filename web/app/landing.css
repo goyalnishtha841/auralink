@@ -88,6 +88,26 @@
    independently-lit boxes with a seam at every join. */
 .section { position: relative; padding: clamp(80px, 11vw, 140px) 0; }
 .section > .wrap { position: relative; }
+
+/* sakura soundwave divider: sits in the gap between two sections (its own element, not a section's
+   own border/pseudo-element), a single glowing coral line framed by a small cropped branch at each
+   edge. Full-bleed so the branches can sit near the real viewport edges, like the reference. */
+.divider { position: relative; display: flex; align-items: center; width: 100%;
+  margin: clamp(8px, 3vw, 28px) 0; pointer-events: none; isolation: isolate; overflow: hidden; }
+.divider-branch { flex: none; width: clamp(80px, 10vw, 150px); height: auto; opacity: 0.95;
+  filter: drop-shadow(0 0 16px rgba(255, 91, 91, 0.15)); }
+.divider-branch.left { margin: -34px -26px 0 -10px; }
+.divider-branch.right { margin: -34px -10px 0 -26px; transform: scaleX(-1); }
+.divider-wave { flex: 1 1 auto; min-width: 0; height: clamp(46px, 6vw, 86px);
+  filter: drop-shadow(0 0 7px rgba(255, 91, 91, 0.5)); }
+.divider-petal { position: absolute; width: var(--s); height: calc(var(--s) * 0.72); border-radius: 80% 0 80% 0;
+  background: linear-gradient(135deg, #ffd3d6, #ff9aa4 70%); opacity: var(--o); transform: rotate(var(--r)); }
+@media (max-width: 760px) {
+  .divider-branch { width: 56px; }
+  .divider-branch.left { margin: -20px -16px 0 -6px; }
+  .divider-branch.right { margin: -20px -6px 0 -16px; }
+  .divider-petal { display: none; }
+}
 .eyebrow { display: flex; align-items: center; gap: 12px; font: 500 12px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0 0 18px; }
 .eyebrow::before { content: ""; width: 30px; height: 1px; background: var(--accent); }
 .section h2 { font: 800 clamp(34px, 4.6vw, 58px)/1.04 var(--display); letter-spacing: -0.035em; margin: 0; max-width: 820px; }
