@@ -28,11 +28,12 @@
 /* hero */
 .hero { position: relative; min-height: max(760px, 100vh); display: flex; align-items: center; overflow: hidden; padding: 110px 0 70px; isolation: isolate; }
 .hero-art { position: absolute; inset: 0 0 0 auto; width: min(72vw, 1180px); z-index: -2; overflow: hidden;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 32%, #000 88%, transparent 100%), linear-gradient(180deg, #000 70%, transparent 100%);
-  -webkit-mask-composite: source-in; mask-image: linear-gradient(90deg, transparent 0%, #000 32%, #000 88%, transparent 100%); }
+  /* soft edges so the window melts into the black instead of ending in a hard line */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 32%, #000 90%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0%, #000 32%, #000 90%, transparent 100%); }
 .hero-art img { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; object-position: 70% 50%; filter: saturate(1.05) contrast(1.04); }
-.hero-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 60%, var(--bg) 100%); }
-.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.hero-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 5, 5, .15) 0%, rgba(5, 5, 5, .15) 70%, var(--bg) 100%); }
+.hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 52%, transparent 72%); mask-image: linear-gradient(90deg, transparent 0%, #000 12%, #000 52%, transparent 72%); }
 .petals { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
 .petal { position: absolute; top: -40px; width: var(--s); height: calc(var(--s) * 0.72); border-radius: 80% 0 80% 0; opacity: 0;
   background: linear-gradient(135deg, #ffd3d6, #ff9aa4 70%); box-shadow: 0 0 12px rgba(255, 140, 150, 0.35);
@@ -47,24 +48,24 @@
 .vertical-jp { position: absolute; right: clamp(16px, 3vw, 44px); top: 140px; writing-mode: vertical-rl; font: 400 17px/1.9 var(--display); letter-spacing: 0.28em; color: rgba(255, 255, 255, 0.72); display: flex; align-items: center; gap: 18px; }
 .vertical-jp::after { content: ""; width: 1px; height: 48px; background: var(--accent); }
 
-.hero-copy { max-width: 820px; position: relative; }
-.hero-copy .lede, .hero-copy .hero-points { max-width: 600px; }
-.flight-strip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font: 500 12px var(--mono); letter-spacing: 0.08em; color: var(--muted); margin: 0 0 26px; }
+.hero-copy { max-width: 720px; position: relative; text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55); }
+.hero-copy .lede, .hero-copy .hero-points { max-width: 540px; }
+.flight-strip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font: 400 11.5px var(--mono); letter-spacing: 0.06em; color: var(--muted); margin: 0 0 22px; }
 .flight-strip .line { width: 30px; height: 1px; background: var(--accent); }
 .flight-strip .sep { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
 .flight-strip .plane { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); }
 .flight-strip .plane svg { width: 34px; height: 12px; overflow: visible; }
-.hero h1 { font: 800 clamp(46px, 6.3vw, 92px)/1.0 var(--display); letter-spacing: -0.045em; margin: 0; }
+.hero h1 { font: 800 clamp(40px, 5.1vw, 76px)/1.04 var(--display); letter-spacing: -0.028em; margin: 0; }
 .hero h1 .l1 { display: block; white-space: nowrap; }
 .rotor { display: block; position: relative; height: 1.12em; overflow: hidden; }
 .rotor > span { position: absolute; left: 0; top: 0; white-space: nowrap; }
 .rotor .stop { color: var(--accent); }
-.jp-sub { font: 500 clamp(20px, 2.2vw, 28px)/1.4 var(--display); color: rgba(245, 245, 245, 0.82); margin: 18px 0 0; letter-spacing: 0.06em; }
-.lede { font-size: clamp(16px, 1.35vw, 18.5px); line-height: 1.65; color: var(--muted); margin: 22px 0 0; max-width: 560px; }
+.jp-sub { font: 500 clamp(18px, 1.75vw, 24px)/1.4 var(--display); color: rgba(245, 245, 245, 0.8); margin: 14px 0 0; letter-spacing: 0.04em; }
+.lede { font-size: clamp(15.5px, 1.2vw, 17px); line-height: 1.6; color: var(--muted); margin: 16px 0 0; max-width: 540px; }
 .lede strong { color: var(--fg); font-weight: 600; }
-.hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 34px; }
-.hero-points { list-style: none; padding: 0; margin: 40px 0 0; display: flex; gap: 30px; flex-wrap: wrap; }
-.hero-points li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); max-width: 190px; line-height: 1.35; }
+.hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+.hero-points { list-style: none; padding: 0; margin: 30px 0 0; display: flex; gap: 30px; flex-wrap: wrap; }
+.hero-points li { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--muted); max-width: 170px; line-height: 1.35; }
 .hero-points .icon .ic { width: 24px; height: 24px; color: var(--accent); }
 .hero-points li:last-child .icon .ic { color: var(--fg); }
 .scroll-cue { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: 22px; height: 36px; border: 1px solid var(--line-strong); border-radius: 12px; }
@@ -73,6 +74,7 @@
 @media (max-width: 900px) {
   .hero { align-items: flex-end; padding-top: 96px; }
   .hero-art { width: 100%; height: 62%; -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%); mask-image: linear-gradient(180deg, #000 55%, transparent 100%); }
+  .hero-canvas { -webkit-mask-image: none; mask-image: none; }
   .vertical-jp { display: none; }
   .hero-copy { padding-top: 30vh; }
   .hero-art::after { background: linear-gradient(180deg, rgba(5,5,5,.15) 0%, rgba(5,5,5,.55) 45%, var(--bg) 92%); }
@@ -265,3 +267,9 @@
 @media (max-width: 800px) { .foot-inner { grid-template-columns: 1fr; } }
 .foot p { color: var(--muted); margin: 12px 0 0; }
 .foot-small { font-size: 13px; color: var(--faint) !important; }
+
+/* legal / copyright strip under the footer */
+.foot-legal { display: flex; flex-direction: column; gap: 6px; margin-top: 36px; padding-top: 22px; border-top: 1px solid var(--line); }
+.foot-legal p { margin: 0; font-size: 12.5px; line-height: 1.65; color: var(--faint); max-width: 980px; }
+.foot-legal .foot-copy { color: var(--muted); font-size: 13px; }
+.foot-legal a { color: var(--fg); text-decoration-color: var(--accent); text-underline-offset: 3px; }

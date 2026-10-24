@@ -7,7 +7,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
-import { PinDialog } from "@/components/ui";
+import { PinDialog, TapRipple } from "@/components/ui";
 
 export const metadata = {
   title: "Auralink · Every passenger, understood",
@@ -25,6 +25,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <PinDialog />
+        <TapRipple />
       </body>
     </html>
   );

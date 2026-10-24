@@ -36,7 +36,44 @@ export function AppHeader({ online, title, sub, children, home = true }) {
 }
 
 export function Ambient() {
-  return (<><div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /></>);
+  return (<><div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /><Sakura /></>);
+}
+
+// A few cherry-blossom petals drifting slowly behind every screen (桜). Behind the panels, so they
+// only show in the gaps; very sparse and slow, so they never compete with the content.
+// Turned off for prefers-reduced-motion.
+export function Sakura({ count = 7 }) {
+  const [petals, setPetals] = useState([]);
+  useEffect(() => {
+    setPetals(Array.from({ length: count }, (_, i) => ({
+      key: i, left: `${Math.random() * 100}%`, s: `${6 + Math.random() * 6}px`,
+      d: `${24 + Math.random() * 16}s`, delay: `${-Math.random() * 40}s`, sway: `${40 + Math.random() * 80}px`,
+    })));
+  }, [count]);
+  return (
+    <div className="sakura" aria-hidden="true">
+      {petals.map((p) => <i key={p.key} style={{ left: p.left, "--s": p.s, "--d": p.d, "--delay": p.delay, "--sway": p.sway }} />)}
+    </div>
+  );
+}
+
+// Water ripple (波紋) where a button or link is tapped: a thin ring that spreads and fades.
+// Fixed-position overlay, so it never changes any layout. Off for prefers-reduced-motion.
+export function TapRipple() {
+  const [rings, setRings] = useState([]);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let n = 0;
+    const on = (e) => {
+      if (!e.target.closest?.("button, a, [role=button], .tile")) return;
+      const id = ++n;
+      setRings((r) => [...r.slice(-4), { id, x: e.clientX, y: e.clientY }]);
+      setTimeout(() => setRings((r) => r.filter((x) => x.id !== id)), 900);
+    };
+    addEventListener("pointerdown", on, { passive: true });
+    return () => removeEventListener("pointerdown", on);
+  }, []);
+  return <>{rings.map((r) => <span key={r.id} className="hamon" style={{ left: r.x, top: r.y }} aria-hidden="true" />)}</>;
 }
 
 // Dialog that slides up softly. `content` null = closed.

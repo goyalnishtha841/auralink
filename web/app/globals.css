@@ -31,7 +31,8 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; background: var(--bg); overscroll-behavior: none; }
+body { overscroll-behavior: none; }
 body {
   margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
   font: 400 15px/1.55 var(--body); -webkit-font-smoothing: antialiased; overflow-x: clip;
@@ -226,3 +227,22 @@ button.listen .icon .ic { width: 20px; height: 20px; }
 
 /* section labels: mono caps suit Latin; Indian and Thai scripts read better in the body font */
 html:is([lang="hi"], [lang="ta"], [lang="th"]) .panel > h2 { font: 600 14px var(--body); letter-spacing: 0; text-transform: none; }
+
+/* ---------- soft Japanese motion (no new colours) ---------- */
+/* 桜: sparse petals drifting behind every screen */
+.sakura { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.sakura i { position: absolute; top: -30px; width: var(--s); height: calc(var(--s) * 0.72); border-radius: 80% 0 80% 0; opacity: 0;
+  background: linear-gradient(135deg, #ffd3d6, #ff9aa4 70%); animation: sakuraFall var(--d) linear var(--delay) infinite; }
+@keyframes sakuraFall {
+  0% { transform: translate3d(0, -4vh, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.4; }
+  50% { transform: translate3d(calc(var(--sway) * -1), 52vh, 0) rotate(180deg); }
+  88% { opacity: 0.3; }
+  100% { transform: translate3d(var(--sway), 106vh, 0) rotate(380deg); opacity: 0; }
+}
+/* 波紋: a ripple where you tap */
+.hamon { position: fixed; z-index: 90; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none;
+  border: 1.5px solid var(--accent); opacity: 0; animation: hamon 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes hamon { 0% { transform: scale(0.1); opacity: 0.55; } 100% { transform: scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sakura, .hamon { display: none; } }
+@media print { .sakura, .hamon { display: none !important; } }
