@@ -1,0 +1,19 @@
+{
+  "name": "auralink-web",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "5.1.0",
+    "@fontsource/inter": "5.1.0",
+    "@fontsource/plus-jakarta-sans": "5.1.0",
+    "framer-motion": "11.11.17",
+    "next": "14.2.35",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  }
+}

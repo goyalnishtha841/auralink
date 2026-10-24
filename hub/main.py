@@ -637,4 +637,8 @@ app.include_router(auth.router)
 app.include_router(recordings.router)
 app.include_router(demo.router)
 app.include_router(languages.router)
-app.mount("/", StaticFiles(directory=ROOT / "apps", html=True), name="apps")
+# Screens: the Next.js build (web/out, see web/README.md) when it exists, else the original plain-HTML
+# screens in apps/. Same URLs either way. AURALINK_UI=classic forces the original screens.
+_NEXT_UI = ROOT / "web" / "out"
+UI_DIR = _NEXT_UI if _NEXT_UI.is_dir() and os.environ.get("AURALINK_UI", "").lower() != "classic" else ROOT / "apps"
+app.mount("/", StaticFiles(directory=UI_DIR, html=True), name="apps")

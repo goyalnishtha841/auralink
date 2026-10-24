@@ -237,7 +237,8 @@ need the Whisper model are skipped there (`AURALINK_SKIP_WHISPER=1`), so CI neve
 | `engine/` | A | `interpret(nbest, context, lexicon) -> Result`. ASR in `asr.py`, matcher in `matcher.py` |
 | `data/`, `eval/` | B | Intent lexicon, message templates, recording prompts and API (`hub/recordings.py`), evaluation |
 | `hub/`, `hardware/` | C | FastAPI + WebSocket hub, card state machine, safety heat map, ESP32 panel |
-| `apps/` | D | Plain HTML/JS screens: passenger, crew tablet, judge glass-box, presenter, check-in, report, recording |
+| `web/` | D | Next.js + React screens (matte-black design), built to `web/out/` and served by the hub at the same URLs. See [web/README.md](web/README.md) |
+| `apps/` | D | Original plain HTML/JS screens, kept as a fallback (`AURALINK_UI=classic scripts/run.sh`) |
 
 ## Feature guide
 
