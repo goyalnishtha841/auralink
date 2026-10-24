@@ -15,3 +15,10 @@ data/flight/
 
 # local settings (crew PIN); the template .env.example is committed
 .env
+
+# Free Talk model files: downloaded on first use (engine/tts.py), like the Whisper model
+data/tts/
+
+# Next.js app: dependencies and local build cache (web/out, the static export, is committed)
+web/node_modules/
+web/.next/

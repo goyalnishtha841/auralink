@@ -4,3 +4,7 @@ pydantic>=2.6
 faster-whisper>=1.1
 phonemizer>=3.2   # needs eSpeak-NG: brew install espeak-ng / apt install espeak-ng
 segno>=1.6        # QR codes for seat cards
+fastembed>=0.9    # semantic matcher (AURALINK_MATCHER=trimodal); downloads a 90 MB model on first use
+transformers>=4.40   # Live Conversation translation (AURALINK_FREE_TALK); + ctranslate2, already pulled in by faster-whisper; downloads a ~2.4 GB model once
+kokoro-onnx>=0.4     # Live Conversation voice; needs ~354 MB of model files in data/tts/, downloaded once (see engine/tts.py)
+mlx-lm>=0.19         # Live Conversation assist (AURALINK_LIVE_ASSIST), Apple Silicon only; downloads a ~300 MB model once (see engine/assist.py)

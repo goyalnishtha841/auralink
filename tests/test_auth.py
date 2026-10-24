@@ -73,4 +73,6 @@ def test_pin_hint_only_on_the_hub_laptop():
 
 def test_languages_have_english_names():
     langs = TestClient(main.app).get("/api/config").json()["languages"]
-    assert {lang["code"]: lang["english"] for lang in langs} == {"en": "English", "hi": "Hindi", "ta": "Tamil", "th": "Thai"}
+    names = {lang["code"]: lang["english"] for lang in langs}
+    assert all(names.values()), "every registered language needs an English name"
+    assert names["en"] == "English" and names["hi"] == "Hindi" and names["ta"] == "Tamil" and names["th"] == "Thai"

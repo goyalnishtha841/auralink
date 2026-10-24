@@ -1,0 +1,3 @@
+node_modules/
+.next/
+# web/out is committed on purpose: the hub laptop can serve the new UI without Node installed.

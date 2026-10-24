@@ -123,13 +123,51 @@ class HybridSimilarity:
                 "spelling": round(similarity(heard, variant), 3), "score": round(self(heard, variant), 3)}
 
 
+class TriSimilarity:
+    """Weighted blend of the hybrid (phonetic + spelling) score and a semantic embedding score.
+
+    Semantic similarity is the weakest signal on short, single-word variants ("pani" vs "jal"
+    scores lower than an exact phonetic match would), so it gets a minority weight: enough to
+    rescue a genuine paraphrase that shares no sound or spelling with any lexicon word, not
+    enough to override a strong direct match on its own.
+
+    Measured, not assumed: on data/eval/text_cases.json (accent/spelling cases, no paraphrases),
+    any semantic weight costs first-try accuracy (90.8% at 0.0 down to 87.7% at 0.3) because that
+    set has nothing for it to rescue, while cutting false alarms (12.5% -> 0%). 0.15 is chosen as
+    the smallest weight that still lets a real paraphrase ("where is the bathroom" -> toilet,
+    0.72 cosine) outvote a weak or absent hybrid score. Re-tune once paraphrase cases exist in
+    the eval set, the same way T1/T2 in interpret() are starting values, not final ones.
+    """
+
+    SEMANTIC_WEIGHT = 0.15
+
+    def __init__(self, hybrid: HybridSimilarity, semantic):
+        self.hybrid = hybrid
+        self.semantic = semantic
+        self.name = "trimodal"
+
+    def warm(self, texts: list[str]) -> None:
+        self.hybrid.warm(texts)
+        self.semantic.warm(texts)
+
+    def __call__(self, heard: str, variant: str) -> float:
+        h = self.hybrid(heard, variant)
+        s = self.semantic(heard, variant)
+        return (1 - self.SEMANTIC_WEIGHT) * h + self.SEMANTIC_WEIGHT * s
+
+    def explain(self, heard: str, variant: str) -> dict:
+        return {**self.hybrid.explain(heard, variant), "semantic": self.semantic.explain(heard, variant),
+                "score": round(self(heard, variant), 3)}
+
+
 def is_filler(token: str, lex: Lexicon, sim: Similarity) -> bool:
     return _is_filler(token, lex, sim)
 
 
 def make_similarity(kind: str) -> Similarity:
-    """kind: "text" (spelling), "phonetic_uniform" (plain phoneme distance), "phonetic" (accent costs)
-    or "hybrid" (phonetic + spelling, the default)."""
+    """kind: "text" (spelling), "phonetic_uniform" (plain phoneme distance), "phonetic" (accent costs),
+    "hybrid" (phonetic + spelling, the default) or "trimodal" (hybrid + a semantic embedding vote,
+    catches paraphrases that share no sound or spelling with any lexicon word)."""
     if kind == "text":
         return similarity
     try:
@@ -141,9 +179,13 @@ def make_similarity(kind: str) -> Similarity:
             h = HybridSimilarity(make_phonetic("phonetic_learned"))
             h.name = "hybrid_learned"
             return h
+        if kind == "trimodal":
+            from .semantic import SemanticSimilarity
+
+            return TriSimilarity(HybridSimilarity(make_phonetic("phonetic")), SemanticSimilarity())
         return make_phonetic(kind)
-    except Exception as e:  # eSpeak-NG or phonemizer missing: keep working with spelling matching
-        log.warning("phonetic matcher unavailable (%s); using text similarity", e)
+    except Exception as e:  # eSpeak-NG, phonemizer or fastembed missing: keep working with spelling matching
+        log.warning("phonetic/semantic matcher unavailable (%s); using text similarity", e)
         return similarity
 
 

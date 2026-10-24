@@ -47,5 +47,20 @@
   "savedSeat": "บันทึกแล้ว บนเครื่องบินให้สแกนรหัสที่ที่นั่งของคุณ Auralink จะเปิดแบบนี้",
   "scanAtSeat": "ลิงก์ที่นั่งของคุณ",
   "nextPassenger": "ผู้โดยสารคนถัดไป",
-  "announcement": "ประกาศในห้องโดยสาร"
+  "announcement": "ประกาศในห้องโดยสาร",
+  "suggestTitle": "ไม่แน่ใจทั้งหมด แต่นี่คือสิ่งที่เข้าใจ",
+  "suggestDidYouMean": "คุณหมายถึง",
+  "suggestOrSend": "หรือส่งข้อความนี้ให้ลูกเรือ (แปลโดยเครื่อง ยังไม่ได้ตรวจสอบ)",
+  "suggestSendBtn": "ส่งให้ลูกเรือ",
+  "suggestOrPicture": "หรือเลือกรูปภาพแทน",
+  "settingsTitle": "การตั้งค่า",
+  "liveConv": "สนทนาสด",
+  "convListening": "กำลังฟัง… พูดได้เลย ไม่ต้องแตะ",
+  "convSpeaking": "กำลังฟังคุณ…",
+  "noRequestsTitle": "ยังไม่มีคำขอ",
+  "noRequestsSub": "คำขอของคุณจะปรากฏที่นี่",
+  "mute": "ปิดเสียง",
+  "unmute": "เปิดเสียง",
+  "accessibilityLabel": "การเข้าถึง",
+  "convReplyPlaying": "กำลังเล่นคำตอบ — ไมค์หยุดชั่วคราว"
 }

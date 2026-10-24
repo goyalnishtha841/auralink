@@ -47,5 +47,20 @@
   "savedSeat": "Saved. On board, scan the code on your seat and Auralink opens like this.",
   "scanAtSeat": "Your seat link",
   "nextPassenger": "Next passenger",
-  "announcement": "Cabin announcement"
+  "announcement": "Cabin announcement",
+  "suggestTitle": "I'm not fully sure, here's what I understood",
+  "suggestDidYouMean": "Did you mean",
+  "suggestOrSend": "Or send this message to crew (translated, not reviewed)",
+  "suggestSendBtn": "Send to crew",
+  "suggestOrPicture": "Or pick a picture instead",
+  "settingsTitle": "Settings",
+  "liveConv": "Live conversation",
+  "convListening": "Listening… just talk, no need to tap",
+  "convSpeaking": "Hearing you…",
+  "noRequestsTitle": "No requests yet",
+  "noRequestsSub": "Your requests will appear here.",
+  "mute": "Mute voice",
+  "unmute": "Unmute voice",
+  "accessibilityLabel": "Accessibility",
+  "convReplyPlaying": "Reply playing — mic paused"
 }

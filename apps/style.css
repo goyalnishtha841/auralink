@@ -1,21 +1,16 @@
-/* App screens (passenger, crew, judge, record). Same night-cabin system as the landing page
-   (landing.css): aurora teal for information, amber call-light for actions. Calmer than the
-   landing page on purpose: these screens are used by seniors and busy crew. */
+/* App screens (passenger, crew, judge, record). Flat, compact, one accent color, no gradients;
+   calm on purpose, these screens are used by seniors and busy crew. */
 @import url("fonts/fonts.css");   /* bundled: works offline */
 :root {
-  --bg: #060915; --surface: #0f1630; --surface-2: #162043; --fg: #edf2ff; --muted: #a3afcf; --line: rgba(150, 175, 255, .16);
-  --accent: #ffb547; --accent-ink: #1d1300; --info: #3ce8c8; --ok: #3ddc97; --warn: #ffb547; --bad: #ff6b6b; --idle: #2a3558;
-  --radius: 16px;
+  --bg: #0a0d16; --surface: #12172a; --surface-2: #1a2036; --fg: #f1f4fb; --muted: #97a1bd; --line: rgba(151, 161, 189, .22);
+  --accent: #ffb547; --accent-ink: #1d1300; --info: #97a1bd; --ok: #3ddc97; --warn: #ffb547; --bad: #ff6b6b; --idle: #262c45;
+  --radius: 12px;
   font-family: "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", system-ui, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }  /* .panel and .row set display, which would override hidden */
-body { margin: 0; color: var(--fg); line-height: 1.5; min-height: 100vh;
-       background: radial-gradient(70% 45% at 10% 0%, rgba(91, 140, 255, .14), transparent 70%),
-                   radial-gradient(60% 40% at 100% 100%, rgba(168, 124, 255, .10), transparent 70%),
-                   radial-gradient(40% 30% at 70% 0%, rgba(60, 232, 200, .08), transparent 70%), var(--bg);
-       background-attachment: fixed; }
+body { margin: 0; color: var(--fg); line-height: 1.5; min-height: 100vh; background: var(--bg); }
 header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 16px;
          background: rgba(6, 9, 21, .72); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 header h1 { font: 600 19px "Outfit", system-ui, sans-serif; letter-spacing: -.01em; margin: 0; flex: 1; }

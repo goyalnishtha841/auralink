@@ -1,26 +1,20 @@
-/* "Under the hood" glass-box screen. Same night-cabin tokens as landing.css; built to be read on a
-   projector: large type, high contrast, one colour per meaning (teal = matched, amber = cheap accent
-   substitution / action, red = costly or urgent, grey = ignored). Dark only, like the cabin at night. */
+/* "Under the hood" glass-box screen. Flat, compact; one colour per meaning (teal = matched, amber =
+   cheap accent substitution / action, red = costly or urgent, grey = ignored). No decoration beyond that. */
 :root {
-  --night-0: #060915; --night-1: #0b1124; --night-2: #121a36; --night-3: #1a2447;
-  --line: rgba(150, 175, 255, .14); --line-strong: rgba(150, 175, 255, .28);
-  --ink: #edf2ff; --ink-dim: #a3afcf; --ink-faint: #7d89ab;
-  --teal: #3ce8c8; --blue: #5b8cff; --violet: #a87cff; --amber: #ffb547; --amber-ink: #1d1300;
+  --night-0: #0a0d16; --night-1: #10152a; --night-2: #161d38; --night-3: #1d2546;
+  --line: rgba(151, 161, 189, .18); --line-strong: rgba(151, 161, 189, .32);
+  --ink: #f1f4fb; --ink-dim: #97a1bd; --ink-faint: #76809e;
+  --teal: #3ce8c8; --amber: #ffb547; --amber-ink: #1d1300;
   --ok: #3ddc97; --bad: #ff6b6b;
   --display: "Outfit", "Noto Sans", system-ui, sans-serif;
   --body: "Noto Sans", "Noto Sans Devanagari", "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans CJK JP", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
-  --r: 16px;
+  --r: 12px;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body {
-  margin: 0; color: var(--ink); font: 16px/1.55 var(--body); min-height: 100vh;
-  background: radial-gradient(60% 40% at 0% 0%, rgba(91, 140, 255, .14), transparent 70%),
-              radial-gradient(50% 40% at 100% 100%, rgba(168, 124, 255, .1), transparent 70%), var(--night-0);
-  background-attachment: fixed;
-}
+body { margin: 0; color: var(--ink); font: 16px/1.55 var(--body); min-height: 100vh; background: var(--night-0); }
 h1, h2 { font-family: var(--display); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
 svg { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 :focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; border-radius: 6px; }
@@ -75,7 +69,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 24px max(20px, env(safe-area-
 .meter { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-dim); }
 .meter-row { display: flex; justify-content: space-between; font-family: var(--mono); }
 .meter-bar { height: 8px; border-radius: 4px; background: var(--night-3); overflow: hidden; }
-.meter-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--teal), var(--blue)); }
+.meter-bar i { display: block; height: 100%; border-radius: 4px; background: var(--teal); }
 .meter.over .meter-bar i { background: var(--bad); }
 
 /* waveform */
@@ -88,7 +82,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 24px max(20px, env(safe-area-
 .nbest li { display: grid; grid-template-columns: 34px 1fr 64px; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 8px; }
 .nbest li:first-child { background: var(--night-2); }
 .lang { font: 600 11px var(--mono); padding: 2px 6px; border-radius: 6px; text-align: center; }
-.lang.en { background: rgba(91, 140, 255, .18); color: #a9c1ff; }
+.lang.en { background: var(--night-3); color: var(--ink-dim); }
 .lang.hi { background: rgba(255, 181, 71, .16); color: var(--amber); }
 .lang.typed { background: var(--night-3); color: var(--ink-dim); }
 .nb-text { overflow-wrap: anywhere; }
@@ -120,8 +114,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 24px max(20px, env(safe-area-
 .cand-name small { display: block; font: 400 12px var(--body); color: var(--ink-faint); }
 .track { position: relative; height: 14px; border-radius: 7px; background: var(--night-0); }
 .track i { position: absolute; inset: 0 auto 0 0; border-radius: 7px; background: var(--ink-faint); transform-origin: left; animation: grow .7s cubic-bezier(.2, .8, .2, 1) both; }
-.cand.top .track i { background: linear-gradient(90deg, var(--teal), var(--blue)); }
-.cand.urgent .track i { background: linear-gradient(90deg, #ff9f6b, var(--bad)); }
+.cand.top .track i { background: var(--teal); }
+.cand.urgent .track i { background: var(--bad); }
 @keyframes grow { from { transform: scaleX(0); } }
 .mark { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--amber); }
 .mark span { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font: 600 10px var(--mono); color: var(--amber); white-space: nowrap; }
@@ -148,7 +142,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 24px max(20px, env(safe-area-
 .col-skip .ph { opacity: .35; }
 .reasons { display: flex; flex-wrap: wrap; gap: 6px; }
 .reason { font: 12px var(--mono); padding: 3px 8px; border-radius: 6px; background: rgba(255, 181, 71, .1); color: var(--amber); }
-.inside-note { font: 12px var(--mono); color: var(--violet); }
+.inside-note { font: 12px var(--mono); color: var(--ink-dim); }
 
 /* history */
 .history ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }

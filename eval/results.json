@@ -7,7 +7,7 @@
    "wrong_card": 0.0,
    "false_alarm": 0.0,
    "urgent_recall": 76.9,
-   "median_ms": 0.02,
+   "median_ms": 0.01,
    "by_group": {
     "asr_error": 35.7,
     "devanagari": 62.5,
@@ -43,7 +43,7 @@
    "wrong_card": 1.8,
    "false_alarm": 0.0,
    "urgent_recall": 92.3,
-   "median_ms": 3.52,
+   "median_ms": 3.22,
    "by_group": {
     "asr_error": 64.3,
     "devanagari": 87.5,
@@ -58,10 +58,10 @@
    "n": 65,
    "first_try": 86.0,
    "one_tap": 93.0,
-   "wrong_card": 0.0,
-   "false_alarm": 37.5,
+   "wrong_card": 1.8,
+   "false_alarm": 50.0,
    "urgent_recall": 100.0,
-   "median_ms": 7.01,
+   "median_ms": 6.22,
    "by_group": {
     "asr_error": 78.6,
     "devanagari": 100.0,
@@ -76,10 +76,10 @@
    "n": 65,
    "first_try": 91.2,
    "one_tap": 93.0,
-   "wrong_card": 0.0,
+   "wrong_card": 1.8,
    "false_alarm": 12.5,
    "urgent_recall": 100.0,
-   "median_ms": 8.09,
+   "median_ms": 7.1,
    "by_group": {
     "asr_error": 85.7,
     "devanagari": 100.0,
@@ -89,77 +89,41 @@
     "sea_accent": 100.0,
     "urgent": 80.0
    }
-  }
- },
- "synthetic_audio": {
-  "baseline_a": {
-   "n": 42,
-   "first_try": 64.3,
-   "one_tap": 64.3,
-   "wrong_card": 0.0,
-   "false_alarm": null,
-   "urgent_recall": 66.7,
-   "median_ms": 0.02,
+  },
+  "hybrid_learned": {
+   "n": 65,
+   "first_try": 91.2,
+   "one_tap": 93.0,
+   "wrong_card": 1.8,
+   "false_alarm": 12.5,
+   "urgent_recall": 100.0,
+   "median_ms": 6.54,
    "by_group": {
-    "0 dB": 57.1,
-    "10 dB": 71.4,
-    "clean": 64.3
+    "asr_error": 85.7,
+    "devanagari": 100.0,
+    "hinglish": 100.0,
+    "japanese_accent": 71.4,
+    "multi": 100.0,
+    "sea_accent": 100.0,
+    "urgent": 80.0
    }
   },
-  "text": {
-   "n": 42,
-   "first_try": 90.5,
-   "one_tap": 92.9,
-   "wrong_card": 0.0,
-   "false_alarm": null,
+  "trimodal": {
+   "n": 65,
+   "first_try": 86.0,
+   "one_tap": 87.7,
+   "wrong_card": 1.8,
+   "false_alarm": 0.0,
    "urgent_recall": 100.0,
-   "median_ms": 4.61,
+   "median_ms": 31.81,
    "by_group": {
-    "0 dB": 92.9,
-    "10 dB": 85.7,
-    "clean": 92.9
-   }
-  },
-  "phonetic_uniform": {
-   "n": 42,
-   "first_try": 83.3,
-   "one_tap": 85.7,
-   "wrong_card": 0.0,
-   "false_alarm": null,
-   "urgent_recall": 100.0,
-   "median_ms": 9.79,
-   "by_group": {
-    "0 dB": 85.7,
-    "10 dB": 78.6,
-    "clean": 85.7
-   }
-  },
-  "phonetic": {
-   "n": 42,
-   "first_try": 83.3,
-   "one_tap": 97.6,
-   "wrong_card": 0.0,
-   "false_alarm": null,
-   "urgent_recall": 100.0,
-   "median_ms": 17.58,
-   "by_group": {
-    "0 dB": 78.6,
-    "10 dB": 78.6,
-    "clean": 92.9
-   }
-  },
-  "hybrid": {
-   "n": 42,
-   "first_try": 92.9,
-   "one_tap": 95.2,
-   "wrong_card": 0.0,
-   "false_alarm": null,
-   "urgent_recall": 100.0,
-   "median_ms": 19.33,
-   "by_group": {
-    "0 dB": 92.9,
-    "10 dB": 85.7,
-    "clean": 100.0
+    "asr_error": 85.7,
+    "devanagari": 87.5,
+    "hinglish": 100.0,
+    "japanese_accent": 57.1,
+    "multi": 100.0,
+    "sea_accent": 83.3,
+    "urgent": 80.0
    }
   }
  }
