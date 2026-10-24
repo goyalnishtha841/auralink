@@ -2,7 +2,7 @@ import numpy as np
 
 from engine import Lexicon
 from engine.prosody import STRESS_FLOOR, analyze
-from hub.state import Cabin, MAX_ROUNDS
+from hub.state import MAX_ROUNDS, Cabin
 
 
 def test_calm_synthetic_tone_scores_low():
