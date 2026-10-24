@@ -82,27 +82,11 @@
   .flight-strip { text-shadow: 0 1px 8px #000; }
 }
 
-/* sections: the hero's sunset (warm coral + cool dusk blue) carries on down the page.
-   Glows are sized in viewport units and anchored to the TOP and BOTTOM of each section's actual
-   content (not the section box, which can be far taller than the screen) so there is always a
-   glow near whatever you've scrolled to, instead of one glow stranded off past the fold. */
-/* isolation: isolate keeps the z-index: -1 glows below exactly contained and ordered within this
-   section (same trick .hero uses), instead of being swallowed by the <html>/<body> overflow+background
-   interaction that otherwise hides negative-z fixed/absolute content site-wide. */
-.section { position: relative; padding: clamp(80px, 11vw, 140px) 0; overflow: hidden; isolation: isolate;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 30%); }
-.section::before { content: ""; position: absolute; z-index: -1; pointer-events: none;
-  top: -16vh; left: -14vw; width: 62vw; height: 58vh; max-width: 760px; max-height: 620px;
-  background: radial-gradient(circle, rgba(255, 91, 91, 0.32), transparent 68%); }
-.section > .wrap::after { content: ""; position: absolute; z-index: -1; pointer-events: none;
-  bottom: -18vh; right: -14vw; width: 56vw; height: 54vh; max-width: 700px; max-height: 560px;
-  background: radial-gradient(circle, rgba(122, 139, 255, 0.22), transparent 66%); }
-.section:nth-of-type(even)::before { left: auto; right: -14vw; background: radial-gradient(circle, rgba(255, 91, 91, 0.3), transparent 68%); }
-.section:nth-of-type(even) > .wrap::after { right: auto; left: -14vw; }
-/* a thin sakura branch, not a hard rule, marks where one section ends and the next begins */
-.section::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 44px; z-index: 1;
-  background: url("/branch-divider.svg") top center / 100% 100% no-repeat; opacity: 0.8; pointer-events: none; }
-.section:nth-of-type(even)::after { transform: scaleX(-1); }
+/* sections carry no glow or boundary of their own — color comes only from the single fixed .ambient
+   wash (see globals.css), which sits at the same spot relative to the viewport no matter what you've
+   scrolled to. That's what makes the page read as one continuous surface instead of a stack of
+   independently-lit boxes with a seam at every join. */
+.section { position: relative; padding: clamp(80px, 11vw, 140px) 0; }
 .section > .wrap { position: relative; }
 .eyebrow { display: flex; align-items: center; gap: 12px; font: 500 12px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0 0 18px; }
 .eyebrow::before { content: ""; width: 30px; height: 1px; background: var(--accent); }
