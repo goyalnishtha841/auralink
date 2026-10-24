@@ -1,22 +1,24 @@
 "use client";
 // Passenger seat screen. Same protocol and behaviour as the original apps/passenger.html.
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useReducer, useRef } from "react";
-import { Recorder, VadRecorder, connect, loadConfig, params } from "@/lib/hub";
+import jsQR from "jsqr";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { Recorder, VadRecorder, connect, loadConfig, params, toBase64 } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { ACCESSIBILITY_META } from "@/lib/accessibility";
 import { Picto } from "@/lib/pictograms";
 import { canSpeak, isSpeaking, onSpeakingChange, speakNatural as speak, unlockAudio } from "@/lib/speech";
 import { Ambient, Carousel, Sheet, ease, useFlash } from "@/components/ui";
 import { ConvThread, MuteButton } from "@/components/liveconversation";
+import { Onboarding, OnboardingFab } from "@/components/onboarding";
 
 export default function Passenger() {
   const [, bump] = useReducer((x) => x + 1, 0);
   const st = useRef(null);
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
-  if (!st.current) st.current = { ready: false, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, voiceOK: false,
-    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: "34K",
+  if (!st.current) st.current = { ready: false, awaitingSeat: false, onboarding: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, name: null, voiceOK: false,
+    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: null,
     conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [], spoken: new Set() } };
   const s = st.current;
   const socket = useRef(null);
@@ -28,7 +30,7 @@ export default function Passenger() {
   const shake = useRef({ x: null, y: null, z: null, hits: 0, lastHitAt: 0, cooldownUntil: 0, listening: false });
 
   const t = (k) => s.strings[k] ?? s.fallback[k] ?? k;
-  const hello = () => socket.current?.send({ type: "hello", lang: s.lang, senior: s.senior, pictures: s.pictures, read: s.readAloud, accessibility: s.accessibility });
+  const hello = () => socket.current?.send({ type: "hello", lang: s.lang, senior: s.senior, pictures: s.pictures, read: s.readAloud, accessibility: s.accessibility, name: s.name || undefined });
   const bigMode = () => s.senior || s.accessibility === "low_vision";
   const pictureMode = () => s.pictures || s.accessibility === "cognitive";
   const say = (lines) => { if (s.readAloud && s.voiceOK && !pictureMode()) speak(lines, s.lang); };
@@ -365,23 +367,17 @@ export default function Passenger() {
     </div>);
   }
 
-  useEffect(() => {
-    addEventListener("pointerdown", unlockAudio, { once: true });
-    let alive = true, markReady;
+  const aliveRef = useRef(true);
+
+  function boot(seat, p) {
+    s.seat = seat;
+    let markReady;
     const ready = new Promise((r) => (markReady = r));
-    const p = params();
-    s.seat = p.get("seat") || "34K";
-    s.lang = p.get("lang") || "en";
-    s.senior = p.get("senior") === "1";
-    s.pictures = p.get("mode") === "pictures";
-    s.readAloud = p.get("read") === "1";
-    s.accessibility = ACCESSIBILITY_META[p.get("accessibility")] ? p.get("accessibility") : null;
-    socket.current = connect(`/ws/passenger/${s.seat}`, (msg) => ready.then(() => alive && onMessage(msg)), (on) => {
+    socket.current = connect(`/ws/passenger/${s.seat}`, (msg) => ready.then(() => aliveRef.current && onMessage(msg)), (on) => {
       s.online = on; bump();
       if (on) ready.then(() => hello());
     });
     (async () => {
-      s.cfg = await loadConfig();
       let checkedIn = false;
       if (!["lang", "senior", "mode", "read", "accessibility"].some((k) => p.has(k))) {
         try {
@@ -402,9 +398,39 @@ export default function Passenger() {
       document.documentElement.lang = s.lang;
       s.ready = true; bump();
       markReady();
-      if (askLanguage) chooseLanguage();
+      // Same gate as the plain language prompt below: skip it for a checked-in seat (already
+      // configured at the kiosk) or a demo link with an explicit ?lang=, same as before.
+      if (askLanguage) {
+        let onboarded = false;
+        try { onboarded = localStorage.getItem(`auralink-onboarded-${s.seat}`) === "1"; } catch { /* blocked */ }
+        if (onboarded) chooseLanguage(); else { s.onboarding = true; bump(); }
+      }
     })();
-    return () => { alive = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); removeEventListener("pointerdown", unlockAudio); };
+  }
+
+  // The shared scanner lands here with no ?seat= at all: one QR code for the whole cabin
+  // instead of one per seat (there's no screen on every seat to print one onto). The passenger
+  // picks their seat on the map below before anything connects to the hub.
+  function confirmSeat(seat, name) {
+    s.awaitingSeat = false; s.name = name || null; bump();
+    boot(seat, params());
+  }
+
+  useEffect(() => {
+    addEventListener("pointerdown", unlockAudio, { once: true });
+    const p = params();
+    s.lang = p.get("lang") || "en";
+    s.senior = p.get("senior") === "1";
+    s.pictures = p.get("mode") === "pictures";
+    s.readAloud = p.get("read") === "1";
+    s.accessibility = ACCESSIBILITY_META[p.get("accessibility")] ? p.get("accessibility") : null;
+    (async () => {
+      s.cfg = await loadConfig();
+      const seatParam = p.get("seat");
+      if (seatParam) boot(seatParam, p);
+      else { s.awaitingSeat = true; bump(); }
+    })();
+    return () => { aliveRef.current = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); removeEventListener("pointerdown", unlockAudio); };
   }, []); // eslint-disable-line
 
   // Shake to call the crew: 3 strong jolts within ~2s, same request as tapping "Call crew".
@@ -451,7 +477,15 @@ export default function Passenger() {
     };
   }, []); // eslint-disable-line
 
+  if (s.awaitingSeat) return <SeatGate cfg={s.cfg} onConfirm={confirmSeat} />;
+
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
+  if (s.onboarding) return (
+    <Onboarding cfg={s.cfg} seat={s.seat} lang={s.lang} onSelectLanguage={setLanguage}
+      accessibility={{ senior: s.senior, pictures: s.pictures, readAloud: s.readAloud, accessibility: s.accessibility }}
+      onSetAccessibility={(patch) => { Object.assign(s, patch); bump(); hello(); }}
+      onComplete={() => { s.onboarding = false; bump(); }} />
+  );
 
   const reqs = [...s.requests.values()].reverse();
   const micLabel = t({ idle: "speak", recording: "stop", thinking: "thinking", off: "speak" }[s.micState]);
@@ -562,7 +596,197 @@ export default function Passenger() {
             <div className="pa-acts"><Listen lines={s.caption.text} /><button className="primary" onClick={() => { closeCaption(); bump(); }}>{t("ok")}</button></div>
           </motion.div>) : null}
       </AnimatePresence>
+
+      {!s.sheet && !s.conv.open ? (
+        <OnboardingFab seat={s.seat} lang={s.lang} onReplay={() => { s.onboarding = true; bump(); }}
+          onAskHelp={() => { attention(); closeSheet(); }} onChangeLanguage={chooseLanguage} onAccessibility={showSettings} />
+      ) : null}
     </div>
+  );
+}
+
+// One scanner for the whole cabin (no screen on every seat to print a per-seat QR onto): the
+// passenger taps their own seat on a plane-shaped map before anything connects to the hub, the
+// same layout the crew tablet uses so it reads the same way on both sides. They can also just
+// say it ("three four kay") -- the same offline phonetic matcher used for every other request,
+// run on the seat number instead -- which only pre-picks the seat below; they still tap Continue.
+function SeatGate({ cfg, onConfirm }) {
+  const [picked, setPicked] = useState(null);
+  const [mic, setMic] = useState("idle");   // idle | recording | thinking
+  const [heard, setHeard] = useState(null); // {text, seat} | {text, seat: null} | {error: true} | null
+  const [scanning, setScanning] = useState(false);
+  const [scanned, setScanned] = useState(null); // {seat, name} | {seat: null} | {error: true} | null
+  const micRef = useRef("idle");
+  const recorder = useRef(null);
+  const known = useRef(new Set());
+  known.current = new Set((cfg?.seats) || []);
+
+  async function onBarcodeScanned(text) {
+    setScanning(false);
+    try {
+      const res = await fetch("/api/seat/by-boarding-pass", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }),
+      });
+      const r = await res.json();
+      setScanned(r);
+      if (r.seat && known.current.has(r.seat)) setPicked(r.seat);
+    } catch { setScanned({ error: true }); }
+  }
+
+  async function speakSeat() {
+    if (micRef.current === "recording") {
+      micRef.current = "thinking"; setMic("thinking");
+      const pcm = await recorder.current.stop();
+      recorder.current = null;
+      try {
+        const res = await fetch("/api/seat/by-voice", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ audio_b64: await toBase64(pcm) }),
+        });
+        const r = await res.json();
+        setHeard({ text: r.heard, seat: r.seat });
+        if (r.seat && known.current.has(r.seat)) setPicked(r.seat);
+      } catch { setHeard({ error: true }); }
+      micRef.current = "idle"; setMic("idle");
+      return;
+    }
+    if (!Recorder.supported()) { setHeard({ error: true }); return; }
+    setHeard(null);
+    recorder.current = new Recorder();
+    try {
+      await recorder.current.start(6, () => micRef.current === "recording" && speakSeat());
+      micRef.current = "recording"; setMic("recording");
+    } catch { micRef.current = "idle"; setMic("idle"); }
+  }
+
+  if (!cfg) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
+  const rows = [...new Set(cfg.seats.map((x) => x.slice(0, -1)))];
+  const known_ = known.current;
+  return (
+    <>
+      <Ambient />
+      <main className="app" style={{ maxWidth: 420, minHeight: "100dvh", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20, paddingBottom: 28 }}>
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ font: "800 24px/1.25 var(--display)", margin: "0 0 4px" }}>Which seat are you in?</h1>
+          <p className="muted" style={{ margin: 0 }}>Tap your seat, or say it.</p>
+        </div>
+        {Recorder.supported() ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <button type="button" className={`ask-round mic-on ${mic === "recording" ? "recording" : ""}`}
+              disabled={mic === "thinking"}
+              aria-label={mic === "recording" ? "Stop and check" : "Say your seat number"}
+              title={mic === "recording" ? "Stop and check" : "Say your seat number"} onClick={speakSeat}>
+              <Icon id="mic" />
+            </button>
+            <p className="muted" style={{ margin: 0, fontSize: 13, textAlign: "center" }}>
+              {mic === "recording" ? "Listening… say your seat, like “three four kay”"
+                : mic === "thinking" ? "Checking…"
+                : heard?.error ? "Couldn't use the microphone — tap your seat instead."
+                : heard && !heard.seat ? `Didn't catch a seat in “${heard.text}” — try again or tap below.`
+                : heard?.seat ? `Heard “${heard.text}” → seat ${heard.seat}. Tap Continue, or pick a different seat below.`
+                : "Tap to say your seat number"}
+            </p>
+          </div>
+        ) : null}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+          <button type="button" className="ghost" style={{ fontSize: 14 }} onClick={() => { setScanned(null); setScanning(true); }}>
+            <Icon id="qr" /> Scan boarding pass
+          </button>
+          {scanned ? (
+            <p className="muted" style={{ margin: 0, fontSize: 13, textAlign: "center" }}>
+              {scanned.error ? "Couldn't use the camera — tap your seat instead."
+                : scanned.seat ? `${scanned.name ? scanned.name + " · " : ""}Seat ${scanned.seat}. Tap Continue, or pick a different seat below.`
+                : "That didn't look like a boarding pass — try again or tap your seat below."}
+            </p>
+          ) : null}
+        </div>
+        {scanning ? <BoardingPassScanner onResult={onBarcodeScanned} onClose={() => setScanning(false)} /> : null}
+        <div className="seatgate-map">
+          {rows.map((row) => (
+            <div className="seatgate-row" key={row}>
+              <span className="seatgate-row-label">{row}</span>
+              <div className="seatgate-seats">
+                {["A", "B", "C", null, "D", "E", "G", null, "H", "J", "K"].map((letter, i) => {
+                  if (!letter) return <span className="seatgate-aisle" key={`gap-${i}`} />;
+                  const id = row + letter;
+                  if (!known_.has(id)) return <span className="seatgate-missing" key={id} />;
+                  return (
+                    <button key={id} type="button" className={`seat seatgate-seat ${picked === id ? "picked pop" : ""}`}
+                      aria-pressed={picked === id} aria-label={`Seat ${id}`} onClick={() => setPicked(id)}>{letter}</button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className="primary" disabled={!picked}
+          onClick={() => picked && onConfirm(picked, scanned?.seat === picked ? scanned.name : undefined)}
+          style={{ minHeight: 52, fontSize: 16 }}>
+          {picked ? `Continue · ${scanned?.seat === picked && scanned.name ? `${scanned.name}, seat ` : "Seat "}${picked}` : "Pick your seat above"}
+        </button>
+      </main>
+    </>
+  );
+}
+
+// Live camera read of a boarding pass barcode (IATA BCBP, hub/bcbp.py) -- no airline integration
+// needed, since every boarding pass already carries one. Decodes entirely in the browser (jsQR
+// against video frames drawn to a hidden canvas); only the decoded text, never the image, goes
+// to the hub, which is also the one place that knows which seats exist on this aircraft.
+function BoardingPassScanner({ onResult, onClose }) {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const rafRef = useRef(null);
+  const doneRef = useRef(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    function tick() {
+      const video = videoRef.current, canvas = canvasRef.current;
+      if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height);
+      if (code?.data && !doneRef.current) { doneRef.current = true; onResult(code.data); return; }
+      rafRef.current = requestAnimationFrame(tick);
+    }
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        tick();
+      } catch { if (!cancelled) setError(true); }
+    })();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafRef.current);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []); // eslint-disable-line
+
+  return (
+    <motion.div className="bp-scanner" role="dialog" aria-label="Scan boarding pass"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      {error ? (
+        <p className="muted" style={{ textAlign: "center", padding: 24 }}>Couldn't use the camera. Close this and tap your seat instead.</p>
+      ) : (<>
+        <video ref={videoRef} playsInline muted className="bp-video" />
+        <div className="bp-frame" />
+        <p className="muted bp-hint">Point the camera at your boarding pass barcode</p>
+      </>)}
+      <canvas ref={canvasRef} style={{ display: "none" }} />
+      <button className="ghost bp-close" onClick={onClose}><Icon id="close" /> Cancel</button>
+    </motion.div>
   );
 }
 

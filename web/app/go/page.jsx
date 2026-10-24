@@ -42,6 +42,12 @@ export default function Go() {
           <Icon id="arrow" />
         </motion.a>
 
+        <motion.a href="/passenger" onClick={tap}
+          className="link" style={{ textAlign: "center", fontSize: 13 }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.22, ease }}>
+          No screen at your seat? Scan the shared code at the galley, then pick your seat →
+        </motion.a>
+
         <p className="muted mono" style={{ textAlign: "center", fontSize: 12, margin: 0 }}>Nothing here leaves this Wi-Fi.</p>
       </main>
     </>

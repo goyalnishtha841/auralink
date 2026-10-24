@@ -54,6 +54,26 @@ def test_split_request_reaches_crew_after_confirm(client):
         assert reply == {"type": "reply", "card_id": water["id"], "text": "अभी लेकर आ रहे हैं।"}
 
 
+def test_scanned_boarding_pass_name_reaches_crew(client):
+    """A name only ever arrives from a scanned boarding pass (web/app/passenger's SeatGate), so
+    crew should see it on the seat's request cards once the passenger says hello with one."""
+    with client.websocket_connect("/ws/crew") as crew, client.websocket_connect("/ws/passenger/34K") as pax:
+        crew_state(crew)
+        pax.send_json({"type": "hello", "lang": "en", "name": "Yuki Tanaka"})
+        pax.send_json({"type": "icon", "intent": "water"})
+        pax.receive_json()
+
+        state = crew_state(crew)
+        while not state["cards"]:
+            state = crew_state(crew)
+        assert state["cards"][0]["name"] == "Yuki Tanaka"
+
+        # a later hello with no name (e.g. a language change) must not erase it
+        pax.send_json({"type": "hello", "lang": "hi"})
+        state = crew_state(crew)
+        assert state["cards"][0]["name"] == "Yuki Tanaka"
+
+
 def test_two_failed_rounds_escalate_to_needs_human(client):
     with client.websocket_connect("/ws/passenger/30A") as pax:
         pax.send_json({"type": "text", "text": "hmm"})
@@ -179,6 +199,44 @@ def test_exit_row_check(crew_login):
             state = crew_state(crew)
         results = {c["seat"]: c["result"] for c in state["exit_checks"]}
         assert results["30A"] == "pass" and results["30K"] == "talk" and results["30B"] == "pending"
+
+
+def test_exit_row_check_resends_on_late_connect(crew_login):
+    """A seat that connects (or reconnects) after crew started the check still gets asked --
+    not just whoever happened to be connected at that moment."""
+    with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew:
+        crew.send_json({"type": "exit_check"})
+        crew_state(crew)   # the state push from starting the check
+        with shared.websocket_connect("/ws/passenger/30B") as late:
+            q = late.receive_json()
+            assert q["type"] == "exit_check" and len(q["check"]["questions"]) == 3
+
+
+def test_seat_by_voice(client):
+    r = client.post("/api/seat/by-voice", json={"text": "three four kay"})
+    assert r.status_code == 200
+    assert r.json() == {"heard": "three four kay", "seat": "34K"}
+
+    r = client.post("/api/seat/by-voice", json={"text": "um, not sure"})
+    assert r.json()["seat"] is None
+
+
+def test_boarding_pass_demo_and_scan(client):
+    gen = client.get("/api/boarding-pass/demo", params={"name": "Yuki Tanaka", "seat": "34K"})
+    assert gen.status_code == 200
+    text = gen.json()["text"]
+    assert len(text) == 60
+
+    scan = client.post("/api/seat/by-boarding-pass", json={"text": text})
+    assert scan.json() == {"seat": "34K", "name": "Yuki Tanaka"}
+
+    bad = client.post("/api/seat/by-boarding-pass", json={"text": "not a boarding pass"})
+    assert bad.json() == {"seat": None, "name": None}
+
+
+def test_boarding_pass_demo_rejects_unknown_seat(client):
+    r = client.get("/api/boarding-pass/demo", params={"name": "A B", "seat": "99Z"})
+    assert r.status_code == 404
 
 
 def test_demo_kit_endpoints(client):

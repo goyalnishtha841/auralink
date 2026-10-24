@@ -597,7 +597,7 @@ export default function Landing() {
             <p className="sub"><HubStatus /></p>
             <p className="sub">First time? <a href="/start"><b>Start here</b></a>: who uses which screen, the seat QR code, the crew PIN, and how it works with no internet.</p>
             <div className="launch-grid">
-              {[["/passenger?seat=34K", "mic", "Passenger", "Seat 34K. Speak, tap or type a request."],
+              {[["/passenger", "mic", "Passenger", "Pick your seat, then speak, tap or type a request."],
                 ["/crew", "tablet", "Crew tablet", "Request cards, replies and the safety heat map."],
                 ["/judge", "wave", "Under the hood", "Every guess, score and decision, live."],
                 ["/record", "check", "Record voices", "Help us test with your own accent."]].map(([href, ic, h, p], k) => (

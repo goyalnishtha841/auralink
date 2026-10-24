@@ -45,6 +45,7 @@ class Card(BaseModel):
 
 class Seat(BaseModel):
     id: str
+    name: str | None = None   # from a scanned boarding pass, so crew can address them by name
     lang: str = "en"
     senior: bool = False
     pictures: bool = False   # picture-only mode: crew should answer visually or in person

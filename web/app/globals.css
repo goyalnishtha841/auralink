@@ -289,6 +289,35 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .seat.pop { transform: scale(1.18); }
 @keyframes seatPulse { 50% { box-shadow: 0 0 0 6px rgba(255, 61, 90, 0.25); } }
 
+/* seat gate: shared-scanner passengers pick their own seat on a plane-shaped map before anything connects */
+/* Centered: the seat sizing below keeps every row within common phone widths, so this is safe.
+   If a row ever is wider than the viewport (an unusually narrow screen), overflow still scrolls
+   rather than clips, and the row label stays put via position: sticky rather than disappearing
+   off the left edge the way a plain centered overflow would. */
+.seatgate-map { display: flex; flex-direction: column; gap: 7px; align-items: center; max-height: 50vh; overflow: auto; padding: 4px; }
+.seatgate-row { display: flex; align-items: center; gap: 5px; flex: none; }
+.seatgate-row-label { position: sticky; left: 4px; width: 14px; font: 700 10.5px var(--mono); color: var(--faint);
+  text-align: right; flex: none; background: var(--bg); z-index: 1; }
+.seatgate-seats { display: flex; gap: 3px; flex: none; }
+.seatgate-aisle, .seatgate-missing { width: 6px; flex: none; }
+/* 27px fits the full 9-across row (with the aisle gaps) on common phone widths (~360px+) without
+   needing to scroll; .seatgate-map still scrolls as a fallback on anything narrower. */
+.seatgate-seat { width: 27px; height: 27px; border-radius: 7px; font-weight: 700; font-size: 11.5px; padding: 0; min-height: 0; cursor: pointer; flex: none; }
+@media (max-width: 360px) {
+  .seatgate-seat { width: 24px; height: 24px; border-radius: 6px; font-size: 11px; }
+  .seatgate-seats { gap: 2px; }
+  .seatgate-row { gap: 4px; }
+}
+.seatgate-seat.picked, .seatgate-seat.picked:hover { background: var(--ok) !important; color: #04210f !important; border-color: var(--ok) !important; }
+.seatgate-seat:hover:not(:disabled) { border-color: var(--accent); }
+
+/* boarding-pass camera scanner: a full-screen overlay over the seat gate */
+.bp-scanner { position: fixed; inset: 0; z-index: 50; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.bp-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bp-frame { position: relative; width: min(78vw, 320px); height: min(50vw, 200px); border: 3px solid var(--accent); border-radius: 18px; box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.55); }
+.bp-hint { position: absolute; bottom: 110px; left: 16px; right: 16px; text-align: center; color: #fff; z-index: 1; }
+.bp-close { position: absolute; bottom: 36px; left: 50%; transform: translateX(-50%); background: rgba(20, 20, 22, 0.85); color: #fff; border-color: rgba(255, 255, 255, 0.3); z-index: 1; }
+
 /* safety pictograms */
 .picto { width: 100%; height: auto; color: var(--fg); display: block; }
 .picto .acc { stroke: var(--accent); }
@@ -377,6 +406,143 @@ button.listen .icon .ic { width: 20px; height: 20px; }
 
 /* section labels: mono caps suit Latin; Indian and Thai scripts read better in the body font */
 html:is([lang="hi"], [lang="ta"], [lang="th"]) .panel > h2 { font: 600 14px var(--body); letter-spacing: 0; text-transform: none; }
+
+/* ---------------------------------------------------------------------------------------------
+   Crew avatar + onboarding (web/components/onboarding.jsx)
+   --------------------------------------------------------------------------------------------- */
+/* Real character art (a transparent PNG, web/public/images/skyconnect-assistant.png), not a
+   recreation -- .ca-photo-wrap holds the <Image>, everything else here is a decorative overlay
+   (ring/spinner/badge/sparks) positioned around it. All overlays are pointer-events: none so they
+   never sit between a tap and a button underneath or beside the avatar. */
+.crew-avatar { position: relative; width: 112px; height: 112px; flex: none; }
+.ca-photo-wrap { position: relative; width: 100%; height: 100%; z-index: 2; }
+.ca-photo-wrap img { object-fit: contain; }
+.crew-avatar[data-state="idle"] .ca-photo-wrap { animation: caFloat 4.6s ease-in-out infinite; transform-origin: 50% 85%; }
+.crew-avatar[data-state="speaking"] .ca-photo-wrap { animation: caSpeak 0.55s ease-in-out infinite; transform-origin: 50% 85%; }
+.crew-avatar[data-state="listening"] .ca-ring { opacity: 1; animation: caPulseRing 1.3s ease-out infinite; }
+.crew-avatar[data-state="listening"] .ca-mic-badge { opacity: 1; }
+.crew-avatar[data-state="loading"] .ca-spinner { opacity: 1; animation: caSpin 0.9s linear infinite; }
+.crew-avatar[data-state="loading"] .ca-photo-wrap { opacity: 0.55; }
+.crew-avatar[data-state="celebrating"] .ca-photo-wrap { animation: caCelebrate 0.7s var(--ease) 1; transform-origin: 50% 85%; }
+.crew-avatar[data-state="celebrating"] .ca-spark { opacity: 1; animation: caSparkle 0.9s ease-out 1; }
+.ca-ring, .ca-spinner { position: absolute; inset: -6%; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 1; }
+.ca-ring { border: 2.5px solid var(--accent); }
+.ca-spinner { border: 2.5px solid transparent; border-top-color: var(--accent); border-right-color: var(--accent); }
+.ca-mic-badge { position: absolute; right: -2%; bottom: -2%; width: 30%; height: 30%; min-width: 20px; min-height: 20px;
+  border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center;
+  opacity: 0; pointer-events: none; box-shadow: 0 0 0 2px var(--bg); z-index: 3; }
+.ca-mic-badge .icon .ic { width: 55%; height: 55%; }
+.ca-spark { position: absolute; width: 10px; height: 10px; opacity: 0; pointer-events: none; z-index: 3;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.ca-spark-a { left: -4%; top: 14%; background: var(--warn); }
+.ca-spark-b { right: -2%; top: 26%; width: 7px; height: 7px; background: var(--ok); }
+@keyframes caFloat { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(-1.1deg); } }
+@keyframes caSpeak { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+@keyframes caPulseRing { 0% { transform: scale(0.9); opacity: 0.9; } 100% { transform: scale(1.35); opacity: 0; } }
+@keyframes caSpin { to { transform: rotate(360deg); } }
+@keyframes caCelebrate { 0% { transform: rotate(0) scale(1); } 25% { transform: rotate(-5deg) scale(1.07); } 60% { transform: rotate(4deg) scale(1.08); } 100% { transform: rotate(0) scale(1); } }
+@keyframes caSparkle { 0% { opacity: 0; transform: scale(0.4) translateY(4px); } 40% { opacity: 1; } 100% { opacity: 0; transform: scale(1.1) translateY(-10px); } }
+
+/* Onboarding's own theme: a deep navy/electric-blue "SkyConnect" identity, scoped entirely to
+   .ob-screen so it never leaks into the rest of Auralink (which keeps its coral/matte-black
+   look). Every existing shared class (button.primary, .panel, .choose-lang, .toggle, ...)
+   reads these same custom properties, so overriding them here reskins all of it at once instead
+   of duplicating every rule. */
+.ob-screen {
+  --bg: #050814; --bg-2: #0a1026; --surface: #0a1026; --surface-2: #0d1430; --surface-card: rgba(255, 255, 255, 0.07);
+  --surface-3: rgba(255, 255, 255, 0.1); --line: rgba(255, 255, 255, 0.14); --line-strong: rgba(255, 255, 255, 0.24);
+  --fg: #ffffff; --muted: #b7c0e0; --faint: #8a93ba; --accent: #2f6fed; --accent-hover: #4a81f5;
+  --accent-soft: rgba(47, 111, 237, 0.18); --accent-glow: rgba(47, 111, 237, 0.55); --accent-ink: #ffffff;
+  --icon-bg: rgba(47, 111, 237, 0.22);
+  position: fixed; inset: 0; z-index: 55; background: var(--bg); overflow-y: auto; display: flex; flex-direction: column; color: var(--fg);
+}
+.ob-screen .panel { background: var(--surface-card); backdrop-filter: blur(10px); }
+/* One locally-hosted photo (the landing page's own hero.jpg) stands in for every screen's
+   "cinematic cabin/window" background -- there's no separate cabin-interior photo in this
+   project and nothing here is fetched at runtime, so the overlay strength is what tells screens
+   apart: bright for the window moments (welcome, greeting, completion), heavily dimmed and
+   blurred behind anything with a lot of text to read (language, features, accessibility, ...). */
+.ob-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+.ob-bg img { object-fit: cover; object-position: center 30%; }
+.ob-bg::after { content: ""; position: absolute; inset: 0; background: var(--ob-bg-overlay, linear-gradient(180deg, rgba(5, 8, 20, 0.55) 0%, rgba(5, 8, 20, 0.86) 70%, rgba(5, 8, 20, 0.96) 100%)); }
+.ob-bg.dim::after { background: var(--ob-bg-overlay, linear-gradient(180deg, rgba(5, 8, 20, 0.86) 0%, rgba(5, 8, 20, 0.94) 50%, rgba(5, 8, 20, 0.98) 100%)); backdrop-filter: blur(2px); }
+
+.ob-wrap { max-width: 480px; width: 100%; margin: 0 auto; padding: clamp(18px, 5vw, 32px) 20px 28px; display: flex; flex-direction: column; gap: 18px; flex: 1; }
+.ob-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.ob-back { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--line); border-radius: 50%; width: 38px; height: 38px; padding: 0; display: grid; place-items: center; min-height: 0; }
+.ob-progress { display: flex; gap: 5px; flex: 1; justify-content: center; }
+.ob-progress i { width: 18px; height: 4px; border-radius: 3px; background: var(--line-strong); transition: background 0.3s var(--ease), width 0.3s var(--ease); }
+.ob-progress i.on { background: var(--accent); width: 26px; }
+.ob-progress i.done { background: var(--accent-soft); }
+.ob-avatar-row { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+/* greeting's side-by-side composition: avatar left, speech bubble to its right -- distinct from
+   the centered-stack layout every other screen uses, matching the reference's screen 3 */
+.ob-side-row { display: flex; align-items: center; gap: 4px; }
+.ob-side-row .ob-bubble { margin-left: -18px; }
+.ob-bubble { position: relative; background: var(--surface-card); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; max-width: 360px; }
+.ob-bubble p { margin: 0; font-size: 15.5px; line-height: 1.55; }
+.ob-bubble .ob-caption-en { margin-top: 6px; font-size: 12.5px; color: var(--faint); }
+.ob-replay { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 13px; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+.ob-replay .icon .ic { width: 15px; height: 15px; }
+.ob-body { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.ob-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 8px; }
+.ob-actions .primary { flex: 1; min-height: 52px; font-size: 16px; border-radius: 999px; box-shadow: 0 10px 30px -8px var(--accent-glow); }
+.ob-skip { text-align: center; }
+.ob-skip button { background: none; border: 0; color: var(--faint); font-size: 13px; cursor: pointer; padding: 6px; }
+
+.ob-feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.ob-feature { text-align: left; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 16px; }
+.ob-feature b { font-size: 14.5px; }
+.ob-feature span { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.ob-feature-icon { width: 36px; height: 36px; border-radius: 11px; background: var(--icon-bg); display: grid; place-items: center; }
+.ob-feature-icon .icon .ic { width: 19px; height: 19px; color: var(--accent); }
+.ob-feature.active, .ob-feature.active:hover { border-color: var(--accent) !important; background: var(--accent-soft) !important; }
+
+.ob-scenario-grid { display: grid; gap: 8px; }
+.ob-scenario { display: flex; flex-direction: row; align-items: center; gap: 12px; text-align: left; padding: 14px; border-radius: 14px; }
+.ob-scenario .ob-feature-icon { width: 34px; height: 34px; }
+.ob-scenario .ob-feature-icon .icon .ic { width: 17px; height: 17px; }
+.ob-demo-tag { display: inline-flex; align-items: center; gap: 6px; font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--warn); background: rgba(246, 184, 92, 0.14); border: 1px solid rgba(246, 184, 92, 0.32); border-radius: 999px; padding: 4px 10px; align-self: flex-start; }
+.ob-convo { display: flex; flex-direction: column; gap: 10px; }
+.ob-msg { max-width: 82%; padding: 10px 14px; border-radius: 16px; font-size: 14.5px; line-height: 1.45; }
+.ob-msg.pax { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+.ob-msg.crew { align-self: flex-start; background: var(--surface-card); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.ob-msg .ob-msg-sub { display: block; margin-top: 3px; font-size: 11.5px; opacity: 0.8; }
+.ob-status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); align-self: flex-start; }
+.ob-status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: obPulseDot 1.1s ease-in-out infinite; }
+@keyframes obPulseDot { 0%, 100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1.1); } }
+.ob-check { display: flex; flex-direction: column; gap: 8px; }
+.ob-check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.ob-check-row .icon .ic { width: 18px; height: 18px; color: var(--ok); }
+.ob-fallback-note { font-size: 12px; color: var(--faint); }
+
+.ob-lang-list { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.ob-lang-row { display: flex; flex-direction: row; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; border-radius: 14px; width: 100%; }
+.ob-lang-chip { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 11px var(--mono); color: #fff; }
+.ob-lang-row b { display: block; font-size: 15px; } .ob-lang-row small { color: var(--muted); font-size: 12.5px; }
+.ob-lang-check { margin-left: auto; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); flex: none; }
+.ob-lang-check .icon .ic { width: 13px; height: 13px; color: #fff; }
+.ob-lang-row.active { border-color: var(--accent) !important; background: var(--accent-soft) !important; box-shadow: 0 0 0 1px var(--accent); }
+
+.ob-visual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ob-visual-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 6px; border-radius: 14px; text-align: center; }
+.ob-visual-tile .ob-feature-icon { width: 40px; height: 40px; }
+
+.ob-fab { position: fixed; right: 16px; bottom: 16px; z-index: 40; width: 58px; height: 58px; border-radius: 50%;
+  background: linear-gradient(160deg, #11183a, #0a0f24); border: 1px solid rgba(90, 130, 255, 0.4); display: grid; place-items: center;
+  box-shadow: 0 10px 30px -8px rgba(47, 111, 237, 0.65); padding: 0; }
+.ob-fab .crew-avatar { width: 42px; height: 42px; }
+/* The FAB and its menu render in the main app, outside .ob-screen, so they carry the same navy
+   theme as their own local override rather than inheriting it from an .ob-screen ancestor. */
+.ob-fab-menu {
+  --surface-card: #0d1430; --line: rgba(255, 255, 255, 0.16); --line-strong: rgba(255, 255, 255, 0.26);
+  --fg: #ffffff; --muted: #b7c0e0; --faint: #8a93ba; --accent: #2f6fed; --accent-hover: #4a81f5;
+  display: flex; flex-direction: column; gap: 6px; background: var(--surface-card) !important; border-color: var(--line-strong) !important;
+}
+.ob-fab-menu button { display: flex; align-items: center; gap: 10px; text-align: left; justify-content: flex-start; }
+.ob-fab-hint { position: fixed; right: 16px; bottom: 82px; z-index: 39; background: rgba(10, 16, 38, 0.95); border: 1px solid rgba(90, 130, 255, 0.35);
+  border-radius: 14px; padding: 10px 14px; font-size: 13px; color: #fff; max-width: 190px; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6); }
+.ob-fab-menu .icon .ic { width: 18px; height: 18px; color: var(--accent); }
 
 /* ---------- soft Japanese motion (no new colours) ---------- */
 /* 桜: sparse petals drifting behind every screen */

@@ -294,6 +294,7 @@ export default function Crew() {
                     {briefing.summary || "Nothing needs a summary right now."}
                   </p>
                 ) : <p className="muted" style={{ margin: 0, fontSize: 13 }}>Tap "AI briefing" for a one-glance read of what needs attention, from the facts already on this screen. Tap any seat for its detail.</p>}
+                <MapLegend />
                 <CabinMap state={state} cfg={cfg} exitSeats={exitSeats} selected={pickedSeat} onSelect={(s) => setPickedSeat(s === pickedSeat ? null : s)} />
               </section>
             ) : null}
@@ -388,7 +389,10 @@ function CardView({ c, cfg, send, myName, onTalk }) {
   const takenByOther = c.claimed_by && !mine;
   return (
     <motion.div layout className={`item citem ${c.urgent ? "is-urgent" : ""}`} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24, height: 0, padding: 0, margin: 0 }} transition={{ duration: 0.4, ease }}>
-      <span className="who">{c.seat}{c.zone ? <span className="muted" style={{ fontSize: 11, display: "block" }}>区画 {c.zone}</span> : null}</span>
+      <span className="who">{c.seat}
+        {c.name ? <span className="muted" style={{ fontSize: 11, display: "block", fontWeight: 600 }} title="From a scanned boarding pass">{c.name}</span> : null}
+        {c.zone ? <span className="muted" style={{ fontSize: 11, display: "block" }}>区画 {c.zone}</span> : null}
+      </span>
       <div className="body">
         <div className="what">
           {c.intent ? (<><Icon id={c.intent} /><strong>{c.crew_ja}</strong><span className="muted">{c.label_en}</span></>)
@@ -464,6 +468,24 @@ function CrewFreeTalk({ cfg, LANG_NAME }) {
   );
 }
 
+// Cabin map colour key, so crew don't have to guess what a colour means mid-flight.
+// Keep in sync with CabinMap's statusFor() and crew.css's .cabinmap .seat.* rules.
+const MAP_LEGEND = [
+  ["urgent", "var(--bad)", "至急 Urgent", "e.g. possible medical"],
+  ["accessibility", "var(--violet)", "要配慮 Accessibility", "request from a passenger with an accessibility need"],
+  ["open", "var(--warn)", "対応待ち Open request", "waiting, not yet urgent"],
+  ["idle", "var(--idle)", "リクエストなし No request", ""],
+];
+function MapLegend() {
+  return (
+    <div className="map-legend" role="note" aria-label="Cabin map colour key">
+      {MAP_LEGEND.map(([key, color, label, hint]) => (
+        <span key={key} className="map-legend-item" title={hint || undefined}><i className="sw" style={{ background: color }} />{label}</span>
+      ))}
+    </div>
+  );
+}
+
 function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
   if (!state) return null;
   const heat = state.heatmap || {};
@@ -475,6 +497,7 @@ function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
   function statusFor(id) {
     const cards = cardsBySeat[id];
     if (cards?.some((c) => c.urgent && c.status !== "acknowledged")) return "urgent";
+    if (cards?.some((c) => c.accessibility)) return "accessibility";
     if (cards?.length) return "open";
     return heat[id] === "offline" ? "offline" : "idle";
   }
@@ -519,7 +542,7 @@ function SeatDetail({ seat, state, cfg, send, myName, LANG_NAME, onTalk, onChat 
   return (
     <div key={seat} style={{ display: "contents" }}>
       <div className="row">
-        <h2 className="grow">{seat}</h2>
+        <h2 className="grow">{seat}{need?.name ? <span className="muted" style={{ fontSize: 15, fontWeight: 500 }}> · {need.name}</span> : null}</h2>
         {need ? <span className="pill dim">{LANG_NAME[need.lang] || need.lang}</span> : null}
         {need?.accessibility ? <span className="pill bad"><Icon id={ACCESSIBILITY_META[need.accessibility].icon} />{ACCESSIBILITY_META[need.accessibility].en}</span> : null}
         <span className={`dot ${need?.connected ? "on" : ""}`} title={need?.connected ? "screen connected" : "not connected"} />
@@ -583,7 +606,7 @@ function Needs({ needs, LANG_NAME, onTalk }) {
   return (<div className="needs">{[...needs].sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id)).map((n) => (
     <div key={n.id} className="need">
       <span className={`dot ${n.connected ? "on" : ""}`} title={n.connected ? "screen connected" : "not connected"} />
-      <b>{n.id}</b><span className="pill dim">{LANG_NAME[n.lang] || n.lang}</span>
+      <b>{n.id}</b>{n.name ? <span className="muted">{n.name}</span> : null}<span className="pill dim">{LANG_NAME[n.lang] || n.lang}</span>
       {n.pictures ? <span className="pill violet">絵のみ · Pictures only</span> : null}
       {n.senior ? <span className="pill ok">大きな文字 · Large text</span> : null}
       {n.read ? <span className="pill dim">読み上げ · Read aloud</span> : null}

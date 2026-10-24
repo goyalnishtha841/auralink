@@ -16,7 +16,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 
 import anyio
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -26,7 +26,7 @@ from engine.lexicon import ROOT
 from engine.matcher import tokenize
 from engine.types import Phase
 
-from . import auth, checkin, demo, languages, pa, persist, recordings, rounds
+from . import auth, bcbp, checkin, demo, languages, pa, persist, recordings, rounds, seat_speech
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -261,6 +261,7 @@ def card_for_crew(card: Card) -> dict:
     data["pictures"] = cabin.seats[card.seat].pictures
     data["accessibility"] = cabin.seats[card.seat].accessibility
     data["zone"] = SEAT_ZONE.get(card.seat)
+    data["name"] = cabin.seats[card.seat].name
     return data
 
 
@@ -291,10 +292,10 @@ def crew_state() -> dict:
         "round_plan": rounds.plan(cabin),
         "round": cabin.round,
         "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
-        "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "accessibility",
+        "seat_needs": [s.model_dump(include={"id", "name", "lang", "senior", "pictures", "read", "accessibility",
                                              "checked_in", "connected"})
                        for s in cabin.seats.values()
-                       if s.lang != "en" or s.senior or s.pictures or s.read or s.accessibility],
+                       if s.lang != "en" or s.senior or s.pictures or s.read or s.accessibility or s.name],
         # Live Conversation panels open right now, so a crew tablet that reconnects mid-call still
         # knows which seats to show (conv_message itself only reaches sockets already connected).
         "conv_seats": [s.id for s in cabin.seats.values() if s.conv_mode],
@@ -617,6 +618,70 @@ async def post_checkin(body: CheckinIn) -> dict:
     return {"seat": body.seat, **prefs, "passenger_path": f"/passenger?{query}"}
 
 
+class SeatVoiceIn(BaseModel):
+    text: str | None = Field(None, max_length=200)   # typed (presenter backup, tests) ...
+    audio_b64: str | None = None                       # ... or the passenger's own voice, 16 kHz mono int16
+
+
+@app.post("/api/seat/by-voice")
+async def seat_by_voice(body: SeatVoiceIn) -> dict:
+    """The shared scanner's mic: say your seat ("three four kay") instead of only tapping it on
+    the map, using the same offline speech-to-text as every other request. No seat is known yet
+    at this point -- that's the question being answered -- so this is the one passenger-side
+    route with no seat in its path and no crew PIN."""
+    import base64
+
+    import numpy as np
+
+    if body.audio_b64:
+        pcm = base64.b64decode(body.audio_b64)
+        if len(pcm) > MAX_AUDIO_S * 16_000 * 2:
+            raise HTTPException(413, f"Longer than {MAX_AUDIO_S} s")
+        audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
+        try:
+            tr = await asyncio.to_thread(run_asr, audio, ("en", "hi"))
+        except ImportError:
+            raise HTTPException(503, "voice unavailable: faster-whisper not installed") from None
+        heard = tr.hypotheses[0].text if tr.hypotheses else ""
+    else:
+        heard = body.text or ""
+    return {"heard": heard, "seat": seat_speech.parse(heard, set(SEAT_IDS))}
+
+
+class SeatBoardingPassIn(BaseModel):
+    text: str = Field(..., max_length=400)   # raw text decoded from the scanned barcode
+
+
+@app.post("/api/seat/by-boarding-pass")
+def seat_by_boarding_pass(body: SeatBoardingPassIn) -> dict:
+    """The shared scanner's "scan boarding pass" option: the camera already decoded the barcode
+    client-side (no airline integration needed -- every boarding pass already carries one, in
+    the same IATA-standard format); this just parses that text and checks the seat it names is
+    one that exists on this aircraft."""
+    bp = bcbp.decode(body.text)
+    if bp is None or bp.seat not in cabin.seats:
+        return {"seat": None, "name": None}
+    return {"seat": bp.seat, "name": f"{bp.first_name.title()} {bp.last_name.title()}".strip()}
+
+
+DEMO_FLIGHT = {"carrier": "JL", "flight": "6", "origin": "DEL", "destination": "HND"}
+
+
+@app.get("/api/boarding-pass/demo")
+def boarding_pass_demo(name: str = Query(..., max_length=60), seat: str = Query(...)) -> dict:
+    """Presenter/demo-kit tool (web/app/boarding-pass): since nobody at this hackathon has a real
+    JAL ticket to test with, this issues one -- a boarding pass in the same barcode format a real
+    airline's departure-control system would -- so the "scan boarding pass" seat option has
+    something real to scan. Encodes only, never stored: nothing here is a real passenger record."""
+    if seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {seat}")
+    name = name.strip() or "Passenger"
+    first, _, last = name.rpartition(" ")
+    bp = bcbp.BoardingPass(last_name=last, first_name=first or "", pnr=f"AU{seat:0>4}",
+                           seat=seat, **DEMO_FLIGHT)
+    return {"text": bcbp.encode(bp)}
+
+
 @app.get("/api/seat/{seat}")
 def get_seat(seat: str) -> dict:
     """What a seat's screen should open with (set at check-in, or by the passenger last time)."""
@@ -657,6 +722,12 @@ async def passenger_ws(ws: WebSocket, seat: str) -> None:
     await ws.accept()
     passengers[seat].add(ws)
     cabin.seats[seat].connected = True
+    check = cabin.exit_checks.get(seat)
+    if check and check.result == "pending":
+        # the passenger's page loaded (or reloaded) after crew started an exit-row check for this
+        # seat: without this they would never see it, since start_exit_check only pushes once, to
+        # whoever was connected at that moment.
+        await ws.send_json({"type": "exit_check", "check": templates.exit_view(cabin.seats[seat].lang)})
     await push_crew()
     try:
         while True:
@@ -879,6 +950,9 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         s.read = bool(msg.get("read", s.read))
         acc = msg.get("accessibility", s.accessibility)
         s.accessibility = acc if acc in (None, *ACCESSIBILITY_PROFILES) else s.accessibility
+        name = msg.get("name")
+        if name:   # only a scanned boarding pass sends this; never erase a name already known
+            s.name = str(name)[:60]
 
     elif kind == "text":
         await interpret_and_reply(seat, msg.get("text", ""))
