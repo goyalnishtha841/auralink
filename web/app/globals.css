@@ -246,11 +246,12 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 @keyframes seatPulse { 50% { box-shadow: 0 0 0 6px rgba(255, 61, 90, 0.25); } }
 
 /* seat gate: shared-scanner passengers pick their own seat on a plane-shaped map before anything connects */
-/* align-items: flex-start (not center): a row wider than the viewport must only overflow to the
-   right (scrollable, revealing the far seats) -- centering it would clip equally off both edges,
-   hiding the row-number label on the left with no way to scroll back to it. */
-.seatgate-map { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; max-height: 50vh; overflow: auto; padding: 4px; }
-.seatgate-row { display: flex; align-items: center; gap: 5px; flex: none; min-width: 100%; }
+/* Centered: the seat sizing below keeps every row within common phone widths, so this is safe.
+   If a row ever is wider than the viewport (an unusually narrow screen), overflow still scrolls
+   rather than clips, and the row label stays put via position: sticky rather than disappearing
+   off the left edge the way a plain centered overflow would. */
+.seatgate-map { display: flex; flex-direction: column; gap: 7px; align-items: center; max-height: 50vh; overflow: auto; padding: 4px; }
+.seatgate-row { display: flex; align-items: center; gap: 5px; flex: none; }
 .seatgate-row-label { position: sticky; left: 4px; width: 14px; font: 700 10.5px var(--mono); color: var(--faint);
   text-align: right; flex: none; background: var(--bg); z-index: 1; }
 .seatgate-seats { display: flex; gap: 3px; flex: none; }
