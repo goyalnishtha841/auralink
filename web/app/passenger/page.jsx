@@ -433,8 +433,6 @@ export default function Passenger() {
     return () => { aliveRef.current = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); removeEventListener("pointerdown", unlockAudio); };
   }, []); // eslint-disable-line
 
-  if (s.awaitingSeat) return <SeatGate cfg={s.cfg} onConfirm={confirmSeat} />;
-
   // Shake to call the crew: 3 strong jolts within ~2s, same request as tapping "Call crew".
   useEffect(() => {
     const HAS_MOTION = typeof window !== "undefined" && typeof DeviceMotionEvent !== "undefined";
@@ -478,6 +476,8 @@ export default function Passenger() {
       if (onFirstTap) document.removeEventListener("pointerdown", onFirstTap);
     };
   }, []); // eslint-disable-line
+
+  if (s.awaitingSeat) return <SeatGate cfg={s.cfg} onConfirm={confirmSeat} />;
 
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
   if (s.onboarding) return (
