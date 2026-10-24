@@ -61,5 +61,7 @@
   "mute": "ಮೂಕ ಧ್ವನಿ",
   "unmute": "ಮೌನವಿಲ್ಲದ ಧ್ವನಿ",
   "accessibilityLabel": "ಲಭ್ಯತೆ",
-  "convReplyPlaying": "ಸ್ಪಂದಿಸುವ  ಮೈಕ್ರೋಫೋನ್ ವಿರಾಮ"
+  "convReplyPlaying": "ಸ್ಪಂದಿಸುವ  ಮೈಕ್ರೋಫೋನ್ ವಿರಾಮ",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

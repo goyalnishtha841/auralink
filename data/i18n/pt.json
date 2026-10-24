@@ -61,5 +61,7 @@
   "mute": "Voz muda",
   "unmute": "Voz silenciosa.",
   "accessibilityLabel": "Acessibilidade",
-  "convReplyPlaying": "Responder tocando o microfone pausa"
+  "convReplyPlaying": "Responder tocando o microfone pausa",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

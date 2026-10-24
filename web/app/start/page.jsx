@@ -1,20 +1,21 @@
 "use client";
 import "../tools.css";
 import { useEffect, useState } from "react";
-import { Ambient, AppHeader, Reveal } from "@/components/ui";
+import { Ambient, AppHeader, BrandMark, Reveal } from "@/components/ui";
+import { Icon } from "@/lib/icons";
 
 const PAGES = [
-  ["/passenger?seat=34K", "Passenger", "Passenger’s phone", "Ask for help by speaking, typing or tapping a picture; read replies, briefings and announcements"],
-  ["/crew", "Crew tablet", "Cabin crew (PIN)", "Requests in Japanese, one-tap replies, safety briefings, PA captions, care rounds, phrasebook"],
-  ["/checkin", "Check-in", "Airport kiosk", "Passenger picks language and needs before boarding; the seat opens set up"],
-  ["/judge", "Under the hood", "Jury (PIN)", "How each request was understood, step by step"],
-  ["/presenter", "Presenter console", "Presenter (PIN)", "Pitch timer, health check, backup buttons, reset between rehearsals"],
-  ["/report", "Flight report", "JAL manager (PIN)", "How the flight went: waiting times, recovery, safety understanding"],
-  ["/seats", "Seat QR cards", "Demo setup", "Printable QR cards for each seat"],
-  ["/boarding-pass", "Boarding pass simulator", "Demo setup", "Issues a test boarding pass to scan with the passenger's Scan boarding pass option"],
-  ["/phone-setup", "Phone setup", "Each demo phone, once", "Lets a phone use its microphone with the laptop"],
-  ["/noise", "Cabin noise", "Demo", "Plays engine noise to show it works in a loud cabin"],
-  ["/record", "Record voices", "Volunteers", "Records test voices so we can measure accuracy"],
+  ["/passenger?seat=34K", "mic", "Passenger", "Passenger’s phone", "Ask for help by speaking, typing or tapping a picture; read replies, briefings and announcements"],
+  ["/crew", "tablet", "Crew tablet", "Cabin crew (PIN)", "Requests in Japanese, one-tap replies, safety briefings, PA captions, care rounds, phrasebook"],
+  ["/checkin", "qr", "Check-in", "Airport kiosk", "Passenger picks language and needs before boarding; the seat opens set up"],
+  ["/judge", "question", "Under the hood", "Jury (PIN)", "How each request was understood, step by step"],
+  ["/presenter", "clock", "Presenter console", "Presenter (PIN)", "Pitch timer, health check, backup buttons, reset between rehearsals"],
+  ["/report", "grid", "Flight report", "JAL manager (PIN)", "How the flight went: waiting times, recovery, safety understanding"],
+  ["/seats", "qr", "Seat QR cards", "Demo setup", "Printable QR cards for each seat"],
+  ["/boarding-pass", "qr", "Boarding pass simulator", "Demo setup", "Issues a test boarding pass to scan with the passenger's Scan boarding pass option"],
+  ["/phone-setup", "settings", "Phone setup", "Each demo phone, once", "Lets a phone use its microphone with the laptop"],
+  ["/noise", "speaker", "Cabin noise", "Demo", "Plays engine noise to show it works in a loud cabin"],
+  ["/record", "person", "Record voices", "Volunteers", "Records test voices so we can measure accuracy"],
 ];
 
 export default function Start() {
@@ -31,7 +32,8 @@ export default function Start() {
       <AppHeader online={!!info} title="Auralink" sub="Start here" />
       <main className="app">
         <Reveal className="panel t-hero">
-          <span className="t-eyebrow">— Demo guide</span>
+          <div className="t-hero-mark"><BrandMark size={30} /></div>
+          <span className="t-eyebrow">Demo guide</span>
           <h1>Run the Auralink demo in <span>3 steps</span></h1>
           <p>Auralink runs on this laptop. Passengers’ phones and the crew tablet connect to it over Wi-Fi, like on a plane. Nothing goes to the internet.</p>
         </Reveal>
@@ -39,11 +41,11 @@ export default function Start() {
         <Reveal className="panel" delay={0.05}>
           <h2>How it works without the internet</h2>
           <div className="t-flow" role="img" aria-label="Passenger phones and the crew tablet connect over the cabin Wi-Fi to this laptop, which runs Auralink. No internet.">
-            <div className="t-node"><b>Passenger phones</b><small>Scan the QR code on the seat. Opens a web page: no app to install.</small></div>
+            <div className="t-node"><span className="icon"><Icon id="mic" /></span><b>Passenger phones</b><small>Scan the QR code on the seat. Opens a web page: no app to install.</small></div>
             <div className="arrow" aria-hidden="true">⇄</div>
-            <div className="t-node hub"><b>This laptop: the Auralink hub</b><small>Speech to text, matching, all screens. On a plane: a small computer on the aircraft’s own Wi-Fi.</small></div>
+            <div className="t-node hub"><span className="icon"><Icon id="wave" /></span><b>This laptop: the Auralink hub</b><small>Speech to text, matching, all screens. On a plane: a small computer on the aircraft’s own Wi-Fi.</small></div>
             <div className="arrow" aria-hidden="true">⇄</div>
-            <div className="t-node"><b>Crew tablet</b><small>Requests in Japanese, replies, briefings. Locked with the crew PIN.</small></div>
+            <div className="t-node"><span className="icon"><Icon id="tablet" /></span><b>Crew tablet</b><small>Requests in Japanese, replies, briefings. Locked with the crew PIN.</small></div>
           </div>
           <p className="muted" style={{ margin: 0 }}>All devices join the same Wi-Fi (the cabin Wi-Fi, or for the demo a phone hotspot or a router). The internet cable can be unplugged: everything keeps working.</p>
           {info ? <p className="mono" style={{ margin: 0, fontSize: 13 }}>Phones open: <span style={{ color: "var(--accent)" }}>{base}</span></p> : null}
@@ -51,6 +53,7 @@ export default function Start() {
 
         <div className="t-steps">
           <Reveal className="panel t-step" delay={0.05}>
+            <span className="num-badge">1</span>
             <span className="num">Step 1 · Passenger</span>
             <h2 className="big">Scan the seat QR code</h2>
             {info ? <img className="qr" src={`/api/qr?data=${encodeURIComponent(`${base}/passenger?seat=34K`)}`} alt="QR code for the passenger screen of seat 34K" /> : null}
@@ -59,6 +62,7 @@ export default function Start() {
             <div className="t-links"><a href="/seats"><button>Print all seat cards</button></a><a href="/passenger?seat=34K" target="_blank" rel="noopener"><button>Open seat 34K here</button></a></div>
           </Reveal>
           <Reveal className="panel t-step" delay={0.12}>
+            <span className="num-badge">2</span>
             <span className="num">Step 2 · Crew</span>
             <h2 className="big">Open the crew tablet</h2>
             {info ? <img className="qr" src={`/api/qr?data=${encodeURIComponent(`${base}/crew`)}`} alt="QR code for the crew tablet" /> : null}
@@ -68,6 +72,7 @@ export default function Start() {
             <div className="t-links"><a href="/crew" target="_blank" rel="noopener"><button className="primary">Open crew tablet</button></a></div>
           </Reveal>
           <Reveal className="panel t-step" delay={0.19}>
+            <span className="num-badge">3</span>
             <span className="num">Step 3 · Jury</span>
             <h2 className="big">Show how it decides</h2>
             <p><b style={{ color: "var(--fg)" }}>Under the hood</b> shows, live, every guess the speech model made, which words were ignored, how the sounds were matched and why Auralink asked instead of guessing.</p>
@@ -83,9 +88,17 @@ export default function Start() {
         </Reveal>
 
         <Reveal className="panel">
-          <h2>Every page, in one line</h2>
-          <table className="t-table"><thead><tr><th>Page</th><th>Who uses it</th><th>What it is for</th></tr></thead>
-            <tbody>{PAGES.map(([href, name, who, what]) => <tr key={href}><td><a href={href}>{name}</a></td><td>{who}</td><td className="muted" style={{ fontSize: 15 }}>{what}</td></tr>)}</tbody></table>
+          <h2>Every page, at a glance</h2>
+          <div className="t-page-grid">
+            {PAGES.map(([href, icon, name, who, what], i) => (
+              <Reveal as="a" className="t-page-card" href={href} key={href} delay={i * 0.03}>
+                <span className="icon"><Icon id={icon} /></span>
+                <b>{name}</b>
+                <span className="who">{who}</span>
+                <p>{what}</p>
+              </Reveal>
+            ))}
+          </div>
         </Reveal>
 
         <Reveal className="panel">

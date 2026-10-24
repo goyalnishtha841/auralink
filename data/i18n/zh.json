@@ -61,5 +61,7 @@
   "mute": "沉默的声音",
   "unmute": "无声的声音",
   "accessibilityLabel": "获取性",
-  "convReplyPlaying": "回复播放 麦克风暂停"
+  "convReplyPlaying": "回复播放 麦克风暂停",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

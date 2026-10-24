@@ -69,13 +69,50 @@ export function AppHeader({ online, title, sub, children, home = true }) {
       <span className={`dot ${online ? "on" : ""}`} title={online ? "Connected" : "Offline"} />
       <h1>{title}{sub ? <span className="muted">{sub}</span> : null}</h1>
       {children}
-      {home ? <a href="/" aria-label="Home"><button className="ghost"><Icon id="home" /></button></a> : null}
+      {home ? <a href="/" aria-label="Home"><button type="button" className="hdr-icon-btn"><Icon id="home" /></button></a> : null}
     </header>
   );
 }
 
 export function Ambient() {
-  return (<><div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /></>);
+  return (<><div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /><Sakura /></>);
+}
+
+// A few cherry-blossom petals drifting slowly behind every screen (桜). Behind the panels, so they
+// only show in the gaps; very sparse and slow, so they never compete with the content.
+// Turned off for prefers-reduced-motion.
+export function Sakura({ count = 7 }) {
+  const [petals, setPetals] = useState([]);
+  useEffect(() => {
+    setPetals(Array.from({ length: count }, (_, i) => ({
+      key: i, left: `${Math.random() * 100}%`, s: `${6 + Math.random() * 6}px`,
+      d: `${24 + Math.random() * 16}s`, delay: `${-Math.random() * 40}s`, sway: `${40 + Math.random() * 80}px`,
+    })));
+  }, [count]);
+  return (
+    <div className="sakura" aria-hidden="true">
+      {petals.map((p) => <i key={p.key} style={{ left: p.left, "--s": p.s, "--d": p.d, "--delay": p.delay, "--sway": p.sway }} />)}
+    </div>
+  );
+}
+
+// Water ripple (波紋) where a button or link is tapped: a thin ring that spreads and fades.
+// Fixed-position overlay, so it never changes any layout. Off for prefers-reduced-motion.
+export function TapRipple() {
+  const [rings, setRings] = useState([]);
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let n = 0;
+    const on = (e) => {
+      if (!e.target.closest?.("button, a, [role=button], .tile")) return;
+      const id = ++n;
+      setRings((r) => [...r.slice(-4), { id, x: e.clientX, y: e.clientY }]);
+      setTimeout(() => setRings((r) => r.filter((x) => x.id !== id)), 900);
+    };
+    addEventListener("pointerdown", on, { passive: true });
+    return () => removeEventListener("pointerdown", on);
+  }, []);
+  return <>{rings.map((r) => <span key={r.id} className="hamon" style={{ left: r.x, top: r.y }} aria-hidden="true" />)}</>;
 }
 
 // Dialog that slides up softly. `content` null = closed. Always closable: a visible X, the
@@ -104,11 +141,13 @@ export function Sheet({ content, big = false, onClose }) {
   );
 }
 
-export function Reveal({ children, delay = 0, y = 26, className = "", as = "div", ...rest }) {
+export function Reveal({ children, delay = 0, y = 18, className = "", as = "div", ...rest }) {
   const M = motion[as];
+  // margin expands the viewport downward, so content starts fading in before it's scrolled
+  // to, instead of sitting blank while the page catches up to a fast scroll.
   return (
-    <M className={className} initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px -8% 0px" }}
-      transition={{ duration: 0.8, delay, ease }} {...rest}>
+    <M className={className} initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px 20% 0px" }}
+      transition={{ duration: 0.55, delay, ease }} {...rest}>
       {children}
     </M>
   );

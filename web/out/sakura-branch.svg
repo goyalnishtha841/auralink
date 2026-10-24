@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+  <defs>
+    <radialGradient id="sbPink" cx="35%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#fff2ee"/>
+      <stop offset="55%" stop-color="#ffb9c2"/>
+      <stop offset="100%" stop-color="#ff8fa0"/>
+    </radialGradient>
+    <radialGradient id="sbPinkDeep" cx="35%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#ffd9d9"/>
+      <stop offset="55%" stop-color="#ff9fae"/>
+      <stop offset="100%" stop-color="#f4748c"/>
+    </radialGradient>
+    <g id="sbloom">
+      <g fill="url(#sbPink)">
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(0)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(72)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(144)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(216)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(288)"/>
+      </g>
+      <circle r="2.1" fill="#fff6ec"/>
+    </g>
+    <g id="sbloomDeep">
+      <g fill="url(#sbPinkDeep)">
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(0)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(72)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(144)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(216)"/>
+        <ellipse cx="0" cy="-5.2" rx="3.8" ry="5.2" transform="rotate(288)"/>
+      </g>
+      <circle r="2.1" fill="#fff6ec"/>
+    </g>
+    <ellipse id="sbud" rx="2.6" ry="4.4" fill="url(#sbPinkDeep)"/>
+    <path id="sbpetal" d="M0 0 Q 3.4 -2 6.6 0 Q 3.4 2 0 0 Z" fill="#ffb9c2" fill-opacity="0.85"/>
+  </defs>
+
+  <path d="M26 2 C 14 34, 46 60, 78 76 C 110 92, 132 106, 172 118" fill="none" stroke="#5c3f36" stroke-width="2.2" opacity="0.7"/>
+  <path d="M60 52 C 52 42, 40 40, 30 45" fill="none" stroke="#5c3f36" stroke-width="1.5" opacity="0.65"/>
+  <path d="M100 88 C 106 76, 120 72, 132 75" fill="none" stroke="#5c3f36" stroke-width="1.5" opacity="0.65"/>
+  <path d="M140 104 C 146 96, 156 94, 164 98" fill="none" stroke="#5c3f36" stroke-width="1.3" opacity="0.6"/>
+
+  <use href="#sbloom" x="26" y="4" transform="scale(1.5)"/>
+  <use href="#sbloomDeep" x="42" y="18" transform="scale(1.25)"/>
+  <use href="#sbloom" x="18" y="26" transform="scale(1.35)"/>
+  <use href="#sbloomDeep" x="36" y="42" transform="scale(1.5)"/>
+  <use href="#sbloom" x="58" y="34" transform="scale(1.1)"/>
+  <use href="#sbloomDeep" x="64" y="58" transform="scale(1.15)"/>
+  <use href="#sbloom" x="88" y="72" transform="scale(1.3)"/>
+  <use href="#sbloomDeep" x="104" y="90" transform="scale(1.0)"/>
+  <use href="#sbloom" x="128" y="78" transform="scale(0.9)"/>
+  <use href="#sbloomDeep" x="140" y="100" transform="scale(0.85)"/>
+  <use href="#sbloom" x="160" y="100" transform="scale(0.75)"/>
+  <use href="#sbud" x="48" y="10" transform="rotate(-20 48 10)"/>
+  <use href="#sbud" x="78" y="46" transform="rotate(30 78 46)"/>
+  <use href="#sbud" x="150" y="92" transform="rotate(-10 150 92)"/>
+
+  <use href="#sbpetal" x="20" y="64" transform="rotate(-30 20 64)"/>
+  <use href="#sbpetal" x="96" y="46" transform="rotate(50 96 46) scale(0.85)"/>
+  <use href="#sbpetal" x="176" y="128" transform="rotate(-18 176 128) scale(0.8)"/>
+</svg>

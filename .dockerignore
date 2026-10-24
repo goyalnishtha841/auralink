@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store
+certs/
+.git/
+.claude/
+eval/
+tests/
+docs/
+hardware/
+node_modules/
+web/node_modules/
+web/.next/
+
+# Downloaded models and local/runtime state: entrypoint re-downloads TTS into the mounted volume,
+# and flight/recordings state belongs to a real run, not the image.
+data/tts/
+data/flight/
+data/recordings/*
+!data/recordings/README.md

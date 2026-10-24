@@ -61,5 +61,7 @@
   "mute": "મૌન અવાજ",
   "unmute": "શાંત અવાજ",
   "accessibilityLabel": "સુલભતા",
-  "convReplyPlaying": "જવાબ રમી રહ્યા છે  માઇક્રો પાઉઝ"
+  "convReplyPlaying": "જવાબ રમી રહ્યા છે  માઇક્રો પાઉઝ",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

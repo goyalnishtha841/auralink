@@ -34,10 +34,18 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; overflow-x: clip; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; background: var(--bg); overscroll-behavior: none; }
+body { overscroll-behavior: none; }
 body {
   margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
   font: 400 15px/1.55 var(--body); -webkit-font-smoothing: antialiased; overflow-x: clip;
+  /* <html> and <body> both set a background + a non-visible overflow-x (needed to stop horizontal
+     scroll bounce). Without isolation, that combination makes browsers mishandle z-index: -1 fixed
+     children two different ways: either swallowed entirely behind the root's own background, or (if
+     bumped to z-index: 0 to dodge that) incorrectly painted ON TOP of ordinary static content like
+     the footer. Isolating body gives it one unambiguous stacking context, so z-index: -1 decorative
+     layers (.ambient, .sakura) sit correctly behind real content, everywhere on every page. */
+  isolation: isolate;
 }
 a { color: inherit; }
 ::selection { background: var(--accent); color: #fff; }
@@ -45,9 +53,20 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 .mono { font-family: var(--mono); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* flat backdrop: no gradients, no glow, no grain */
+/* ambient backdrop: film grain + two slow coral/white glows. Pure CSS, cheap on phones.
+   Kept (not flattened) because the landing page's glow/warmth was a deliberate, heavily-iterated
+   fix this session for a "looks flat/empty" complaint — app screens sit on opaque panels over this,
+   so the glow only shows as a faint backdrop bleed in the gaps, not a clash with their flat cards. */
 .ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bg); }
-.grain { display: none; }
+.ambient::before, .ambient::after {
+  content: ""; position: absolute; width: 85vmax; height: 85vmax; border-radius: 50%; filter: blur(110px);
+}
+.ambient::before { background: radial-gradient(circle, rgba(255, 91, 91, 0.4), transparent 62%); top: -28vmax; right: -28vmax; animation: drift1 26s ease-in-out infinite alternate; }
+.ambient::after { background: radial-gradient(circle, rgba(122, 139, 255, 0.26), transparent 62%); bottom: -32vmax; left: -28vmax; animation: drift2 32s ease-in-out infinite alternate; }
+.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.055; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+@keyframes drift1 { to { transform: translate(-12vmax, 14vmax) scale(1.1); } }
+@keyframes drift2 { to { transform: translate(14vmax, -10vmax) scale(1.15); } }
 
 /* ---------- app shell (passenger, crew, judge, tools) ---------- */
 /* header as a floating rounded card, not an edge-to-edge bar: a circular icon button each side,
@@ -68,6 +87,13 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 .hdr-icon-btn:hover:not(:disabled) { border-color: var(--line-strong); background: #202024; }
 .hdr-icon-btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .hdr-icon-btn .icon .ic { width: 20px; height: 20px; }
+/* a labelled control (Phase/Zone) that sits in the same header row as the round icon buttons —
+   a small caption above a select, so it reads as one family of controls instead of a mismatched row. */
+.hdr-field { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.hdr-field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.hdr-field select { min-height: 40px; padding: 8px 12px; }
+.hdr-divider { width: 1px; align-self: stretch; min-height: 32px; background: var(--line); flex: none; }
+@media (max-width: 760px) { .hdr-divider { display: none; } }
 .settings-sheet { display: flex; flex-direction: column; gap: 16px; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .settings-row > span { font-weight: 500; }
@@ -80,6 +106,24 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font: 800 19px var(--display); letter-spacing: -0.02em; }
 .brand svg { width: 34px; height: 22px; }
 main.app { padding: clamp(14px, 3vw, 28px); display: flex; flex-direction: column; gap: 18px; max-width: 1180px; margin: 0 auto; }
+
+/* passenger shell: a single centered column, same order on every screen size (how can we help →
+   type or say → tap a picture → your requests) — a two-column split read as an odd, disconnected
+   layout on a laptop, so this just widens the one column a little instead of splitting it. */
+main.app.pax-shell { max-width: 760px; }
+.pax-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; width: 100%; }
+@media (min-width: 900px) { main.app.pax-shell { max-width: 820px; } }
+/* the header bar normally spans the full width; on the passenger screen, match it to the same
+   centered column as the content below so the two don't look like different layouts stacked. */
+.app-header.pax-header { max-width: 760px; margin-left: auto; margin-right: auto; }
+@media (min-width: 900px) { .app-header.pax-header { max-width: 820px; } }
+
+/* crew shell: same idea as the passenger shell — the two-column request/cabin-map layout
+   already reflows, it was just pinned to a phone-era 1320px regardless of screen size. */
+.crew-shell { max-width: 1320px; }
+main.app.crew-shell { max-width: 1320px; }
+@media (min-width: 1300px) { .crew-shell, main.app.crew-shell { max-width: 1520px; } }
+@media (min-width: 1600px) { .crew-shell, main.app.crew-shell { max-width: 1680px; } .seat { height: 36px; font-size: 12px; } }
 
 .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); flex: none; box-shadow: 0 0 0 0 transparent; transition: background 0.3s; }
 .dot.on { background: var(--ok); animation: breathe 2.6s ease-in-out infinite; }
@@ -499,3 +543,22 @@ html:is([lang="hi"], [lang="ta"], [lang="th"]) .panel > h2 { font: 600 14px var(
 .ob-fab-hint { position: fixed; right: 16px; bottom: 82px; z-index: 39; background: rgba(10, 16, 38, 0.95); border: 1px solid rgba(90, 130, 255, 0.35);
   border-radius: 14px; padding: 10px 14px; font-size: 13px; color: #fff; max-width: 190px; box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.6); }
 .ob-fab-menu .icon .ic { width: 18px; height: 18px; color: var(--accent); }
+
+/* ---------- soft Japanese motion (no new colours) ---------- */
+/* 桜: sparse petals drifting behind every screen */
+.sakura { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.sakura i { position: absolute; top: -30px; width: var(--s); height: calc(var(--s) * 0.72); border-radius: 80% 0 80% 0; opacity: 0;
+  background: linear-gradient(135deg, #ffd3d6, #ff9aa4 70%); animation: sakuraFall var(--d) linear var(--delay) infinite; }
+@keyframes sakuraFall {
+  0% { transform: translate3d(0, -4vh, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.4; }
+  50% { transform: translate3d(calc(var(--sway) * -1), 52vh, 0) rotate(180deg); }
+  88% { opacity: 0.3; }
+  100% { transform: translate3d(var(--sway), 106vh, 0) rotate(380deg); opacity: 0; }
+}
+/* 波紋: a ripple where you tap */
+.hamon { position: fixed; z-index: 90; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none;
+  border: 1.5px solid var(--accent); opacity: 0; animation: hamon 0.85s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes hamon { 0% { transform: scale(0.1); opacity: 0.55; } 100% { transform: scale(1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sakura, .hamon { display: none; } }
+@media print { .sakura, .hamon { display: none !important; } }

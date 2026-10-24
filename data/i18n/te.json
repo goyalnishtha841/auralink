@@ -61,5 +61,7 @@
   "mute": "నిశ్శబ్ద వాయిస్",
   "unmute": "నిశ్శబ్ద స్వరం",
   "accessibilityLabel": "ప్రాప్యత",
-  "convReplyPlaying": "ప్రత్యుత్తరం ప్లే  మైక్రోస్టేషన్ నిలిపివేయబడింది"
+  "convReplyPlaying": "ప్రత్యుత్తరం ప్లే  మైక్రోస్టేషన్ నిలిపివేయబడింది",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

@@ -48,6 +48,8 @@
   "scanAtSeat": "Your seat link",
   "nextPassenger": "Next passenger",
   "announcement": "Cabin announcement",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…",
   "suggestTitle": "I'm not fully sure, here's what I understood",
   "suggestDidYouMean": "Did you mean",
   "suggestOrSend": "Or send this message to crew (translated, not reviewed)",

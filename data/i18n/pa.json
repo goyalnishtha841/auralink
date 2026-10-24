@@ -61,5 +61,7 @@
   "mute": "ਮੂਟ ਆਵਾਜ਼",
   "unmute": "ਅਥਾਹ ਆਵਾਜ਼",
   "accessibilityLabel": "ਪਹੁੰਚਯੋਗਤਾ",
-  "convReplyPlaying": "ਮਾਈਕ੍ਰੋਫੋਨ ਰੁਕਿਆ"
+  "convReplyPlaying": "ਮਾਈਕ੍ਰੋਫੋਨ ਰੁਕਿਆ",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

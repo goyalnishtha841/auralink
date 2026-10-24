@@ -69,7 +69,7 @@ export default function Checkin() {
         <AnimatePresence mode="wait">
           {!done ? (
             <motion.section key="form" className="panel" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ ease }}>
-              <span className="t-eyebrow">— Check-in</span>
+              <span className="t-eyebrow">Check-in</span>
               <h1 style={{ font: "800 32px/1.15 var(--display)", margin: 0, letterSpacing: "-.03em" }}>{t("checkinTitle")}</h1>
               <p className="muted" style={{ margin: 0, fontSize: 15 }}>{t("checkinIntro")}</p>
               <h2>{t("language")}</h2>
