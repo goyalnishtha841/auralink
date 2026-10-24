@@ -7,6 +7,7 @@
 // from /api/config. The "scenario" and "visual" steps are clearly-labelled demos -- they never open
 // a socket or create a real request, so trying the tutorial can never page the cabin crew.
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/lib/icons";
 import { Picto } from "@/lib/pictograms";
@@ -228,32 +229,23 @@ function copyFor(lang) { return COPY[lang] || COPY.en; }
 
 // ---- the avatar -------------------------------------------------------------------------------
 
-export function CrewAvatar({ state = "idle", size = 112 }) {
+// The real SkyConnect character art (web/public/images/skyconnect-assistant.png) -- a transparent
+// PNG, so no SVG/CSS recreation. `poses` lets a future state (e.g. a dedicated "listening" or
+// "celebrating" pose) use its own image once one exists; anything not in `poses` just reuses
+// `src`, so this works today with the single asset and needs no change when more arrive.
+export const DEFAULT_AVATAR_SRC = "/images/skyconnect-assistant.png";
+
+export function CrewAvatar({ state = "idle", size = 112, src = DEFAULT_AVATAR_SRC, poses = {} }) {
+  const photo = poses[state] || src;
   return (
     <div className="crew-avatar" data-state={state} style={{ width: size, height: size }} aria-hidden="true">
-      <svg viewBox="0 0 100 100">
-        <g className="ca-spark"><path d="M14 26 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z" fill="var(--warn)" /><path d="M86 30 l1.6 4.2 4.2 1.6 -4.2 1.6 -1.6 4.2 -1.6 -4.2 -4.2 -1.6 4.2 -1.6z" fill="var(--ok)" /></g>
-        <circle className="ca-ring" cx="50" cy="52" r="34" fill="none" stroke="var(--accent)" strokeWidth="2.5" />
-        <circle className="ca-spinner" cx="50" cy="52" r="34" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeDasharray="42 170" strokeLinecap="round" />
-        <g className="ca-head">
-          <path d="M18 32 Q50 2 82 32 L80 40 Q50 18 20 40 Z" fill="var(--surface-3)" stroke="var(--line-strong)" strokeWidth="1" />
-          <circle cx="50" cy="22" r="3.4" fill="var(--accent)" />
-          <circle cx="50" cy="56" r="29" fill="#f0c6a0" />
-          <path d="M22 50 a28 28 0 0 1 56 0" fill="none" />
-          <ellipse className="ca-eye" cx="40" cy="52" rx="3.1" ry="4" fill="#2b2320" />
-          <ellipse className="ca-eye" cx="60" cy="52" rx="3.1" ry="4" fill="#2b2320" />
-          <path className="ca-mouth-idle" d="M39 67 Q50 75 61 67" stroke="#8a5338" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <ellipse className="ca-mouth-open" cx="50" cy="68" rx="8" ry="6" fill="#6b3a26" />
-          <path d="M30 80 L50 92 L70 80 L70 100 L30 100 Z" fill="var(--surface-3)" />
-          <path d="M44 80 L50 92 L56 80 Z" fill="var(--accent)" />
-        </g>
-        <g className="ca-mic-badge" transform="translate(76,76)">
-          <circle r="11" fill="var(--accent)" />
-          <rect x="-2.2" y="-6" width="4.4" height="8" rx="2.2" fill="#fff" />
-          <path d="M-5 -1a5 5 0 0 0 10 0" stroke="#fff" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-          <path d="M0 3v3" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" />
-        </g>
-      </svg>
+      <span className="ca-ring" />
+      <span className="ca-spinner" />
+      <div className="ca-photo-wrap">
+        <Image src={photo} alt="" fill sizes={`${size}px`} style={{ objectFit: "contain" }} priority unoptimized />
+      </div>
+      <span className="ca-mic-badge"><Icon id="mic" /></span>
+      <span className="ca-spark ca-spark-a" /><span className="ca-spark ca-spark-b" />
     </div>
   );
 }

@@ -366,25 +366,37 @@ html:is([lang="hi"], [lang="ta"], [lang="th"]) .panel > h2 { font: 600 14px var(
 /* ---------------------------------------------------------------------------------------------
    Crew avatar + onboarding (web/components/onboarding.jsx)
    --------------------------------------------------------------------------------------------- */
+/* Real character art (a transparent PNG, web/public/images/skyconnect-assistant.png), not a
+   recreation -- .ca-photo-wrap holds the <Image>, everything else here is a decorative overlay
+   (ring/spinner/badge/sparks) positioned around it. All overlays are pointer-events: none so they
+   never sit between a tap and a button underneath or beside the avatar. */
 .crew-avatar { position: relative; width: 112px; height: 112px; flex: none; }
-.crew-avatar svg { width: 100%; height: 100%; display: block; }
-.crew-avatar .ca-mouth-idle, .crew-avatar .ca-mouth-open { transform-origin: 50px 72px; }
-.crew-avatar[data-state="idle"] .ca-eye { animation: caBlink 4.2s ease-in-out infinite; transform-origin: center; }
-.crew-avatar[data-state="idle"] .ca-head { animation: caBreathe 3.6s ease-in-out infinite; transform-origin: 50px 96px; }
-.crew-avatar[data-state="speaking"] .ca-mouth-idle { display: none; }
-.crew-avatar[data-state="speaking"] .ca-mouth-open { animation: caTalk 0.42s steps(2) infinite; }
+.ca-photo-wrap { position: relative; width: 100%; height: 100%; z-index: 2; }
+.ca-photo-wrap img { object-fit: contain; }
+.crew-avatar[data-state="idle"] .ca-photo-wrap { animation: caFloat 4.6s ease-in-out infinite; transform-origin: 50% 85%; }
+.crew-avatar[data-state="speaking"] .ca-photo-wrap { animation: caSpeak 0.55s ease-in-out infinite; transform-origin: 50% 85%; }
 .crew-avatar[data-state="listening"] .ca-ring { opacity: 1; animation: caPulseRing 1.3s ease-out infinite; }
 .crew-avatar[data-state="listening"] .ca-mic-badge { opacity: 1; }
 .crew-avatar[data-state="loading"] .ca-spinner { opacity: 1; animation: caSpin 0.9s linear infinite; }
-.crew-avatar[data-state="celebrating"] .ca-head { animation: caCelebrate 0.7s var(--ease) 1; }
+.crew-avatar[data-state="loading"] .ca-photo-wrap { opacity: 0.55; }
+.crew-avatar[data-state="celebrating"] .ca-photo-wrap { animation: caCelebrate 0.7s var(--ease) 1; transform-origin: 50% 85%; }
 .crew-avatar[data-state="celebrating"] .ca-spark { opacity: 1; animation: caSparkle 0.9s ease-out 1; }
-.ca-ring, .ca-mic-badge, .ca-spinner, .ca-spark, .ca-mouth-open { opacity: 0; }
-@keyframes caBlink { 0%, 90%, 100% { transform: scaleY(1); } 93%, 96% { transform: scaleY(0.08); } }
-@keyframes caBreathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-@keyframes caTalk { 0% { transform: scaleY(1); } 100% { transform: scaleY(0.35); } }
+.ca-ring, .ca-spinner { position: absolute; inset: -6%; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 1; }
+.ca-ring { border: 2.5px solid var(--accent); }
+.ca-spinner { border: 2.5px solid transparent; border-top-color: var(--accent); border-right-color: var(--accent); }
+.ca-mic-badge { position: absolute; right: -2%; bottom: -2%; width: 30%; height: 30%; min-width: 20px; min-height: 20px;
+  border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center;
+  opacity: 0; pointer-events: none; box-shadow: 0 0 0 2px var(--bg); z-index: 3; }
+.ca-mic-badge .icon .ic { width: 55%; height: 55%; }
+.ca-spark { position: absolute; width: 10px; height: 10px; opacity: 0; pointer-events: none; z-index: 3;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+.ca-spark-a { left: -4%; top: 14%; background: var(--warn); }
+.ca-spark-b { right: -2%; top: 26%; width: 7px; height: 7px; background: var(--ok); }
+@keyframes caFloat { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(-1.1deg); } }
+@keyframes caSpeak { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
 @keyframes caPulseRing { 0% { transform: scale(0.9); opacity: 0.9; } 100% { transform: scale(1.35); opacity: 0; } }
 @keyframes caSpin { to { transform: rotate(360deg); } }
-@keyframes caCelebrate { 0% { transform: rotate(0); } 25% { transform: rotate(-6deg) scale(1.06); } 60% { transform: rotate(5deg) scale(1.08); } 100% { transform: rotate(0) scale(1); } }
+@keyframes caCelebrate { 0% { transform: rotate(0) scale(1); } 25% { transform: rotate(-5deg) scale(1.07); } 60% { transform: rotate(4deg) scale(1.08); } 100% { transform: rotate(0) scale(1); } }
 @keyframes caSparkle { 0% { opacity: 0; transform: scale(0.4) translateY(4px); } 40% { opacity: 1; } 100% { opacity: 0; transform: scale(1.1) translateY(-10px); } }
 
 .ob-screen { position: fixed; inset: 0; z-index: 55; background: var(--bg); overflow-y: auto; display: flex; flex-direction: column; }
