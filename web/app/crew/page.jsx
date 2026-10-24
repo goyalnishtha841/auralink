@@ -141,6 +141,17 @@ export default function Crew() {
             </motion.div>))}
         </AnimatePresence>
 
+        <AnimatePresence>
+          {state?.turbulence ? (
+            <motion.div className="alarm turbulence" role="alert" initial={{ opacity: 0, y: -16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, height: 0 }} transition={{ ease }}>
+              <b>揺れ? Turbulence?</b>
+              <span>{state.turbulence.seats.length} phones shook at once, around {rowRange(state.turbulence.seats)} · 複数の端末が一斉に振られました</span>
+              <button className="primary" onClick={() => send({ type: "broadcast", template_id: "turbulence" })}>シートベルト案内 Send seatbelt briefing</button>
+              <button onClick={() => send({ type: "dismiss_turbulence" })}>消す Dismiss</button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
         <div className="crew-layout">
           <div className="col">
             <section className="panel">
@@ -224,6 +235,12 @@ export default function Crew() {
   );
 }
 
+function rowRange(seats) {
+  const rows = [...new Set(seats.map((s) => parseInt(s, 10)))].sort((a, b) => a - b);
+  if (!rows.length) return "";
+  return rows.length === 1 ? `row ${rows[0]}` : `rows ${rows[0]}–${rows[rows.length - 1]}`;
+}
+
 function CardView({ c, cfg, send, onTalk }) {
   const [ja, en, tone] = STATUS[c.status] || ["", c.status, "dim"];
   return (
@@ -236,6 +253,7 @@ function CardView({ c, cfg, send, onTalk }) {
           <span className={`pill ${tone}`}>{ja} · {en}</span>
           {c.symptom_ja ? <span className="pill bad symptom"><Icon id={c.symptom_icon} />症状 {c.symptom_ja} · {c.symptom_en}</span> : null}
           {c.pictures ? <span className="pill violet" title="This passenger uses picture-only mode">絵のみ · Pictures only</span> : null}
+          {c.source === "shake" ? <span className="pill amber" title="Sent by shaking the phone">📳 振って呼び出し · Shook phone</span> : null}
         </div>
         {c.heard ? <span className="muted">“{c.heard}” · {c.lang}</span> : null}
         <div className="acts">

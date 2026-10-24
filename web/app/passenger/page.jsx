@@ -20,6 +20,7 @@ export default function Passenger() {
   const recorder = useRef(null);
   const captionTimer = useRef(0);
   const flashRef = useRef(flash); flashRef.current = flash;
+  const shake = useRef({ x: null, y: null, z: null, hits: 0, lastHitAt: 0, cooldownUntil: 0, listening: false });
 
   const t = (k) => s.strings[k] ?? s.fallback[k] ?? k;
   const hello = () => socket.current?.send({ type: "hello", lang: s.lang, senior: s.senior, pictures: s.pictures, read: s.readAloud });
@@ -209,6 +210,17 @@ export default function Passenger() {
     }
   }
 
+  function callCrewByShake() {
+    const now = Date.now();
+    if (now < shake.current.cooldownUntil) return;
+    shake.current.cooldownUntil = now + 8000; // don't send another one while the phone is still being shaken
+    socket.current?.send({ type: "icon", intent: "call_crew", source: "shake" });
+    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+    attention();
+    s.titleOverride = t("shakeSent"); bump();
+    setTimeout(() => { s.titleOverride = null; bump(); }, 4000);
+  }
+
   async function setLanguage(code) {
     s.lang = code;
     try { localStorage.setItem(`auralink-lang-${s.seat}`, code); } catch { /* private mode */ }
@@ -271,6 +283,50 @@ export default function Passenger() {
     return () => { alive = false; socket.current?.close(); };
   }, []); // eslint-disable-line
 
+  // Shake to call the crew: 3 strong jolts within ~2s, same request as tapping "Call crew".
+  useEffect(() => {
+    const HAS_MOTION = typeof window !== "undefined" && typeof DeviceMotionEvent !== "undefined";
+    if (!HAS_MOTION) return;
+    const JOLT = 16;          // m/s^2 change between samples that counts as a jolt
+    const JOLT_WINDOW_MS = 2000;
+
+    function onMotion(e) {
+      const acc = e.accelerationIncludingGravity || e.acceleration;
+      if (!acc || acc.x == null) return;
+      const st = shake.current;
+      if (st.x != null) {
+        const delta = Math.abs(acc.x - st.x) + Math.abs(acc.y - st.y) + Math.abs(acc.z - st.z);
+        if (delta > JOLT) {
+          const now = Date.now();
+          if (now - st.lastHitAt > JOLT_WINDOW_MS) st.hits = 0;
+          st.lastHitAt = now;
+          st.hits += 1;
+          if (st.hits >= 3) { st.hits = 0; callCrewByShake(); }
+        }
+      }
+      st.x = acc.x; st.y = acc.y; st.z = acc.z;
+    }
+
+    function enable() {
+      if (shake.current.listening) return;
+      shake.current.listening = true;
+      window.addEventListener("devicemotion", onMotion);
+    }
+
+    // iOS needs a user gesture to ask for motion permission; piggyback on the first tap anywhere.
+    let onFirstTap;
+    if (typeof DeviceMotionEvent.requestPermission === "function") {
+      onFirstTap = () => { DeviceMotionEvent.requestPermission().then((r) => r === "granted" && enable()).catch(() => {}); };
+      document.addEventListener("pointerdown", onFirstTap, { once: true });
+    } else {
+      enable();
+    }
+    return () => {
+      window.removeEventListener("devicemotion", onMotion);
+      if (onFirstTap) document.removeEventListener("pointerdown", onFirstTap);
+    };
+  }, []); // eslint-disable-line
+
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
 
   const reqs = [...s.requests.values()].reverse();
@@ -321,6 +377,7 @@ export default function Passenger() {
         <motion.section className="panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.08, ease }}>
           <h2>{s.pictures ? t("tapNeed") : t("orTap")}</h2>
           <IntentGrid intents={s.cfg.intents} lang={s.lang} big={s.pictures} onPick={(intent) => socket.current.send({ type: "icon", intent })} />
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>{t("shakeHint")}</p>
         </motion.section>
 
         <motion.section className="panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.16, ease }}>

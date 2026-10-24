@@ -5,6 +5,8 @@
   border: 1px solid var(--bad); font-weight: 600; box-shadow: 0 0 60px -20px var(--bad); animation: alarmPulse 1s ease-in-out 4; }
 .alarm b { font: 800 22px var(--display); }
 @keyframes alarmPulse { 50% { background: rgba(255, 61, 90, 0.32); } }
+.alarm.turbulence { background: rgba(246, 184, 92, 0.12); border-color: var(--warn); box-shadow: 0 0 60px -20px var(--warn); animation: turbulencePulse 1s ease-in-out 4; }
+@keyframes turbulencePulse { 50% { background: rgba(246, 184, 92, 0.32); } }
 .citem { align-items: flex-start; }
 .citem .who { font: 800 22px var(--display); min-width: 56px; letter-spacing: -0.02em; }
 .citem .body { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
