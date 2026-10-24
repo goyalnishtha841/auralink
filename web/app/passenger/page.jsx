@@ -4,30 +4,34 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useReducer, useRef } from "react";
 import { Recorder, VadRecorder, connect, loadConfig, params } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
+import { ACCESSIBILITY_META } from "@/lib/accessibility";
 import { Picto } from "@/lib/pictograms";
-import { canSpeak, speakNatural as speak, unlockAudio } from "@/lib/speech";
-import { Ambient, Sheet, ease, useFlash } from "@/components/ui";
-import { ConvThread, ConvToggle, MuteButton } from "@/components/liveconversation";
+import { canSpeak, isSpeaking, onSpeakingChange, speakNatural as speak, unlockAudio } from "@/lib/speech";
+import { Ambient, Carousel, Sheet, ease, useFlash } from "@/components/ui";
+import { ConvThread, MuteButton } from "@/components/liveconversation";
 
 export default function Passenger() {
   const [, bump] = useReducer((x) => x + 1, 0);
   const st = useRef(null);
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
-  if (!st.current) st.current = { ready: false, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, voiceOK: false,
+  if (!st.current) st.current = { ready: false, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, voiceOK: false,
     micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: "34K",
-    conv: { open: false, speaking: false, muted: false, messages: [] } };
+    conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [] } };
   const s = st.current;
   const socket = useRef(null);
   const recorder = useRef(null);
   const vad = useRef(null);
+  const convUnsub = useRef(null);
   const captionTimer = useRef(0);
   const flashRef = useRef(flash); flashRef.current = flash;
 
   const t = (k) => s.strings[k] ?? s.fallback[k] ?? k;
-  const hello = () => socket.current?.send({ type: "hello", lang: s.lang, senior: s.senior, pictures: s.pictures, read: s.readAloud });
-  const say = (lines) => { if (s.readAloud && s.voiceOK && !s.pictures) speak(lines, s.lang); };
-  const Listen = ({ lines }) => (!s.voiceOK || s.pictures ? null :
+  const hello = () => socket.current?.send({ type: "hello", lang: s.lang, senior: s.senior, pictures: s.pictures, read: s.readAloud, accessibility: s.accessibility });
+  const bigMode = () => s.senior || s.accessibility === "low_vision";
+  const pictureMode = () => s.pictures || s.accessibility === "cognitive";
+  const say = (lines) => { if (s.readAloud && s.voiceOK && !pictureMode()) speak(lines, s.lang); };
+  const Listen = ({ lines }) => (!s.voiceOK || pictureMode() ? null :
     <button className="listen" aria-label={t("listen")} title={t("listen")} onClick={() => speak(lines, s.lang)}><Icon id="speaker" /></button>);
   const attention = () => flashRef.current();
 
@@ -133,6 +137,18 @@ export default function Passenger() {
               onClick={() => { s.readAloud = !s.readAloud; if (s.readAloud) speak(t("readLabel"), s.lang); bump(); hello(); }} />
           </div>
         ) : null}
+        <div className="settings-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
+          <span>{t("accessibilityLabel")}</span>
+          <div className="grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+            {Object.entries(ACCESSIBILITY_META).map(([id, m]) => (
+              <button key={id} className={`tile ${s.accessibility === id ? "active" : ""}`}
+                aria-pressed={s.accessibility === id}
+                onClick={() => { s.accessibility = s.accessibility === id ? null : id; bump(); hello(); }}>
+                <Icon id={m.icon} />{s.lang === "ja" ? m.ja : m.en}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>);
   }
@@ -141,8 +157,8 @@ export default function Passenger() {
     attention(); say(msg.triage.title);
     setSheet(<div key={`tri-${msg.card_id}`} style={{ display: "contents" }}>
       <div className="row"><h2 className="grow urgent-title">{msg.triage.title}</h2><Listen lines={msg.triage.title} /></div>
-      <div className="grid triage">{msg.triage.symptoms.map((x) => (
-        <button key={x.id} className="tile" onClick={() => socket.current.send({ type: "symptom", card_id: msg.card_id, symptom: x.id })}><Icon id={x.icon} />{x.label}</button>))}</div>
+      <Carousel className="triage">{msg.triage.symptoms.map((x) => (
+        <button key={x.id} className="tile" onClick={() => socket.current.send({ type: "symptom", card_id: msg.card_id, symptom: x.id })}><Icon id={x.icon} />{x.label}</button>))}</Carousel>
     </div>);
   }
 
@@ -249,27 +265,44 @@ export default function Passenger() {
       say(msg.message);
       setSheet(<div key="exitdone" style={{ display: "contents" }}><h2>{t("thanks")}</h2><p>{msg.message}</p><button className="primary" onClick={closeSheet}>{t("ok")}</button></div>);
     } else if (msg.type === "conv_message") {
+      s.conv.partial = "";
       const i = s.conv.messages.findIndex((m) => m.id === msg.id);
       if (i >= 0) s.conv.messages[i] = msg; else s.conv.messages = [...s.conv.messages, msg];
       if (msg.from === "crew" && msg.done && msg.translated && !s.conv.muted) speak(msg.translated, s.lang);
       bump();
+    } else if (msg.type === "conv_partial") {
+      s.conv.partial = msg.text; bump();
     }
+  }
+
+  // tag(buf): 1-byte header so the hub can tell a still-being-spoken partial (shown only on this
+  // screen, as a live caption) from the finished utterance (transcribed, translated, sent on) —
+  // see hub/main.py passenger_ws / handle_conv_audio.
+  const FINAL = 0, PARTIAL = 1;
+  function tag(kind, buf) {
+    const out = new Uint8Array(buf.byteLength + 1);
+    out[0] = kind; out.set(new Uint8Array(buf), 1);
+    return out.buffer;
   }
 
   async function startConv() {
     if (vad.current) return;
-    s.conv.open = true; bump();
+    s.conv.open = true; s.conv.partial = ""; bump();
     socket.current.send({ type: "conv_start" });
+    convUnsub.current = onSpeakingChange((on) => { s.conv.replyPlaying = on; bump(); });
     vad.current = new VadRecorder({
-      onUtterance: (buf) => socket.current.sendBinary(buf),
-      onSpeaking: (sp) => { s.conv.speaking = sp; bump(); },
+      onUtterance: (buf) => socket.current.sendBinary(tag(FINAL, buf)),
+      onPartial: (buf) => socket.current.sendBinary(tag(PARTIAL, buf)),
+      onSpeaking: (sp) => { s.conv.speaking = sp; if (!sp) s.conv.partial = ""; bump(); },
+      isMuted: () => isSpeaking(),
     });
     try { await vad.current.start(); } catch { s.micNote = "micDenied"; bump(); }
   }
 
   function stopConv() {
     vad.current?.stop(); vad.current = null;
-    s.conv.open = false; s.conv.speaking = false; bump();
+    convUnsub.current?.(); convUnsub.current = null;
+    s.conv.open = false; s.conv.speaking = false; s.conv.replyPlaying = false; s.conv.partial = ""; bump();
     socket.current.send({ type: "conv_end" });
   }
 
@@ -320,6 +353,7 @@ export default function Passenger() {
     s.senior = p.get("senior") === "1";
     s.pictures = p.get("mode") === "pictures";
     s.readAloud = p.get("read") === "1";
+    s.accessibility = ACCESSIBILITY_META[p.get("accessibility")] ? p.get("accessibility") : null;
     socket.current = connect(`/ws/passenger/${s.seat}`, (msg) => ready.then(() => alive && onMessage(msg)), (on) => {
       s.online = on; bump();
       if (on) ready.then(() => hello());
@@ -327,10 +361,10 @@ export default function Passenger() {
     (async () => {
       s.cfg = await loadConfig();
       let checkedIn = false;
-      if (!["lang", "senior", "mode", "read"].some((k) => p.has(k))) {
+      if (!["lang", "senior", "mode", "read", "accessibility"].some((k) => p.has(k))) {
         try {
           const r = await (await fetch(`/api/seat/${s.seat}`)).json();
-          if (r.checked_in) { checkedIn = true; Object.assign(s, { lang: r.lang, senior: r.senior, pictures: r.pictures, readAloud: r.read }); }
+          if (r.checked_in) { checkedIn = true; Object.assign(s, { lang: r.lang, senior: r.senior, pictures: r.pictures, readAloud: r.read, accessibility: r.accessibility ?? null }); }
         } catch { /* hub unreachable */ }
       }
       let askLanguage = false;
@@ -348,7 +382,7 @@ export default function Passenger() {
       markReady();
       if (askLanguage) chooseLanguage();
     })();
-    return () => { alive = false; socket.current?.close(); vad.current?.stop(); removeEventListener("pointerdown", unlockAudio); };
+    return () => { alive = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); removeEventListener("pointerdown", unlockAudio); };
   }, []); // eslint-disable-line
 
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
@@ -356,7 +390,7 @@ export default function Passenger() {
   const reqs = [...s.requests.values()].reverse();
   const micLabel = t({ idle: "speak", recording: "stop", thinking: "thinking", off: "speak" }[s.micState]);
   return (
-    <div className={`${s.senior ? "big" : ""} ${s.pictures ? "pictures" : ""}`}>
+    <div className={`${bigMode() ? "big" : ""} ${pictureMode() ? "pictures" : ""}`}>
       <Ambient />
       {flashFrame}
       <header className="app-header">
@@ -365,30 +399,37 @@ export default function Passenger() {
           <h1><AnimatePresence mode="wait"><motion.span key={s.titleOverride || "t"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>{s.titleOverride || t("title")}</motion.span></AnimatePresence></h1>
           <p className="hdr-sub">{t("seat")} {s.seat} · {s.cfg.languages.find((l) => l.code === s.lang)?.name || s.lang}</p>
         </div>
+        {s.cfg.free_talk ? (
+          <button className={`hdr-icon-btn ${s.conv.open ? "on" : ""}`} aria-pressed={s.conv.open}
+            aria-label={t("liveConv")} title={t("liveConv")} onClick={s.conv.open ? stopConv : startConv}>
+            <Icon id={s.conv.open ? "stop" : "chat"} />
+          </button>
+        ) : null}
         <button className="hdr-icon-btn" aria-label={t("settingsTitle")} title={t("settingsTitle")} onClick={showSettings}><Icon id="settings" /></button>
       </header>
 
       <main className="app" style={{ maxWidth: 980 }}>
-        {!s.pictures ? (
+        {!pictureMode() ? (
           <motion.section className="panel ask-hero" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
-            <div className="row" style={{ alignItems: "flex-start" }}>
-              <div className="grow">
-                <h2>{t("typeHint")}</h2>
-                {s.micState === "thinking" ? (
-                  <p className="sub"><span className="ask-thinking">{[0, 1, 2].map((k) => (
-                    <motion.i key={k} animate={{ opacity: [0.2, 1, 0.2] }} transition={{ repeat: Infinity, duration: 1, delay: k * 0.18 }} />))}</span> {t("thinking")}</p>
-                ) : s.micNote ? <p className="sub">{t(s.micNote)}</p> : null}
+            {!s.conv.open ? (
+              <div className="row" style={{ alignItems: "flex-start" }}>
+                <div className="grow">
+                  <h2>{t("typeHint")}</h2>
+                  {s.micState === "thinking" ? (
+                    <p className="sub"><span className="ask-thinking">{[0, 1, 2].map((k) => (
+                      <motion.i key={k} animate={{ opacity: [0.2, 1, 0.2] }} transition={{ repeat: Infinity, duration: 1, delay: k * 0.18 }} />))}</span> {t("thinking")}</p>
+                  ) : s.micNote ? <p className="sub">{t(s.micNote)}</p> : null}
+                </div>
               </div>
-              {s.cfg.free_talk ? <ConvToggle on={s.conv.open} onClick={s.conv.open ? stopConv : startConv} label={t("liveConv")} /> : null}
-            </div>
+            ) : <h2>{t("liveConv")}</h2>}
             {s.conv.open ? (
               <div className="conv-panel">
                 <div className="conv-status">
-                  <span className={`listen-dot ${s.conv.speaking ? "speaking" : ""}`} />
-                  <span className="grow">{t(s.conv.speaking ? "convSpeaking" : "convListening")}</span>
+                  <span className={`listen-dot ${s.conv.speaking ? "speaking" : ""} ${s.conv.replyPlaying ? "muted" : ""}`} />
+                  <span className="grow">{t(s.conv.replyPlaying ? "convReplyPlaying" : s.conv.speaking ? "convSpeaking" : "convListening")}</span>
                   <MuteButton muted={s.conv.muted} onClick={() => { s.conv.muted = !s.conv.muted; bump(); }} label={t(s.conv.muted ? "unmute" : "mute")} />
                 </div>
-                <ConvThread messages={s.conv.messages} mineFrom="passenger" />
+                <ConvThread messages={s.conv.messages} mineFrom="passenger" partial={s.conv.partial} />
               </div>
             ) : null}
             {!s.conv.open ? (
@@ -411,8 +452,8 @@ export default function Passenger() {
         ) : null}
 
         <motion.section className="panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.08, ease }}>
-          <h2>{s.pictures ? t("tapNeed") : t("orTap")}</h2>
-          <IntentGrid intents={s.cfg.intents} lang={s.lang} big={s.pictures} onPick={(intent) => socket.current.send({ type: "icon", intent })} />
+          <h2>{pictureMode() ? t("tapNeed") : t("orTap")}</h2>
+          <IntentGrid intents={s.cfg.intents} lang={s.lang} big={pictureMode()} onPick={(intent) => socket.current.send({ type: "icon", intent })} />
         </motion.section>
 
         <motion.section className="panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.16, ease }}>
@@ -439,7 +480,7 @@ export default function Passenger() {
         </motion.section>
       </main>
 
-      <Sheet content={s.sheet} big={s.senior} onClose={closeSheet} />
+      <Sheet content={s.sheet} big={bigMode()} onClose={closeSheet} />
 
       <AnimatePresence>
         {s.caption ? (
@@ -456,13 +497,13 @@ export default function Passenger() {
 
 function IntentGrid({ intents, lang, onPick, big = false }) {
   return (
-    <div className="grid" style={big ? { gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 14 } : undefined}>
+    <Carousel big={big}>
       {intents.map((i, k) => (
         <motion.button key={i.id} className="tile" onClick={() => onPick(i.id)} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.03 * k, duration: 0.45, ease }} whileTap={{ scale: 0.95 }}
-          style={big ? { padding: "28px 8px", fontSize: 20, fontWeight: 600 } : undefined}>
+          style={big ? { fontWeight: 600 } : undefined}>
           <Icon id={i.id} />{i.label[lang] || i.label.en}
         </motion.button>))}
-    </div>
+    </Carousel>
   );
 }

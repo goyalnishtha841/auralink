@@ -6,22 +6,29 @@
 import { useEffect, useRef } from "react";
 import { Icon } from "@/lib/icons";
 
-export function ConvThread({ messages, mineFrom }) {
+export function ConvThread({ messages, mineFrom, partial = "" }) {
   const end = useRef(null);
   const last = messages[messages.length - 1];
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, last?.translated, last?.done]);
+  }, [messages.length, last?.translated, last?.done, partial]);
 
-  if (!messages.length) return <p className="conv-empty">…</p>;
+  if (!messages.length && !partial) return <p className="conv-empty">…</p>;
   return (
     <div className="conv-thread">
       {messages.map((m) => (
-        <div key={m.id} className={`conv-bubble ${m.from === mineFrom ? "mine" : "theirs"}`}>
+        <div key={m.id} className={`conv-bubble speaker-${m.from} ${m.from === mineFrom ? "mine" : "theirs"}`}>
+          <span className="conv-speaker">{m.from === "crew" ? "乗務員 · Crew" : "乗客 · Passenger"}</span>
           {m.from === mineFrom ? <p className="conv-original">{m.original}</p> : null}
           <p className="conv-text">{m.translated || "…"}{!m.done ? <span className="conv-typing"> ●●●</span> : null}</p>
         </div>
       ))}
+      {partial ? (
+        <div className={`conv-bubble speaker-${mineFrom} mine draft`}>
+          <span className="conv-speaker">{mineFrom === "crew" ? "乗務員 · Crew" : "乗客 · Passenger"}</span>
+          <p className="conv-original">{partial}<span className="conv-typing"> ●●●</span></p>
+        </div>
+      ) : null}
       <div ref={end} />
     </div>
   );

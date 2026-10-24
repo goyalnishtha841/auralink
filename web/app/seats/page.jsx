@@ -27,11 +27,11 @@ export default function Seats() {
             <label className="r-field">Phones open<input size={34} spellCheck={false} value={base} onChange={(e) => setBase(e.target.value)} /></label>
             <button className="primary" onClick={() => print()}>Print cards</button>
           </div>
-          {b.startsWith("https://") ? <div style={{ color: "var(--ok)" }}>Phones will open {b}/passenger.html?seat=…</div>
+          {b.startsWith("https://") ? <div style={{ color: "var(--ok)" }}>Phones will open {b}/passenger?seat=…</div>
             : <div className="notice">This address is http, not https. Phones will open the page but block the microphone; typing and pictures still work. For voice, set up HTTPS (mkcert) and restart the hub.</div>}
         </section>
         <section className="panel"><div className="s-grid">{seats.map((seat) => {
-          const url = `${b}/passenger.html?seat=${seat}`;
+          const url = `${b}/passenger?seat=${seat}`;
           return (
             <article key={seat} className={`seatcard ${exit.has(seat) ? "exit" : ""}`}>
               <div>

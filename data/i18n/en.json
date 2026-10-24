@@ -60,5 +60,7 @@
   "noRequestsTitle": "No requests yet",
   "noRequestsSub": "Your requests will appear here.",
   "mute": "Mute voice",
-  "unmute": "Unmute voice"
+  "unmute": "Unmute voice",
+  "accessibilityLabel": "Accessibility",
+  "convReplyPlaying": "Reply playing — mic paused"
 }

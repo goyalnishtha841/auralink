@@ -63,6 +63,7 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 .hdr-icon-btn { flex: none; width: 52px; height: 52px; min-height: 52px; padding: 0; border-radius: 50%;
   display: grid; place-items: center; background: var(--surface-3); border: 1px solid var(--line); transition: border-color 0.2s var(--ease), background 0.2s var(--ease); }
 .hdr-icon-btn:hover:not(:disabled) { border-color: var(--line-strong); background: #202024; }
+.hdr-icon-btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .hdr-icon-btn .icon .ic { width: 20px; height: 20px; }
 .settings-sheet { display: flex; flex-direction: column; gap: 16px; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -132,11 +133,32 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 }
 .tile:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-3); transform: translateY(-1px); }
 .tile:active:not(:disabled) { transform: scale(0.97); }
+.tile.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.tile.active .icon { background: var(--accent); color: var(--surface-card); }
 .tile .icon { color: var(--accent); width: 64px; height: 64px; border-radius: 50%; background: var(--icon-bg); display: grid; place-items: center; }
 .tile .icon .ic { width: 28px; height: 28px; }
 .big .tile { padding: 28px 8px; font-size: 20px; min-height: 180px; }
 .big .tile .icon { width: 76px; height: 76px; }
 .big .tile .icon .ic { width: 38px; height: 38px; }
+
+/* carousel: a swipeable row instead of every tile at once */
+.carousel-wrap { display: flex; flex-direction: column; gap: 10px; }
+.grid.carousel {
+  display: flex; grid-template-columns: none; flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 2px 2px 6px;
+  mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+.grid.carousel::-webkit-scrollbar { display: none; }
+.grid.carousel > .tile { flex: 0 0 104px; scroll-snap-align: start; min-height: 112px; padding: 14px 6px; gap: 8px; font-size: 13px; }
+.grid.carousel > .tile .icon { width: 44px; height: 44px; }
+.grid.carousel > .tile .icon .ic { width: 20px; height: 20px; }
+.grid.carousel.big > .tile { flex: 0 0 132px; min-height: 134px; font-size: 15px; }
+.grid.carousel.big > .tile .icon { width: 56px; height: 56px; }
+.grid.carousel.big > .tile .icon .ic { width: 26px; height: 26px; }
+@media (min-width: 560px) { .grid.carousel { grid-template-columns: none; } }
+.carousel-dots { display: flex; gap: 7px; justify-content: center; }
+.dot-mini { width: 7px; height: 7px; padding: 0; border: none; border-radius: 50%; background: var(--surface-3); cursor: pointer; transition: background 0.2s var(--ease), transform 0.2s var(--ease); }
+.dot-mini.on { background: var(--accent); transform: scale(1.3); }
 
 /* the main "ask" bar: one pill with mic, text and send together, like a chat input */
 .ask-hero { display: flex; flex-direction: column; gap: 16px; }
@@ -276,10 +298,18 @@ button.listen .icon .ic { width: 20px; height: 20px; }
 .conv-status { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
 .conv-status .listen-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); flex: none; }
 .conv-status .listen-dot.speaking { background: var(--accent); animation: askPulse 1s ease-in-out infinite; }
+.conv-status .listen-dot.muted { background: var(--violet); animation: askPulse 1s ease-in-out infinite; }
 .conv-thread { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; padding: 2px; }
 .conv-bubble { max-width: 82%; padding: 10px 14px; border-radius: 18px; display: flex; flex-direction: column; gap: 3px; }
-.conv-bubble.mine { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
-.conv-bubble.theirs { align-self: flex-start; background: var(--surface-3); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.conv-bubble.mine { align-self: flex-end; border-bottom-right-radius: 4px; }
+.conv-bubble.theirs { align-self: flex-start; border-bottom-left-radius: 4px; }
+/* one colour per speaker, independent of which screen is looking — a passenger reads crew's
+   lines in violet and their own in red; crew sees the same two colours the other way round, so
+   a live call reads like two people talking, not one undifferentiated stream. */
+.conv-bubble.speaker-passenger { background: var(--accent); color: var(--accent-ink); }
+.conv-bubble.speaker-crew { background: var(--violet); color: #15102e; }
+.conv-bubble.draft { opacity: 0.6; border: 1px dashed currentColor; }
+.conv-bubble .conv-speaker { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.65; }
 .conv-bubble .conv-original { font-size: 11.5px; opacity: 0.7; margin: 0; }
 .conv-bubble .conv-text { margin: 0; font-size: 15px; line-height: 1.4; }
 .conv-bubble .conv-typing { font-size: 11px; opacity: 0.6; }

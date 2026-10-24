@@ -6,12 +6,15 @@ import { loadConfig, params } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { canSpeak } from "@/lib/speech";
 import { Ambient, AppHeader, ease } from "@/components/ui";
+import { ACCESSIBILITY_META } from "@/lib/accessibility";
+
+const BLANK_STATE = { lang: "en", senior: false, pictures: false, read: false, accessibility: null };
 
 export default function Checkin() {
   const [cfg, setCfg] = useState(null);
   const [info, setInfo] = useState(null);
   const [S, setS] = useState({ S: {}, EN: {} });
-  const [state, setState] = useState({ lang: "en", senior: false, pictures: false, read: false });
+  const [state, setState] = useState(BLANK_STATE);
   const [voice, setVoice] = useState(false);
   const [seat, setSeat] = useState("34K");
   const [done, setDone] = useState(null);
@@ -55,6 +58,9 @@ export default function Checkin() {
     ["pictures", <Icon key="h" id="hand" />, t("picturesLabel"), t("picturesDesc")],
     ...(voice ? [["read", <Icon key="s" id="speaker" />, t("readLabel"), t("readDesc")]] : []),
   ];
+  function setAccessibility(id) {
+    setState((x) => ({ ...x, accessibility: x.accessibility === id ? null : id }));
+  }
   return (
     <>
       <Ambient />
@@ -72,6 +78,10 @@ export default function Checkin() {
               <select value={seat} onChange={(e) => setSeat(e.target.value)} aria-label="Seat" style={{ fontSize: 22, minHeight: 54, alignSelf: "flex-start" }}>{cfg?.seats.map((x) => <option key={x}>{x}</option>)}</select>
               <div className="c-opts">{opts.map(([key, ic, title, desc]) => (
                 <button key={key} className="c-opt" aria-pressed={state[key]} onClick={() => toggle(key)}>{ic}<span><b>{title}</b><small>{desc}</small></span><span className="c-tick" aria-hidden="true" /></button>))}</div>
+              <h2>{t("accessibilityLabel")}</h2>
+              <div className="c-opts">{Object.entries(ACCESSIBILITY_META).map(([id, m]) => (
+                <button key={id} className="c-opt" aria-pressed={state.accessibility === id} onClick={() => setAccessibility(id)}>
+                  <Icon id={m.icon} /><span><b>{m.en}</b></span><span className="c-tick" aria-hidden="true" /></button>))}</div>
               <button className="primary" style={{ minHeight: 62, fontSize: 20 }} onClick={save}>{t("saveSeat")}</button>
               {error ? <p className="notice bad" role="alert" style={{ margin: 0 }}>{error}</p> : null}
             </motion.section>
@@ -82,9 +92,10 @@ export default function Checkin() {
                 <div className="list">
                   <p style={{ margin: 0, font: "600 18px var(--display)" }}>{t("savedSeat")}</p>
                   <div className="chips"><span className="chip2">{t("yourSeat")}: {done.seat}</span><span className="chip2">{cfg.languages.find((l) => l.code === done.lang)?.name || done.lang}</span>
-                    {done.senior ? <span className="chip2">{t("seniorLabel")}</span> : null}{done.pictures ? <span className="chip2">{t("picturesLabel")}</span> : null}{done.read ? <span className="chip2">{t("readLabel")}</span> : null}</div>
+                    {done.senior ? <span className="chip2">{t("seniorLabel")}</span> : null}{done.pictures ? <span className="chip2">{t("picturesLabel")}</span> : null}{done.read ? <span className="chip2">{t("readLabel")}</span> : null}
+                    {done.accessibility ? <span className="chip2">{ACCESSIBILITY_META[done.accessibility]?.en}</span> : null}</div>
                   <p className="muted" style={{ margin: 0 }}>{t("scanAtSeat")}: <span className="mono">{done.url}</span></p>
-                  <button onClick={() => { setDone(null); setState({ lang: "en", senior: false, pictures: false, read: false }); setLang("en"); }}>{t("nextPassenger")}</button>
+                  <button onClick={() => { setDone(null); setState(BLANK_STATE); setLang("en"); }}>{t("nextPassenger")}</button>
                 </div>
               </div>
             </motion.section>

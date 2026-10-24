@@ -11,7 +11,7 @@ from pathlib import Path
 
 from engine.lexicon import ROOT
 
-FIELDS = ("lang", "senior", "pictures", "read")
+FIELDS = ("lang", "senior", "pictures", "read", "accessibility")
 
 
 def path() -> Path:

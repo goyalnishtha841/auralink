@@ -60,5 +60,7 @@
   "noRequestsTitle": "अभी कोई अनुरोध नहीं",
   "noRequestsSub": "आपके अनुरोध यहाँ दिखेंगे।",
   "mute": "आवाज़ बंद करें",
-  "unmute": "आवाज़ चालू करें"
+  "unmute": "आवाज़ चालू करें",
+  "accessibilityLabel": "सुगम्यता",
+  "convReplyPlaying": "जवाब चल रहा है — माइक रुका है"
 }

@@ -97,3 +97,56 @@ def test_empty_text_sends_nothing(client):
         crew.send_json({"type": "conv_text", "seat": "30A", "text": "real message"})
         msgs = collect_conv_messages(pax)
         assert msgs[-1]["original"] == "real message"
+
+
+def test_assist_asks_before_filing_never_files_on_its_own(monkeypatch):
+    """engine/assist.py must only ever pop a "did you mean...?" confirm -- the same one Free Talk
+    already shows for typed text -- never create a request card by itself (see hub/main.py
+    maybe_auto_file_from_conv). A passenger's live-call line is not a tap, so it must not act like one."""
+    import asyncio
+
+    monkeypatch.setattr(main.assist, "available", lambda: True)
+    monkeypatch.setattr(main.assist, "classify", lambda text, ids: "blanket")
+    sent = []
+    monkeypatch.setattr(main, "to_seat", lambda seat, msg: sent.append((seat, msg)) or _noop())
+    main._conv_suggested.clear()
+
+    asyncio.run(main.maybe_auto_file_from_conv("30A", "Can I get a blanket please", "en"))
+
+    assert len(sent) == 1 and sent[0][0] == "30A"
+    assert sent[0][1]["type"] == "suggest" and sent[0][1]["guess"]["intent"] == "blanket"
+    assert not main.cabin.cards, "a suggestion must never file a card by itself"
+
+
+def test_confirming_the_suggestion_files_a_normal_request(client):
+    """The popup's "yes" button sends exactly {type: "icon", intent}: the same message a tap on
+    the picture grid sends, so confirming a Live Conversation suggestion is indistinguishable
+    from any other confirmed request once the passenger has actually said yes to it."""
+    with client.websocket_connect("/ws/crew") as crew, client.websocket_connect("/ws/passenger/30A") as pax:
+        while crew.receive_json()["type"] != "state":
+            pass
+        pax.send_json({"type": "hello", "lang": "en"})
+        pax.send_json({"type": "icon", "intent": "blanket"})
+        state = crew.receive_json()
+        while not state.get("cards"):
+            state = crew.receive_json()
+        assert state["cards"][0]["seat"] == "30A" and state["cards"][0]["intent"] == "blanket"
+
+
+def test_a_second_suggestion_for_the_same_intent_is_suppressed_for_a_while(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(main.assist, "available", lambda: True)
+    monkeypatch.setattr(main.assist, "classify", lambda text, ids: "water")
+    sent = []
+    monkeypatch.setattr(main, "to_seat", lambda seat, msg: sent.append(msg) or _noop())
+    main._conv_suggested.clear()
+
+    asyncio.run(main.maybe_auto_file_from_conv("30A", "I need some water", "en"))
+    asyncio.run(main.maybe_auto_file_from_conv("30A", "water please", "en"))
+
+    assert len(sent) == 1, "the same intent came up twice in one chat -- only the first should pop a confirm"
+
+
+async def _noop():
+    return None

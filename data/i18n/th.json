@@ -60,5 +60,7 @@
   "noRequestsTitle": "ยังไม่มีคำขอ",
   "noRequestsSub": "คำขอของคุณจะปรากฏที่นี่",
   "mute": "ปิดเสียง",
-  "unmute": "เปิดเสียง"
+  "unmute": "เปิดเสียง",
+  "accessibilityLabel": "การเข้าถึง",
+  "convReplyPlaying": "กำลังเล่นคำตอบ — ไมค์หยุดชั่วคราว"
 }

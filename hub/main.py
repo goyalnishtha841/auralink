@@ -9,17 +9,19 @@ import itertools
 import json
 import logging
 import os
+import stat
 import threading
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
+import anyio
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from engine import PHASES, Context, Hypothesis, Lexicon, interpret
+from engine import PHASES, Context, Hypothesis, Lexicon, assist, interpret
 from engine.lexicon import ROOT
 from engine.matcher import tokenize
 from engine.types import Phase
@@ -37,6 +39,10 @@ ASR_MODEL = os.environ.get("AURALINK_ASR_MODEL", "base")  # base: ~0.7 s on an M
 # in tests with spoken PAs, `small` heard them right in ~3-5 s. Passenger requests stay on the fast model.
 PA_ASR_MODEL = os.environ.get("AURALINK_PA_ASR_MODEL", "small")
 MAX_AUDIO_S = 10
+# How a seat says it needs help, set at check-in or on the passenger phone (web/app/passenger).
+# Each one switches the passenger UI (captions/vibration, large text, picture-first, ...) and
+# shows the crew a badge so they know *how* to help, not just what was asked.
+ACCESSIBILITY_PROFILES = ("deaf_hoh", "low_vision", "mobility", "cognitive")
 # Free Talk needs ctranslate2 + transformers + a ~2.4 GB model (downloaded once, then offline).
 # Heavy enough that it is opt-out rather than always-on: AURALINK_FREE_TALK=0 hides it even when
 # the dependencies are installed, for a laptop that would rather keep the RAM for Whisper.
@@ -157,9 +163,31 @@ restored_at = persist.restore(cabin)                    # crash recovery: reques
 if restored_at:
     log.warning("restored cabin state saved at %s", time.strftime("%H:%M:%S", time.localtime(restored_at)))
 
+_background_tasks: set[asyncio.Task] = set()   # fire-and-forget tasks (engine/assist.py), kept
+                                                 # alive so asyncio doesn't garbage-collect them mid-flight
+
+
+def _spawn(coro) -> None:
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
+
 passengers: dict[str, set[WebSocket]] = defaultdict(set)
 crew: set[WebSocket] = set()
 judges: set[WebSocket] = set()
+crew_meta: dict[WebSocket, dict] = {}   # crew socket -> {"name": str, "zone": str}, set by a "hello" message
+
+# Rows split evenly into zones (front to back) so each crew member's tablet can show "mine" first.
+# "all" is not a zone itself: every crew member can always see and claim every seat.
+_rows = sorted({int(s[:-1]) for s in SEAT_IDS})
+ZONE_SIZE = max(1, -(-len(_rows) // 3))   # 3 zones, ~even split
+CREW_ZONES = [
+    {"id": chr(ord("A") + i), "rows": _rows[i * ZONE_SIZE:(i + 1) * ZONE_SIZE],
+     "seats": [s for s in SEAT_IDS if int(s[:-1]) in _rows[i * ZONE_SIZE:(i + 1) * ZONE_SIZE]]}
+    for i in range((len(_rows) + ZONE_SIZE - 1) // ZONE_SIZE)
+]
+SEAT_ZONE = {seat: z["id"] for z in CREW_ZONES for seat in z["seats"]}
 
 
 # views: what each screen receives
@@ -194,6 +222,8 @@ def card_for_crew(card: Card) -> dict:
     if (sym := templates.symptom(card.symptom)):
         data["symptom_ja"], data["symptom_en"], data["symptom_icon"] = sym["label"]["ja"], sym["label"]["en"], sym["icon"]
     data["pictures"] = cabin.seats[card.seat].pictures
+    data["accessibility"] = cabin.seats[card.seat].accessibility
+    data["zone"] = SEAT_ZONE.get(card.seat)
     return data
 
 
@@ -223,11 +253,16 @@ def crew_state() -> dict:
         "round_plan": rounds.plan(cabin),
         "round": cabin.round,
         "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
-        "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "checked_in", "connected"})
-                       for s in cabin.seats.values() if s.lang != "en" or s.senior or s.pictures or s.read],
+        "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "accessibility",
+                                             "checked_in", "connected"})
+                       for s in cabin.seats.values()
+                       if s.lang != "en" or s.senior or s.pictures or s.read or s.accessibility],
         # Live Conversation panels open right now, so a crew tablet that reconnects mid-call still
         # knows which seats to show (conv_message itself only reaches sockets already connected).
         "conv_seats": [s.id for s in cabin.seats.values() if s.conv_mode],
+        # Who else is on the crew network right now, and which zone each tablet picked, so the
+        # crew can split up work between devices instead of everyone seeing one undivided queue.
+        "crew_roster": [{"name": m["name"], "zone": m["zone"]} for m in crew_meta.values() if m["name"]],
     }
 
 
@@ -401,7 +436,7 @@ async def presenter_crew(msg: dict) -> dict:
     if msg.get("type") not in allowed:
         raise HTTPException(400, f"Allowed: {', '.join(sorted(allowed))}")
     try:
-        await handle_crew(msg)
+        await handle_crew(None, msg)
     except (KeyError, ValueError) as e:
         raise HTTPException(400, str(e)) from None
     return {"done": msg["type"]}
@@ -490,6 +525,7 @@ class CheckinIn(BaseModel):
     senior: bool = False
     pictures: bool = False
     read: bool = False
+    accessibility: str | None = None
 
 
 @app.post("/api/checkin")
@@ -499,6 +535,8 @@ async def post_checkin(body: CheckinIn) -> dict:
         raise HTTPException(404, f"No seat {body.seat}")
     if body.lang not in languages.codes():
         raise HTTPException(422, f"Unknown language {body.lang!r}")
+    if body.accessibility not in (None, *ACCESSIBILITY_PROFILES):
+        raise HTTPException(422, f"Unknown accessibility profile {body.accessibility!r}")
     prefs = body.model_dump(include=set(checkin.FIELDS))
     seat = cabin.seats[body.seat]
     for k, v in prefs.items():
@@ -509,8 +547,9 @@ async def post_checkin(body: CheckinIn) -> dict:
     checkin.save(saved)
     await push_crew()
     query = f"seat={body.seat}&lang={body.lang}" + ("&senior=1" if body.senior else "") + \
-            ("&mode=pictures" if body.pictures else "") + ("&read=1" if body.read else "")
-    return {"seat": body.seat, **prefs, "passenger_path": f"/passenger.html?{query}"}
+            ("&mode=pictures" if body.pictures else "") + ("&read=1" if body.read else "") + \
+            (f"&accessibility={body.accessibility}" if body.accessibility else "")
+    return {"seat": body.seat, **prefs, "passenger_path": f"/passenger?{query}"}
 
 
 @app.get("/api/seat/{seat}")
@@ -518,7 +557,7 @@ def get_seat(seat: str) -> dict:
     """What a seat's screen should open with (set at check-in, or by the passenger last time)."""
     if seat not in cabin.seats:
         raise HTTPException(404, f"No seat {seat}")
-    return cabin.seats[seat].model_dump(include={"lang", "senior", "pictures", "read", "checked_in"})
+    return cabin.seats[seat].model_dump(include={"lang", "senior", "pictures", "read", "checked_in", "accessibility"})
 
 
 @app.get("/api/config")
@@ -537,6 +576,9 @@ def config() -> dict:
         "languages": [{"code": lang["code"], "name": lang["name"], "english": lang.get("english", lang["name"])}
                       for lang in languages.registry()],
         "free_talk": free_talk_available(),
+        "live_assist": assist.available(),
+        "accessibility_profiles": list(ACCESSIBILITY_PROFILES),
+        "crew_zones": [{"id": z["id"], "seats": z["seats"]} for z in CREW_ZONES],
     }
 
 
@@ -559,7 +601,8 @@ async def passenger_ws(ws: WebSocket, seat: str) -> None:
             try:
                 if frame.get("bytes") is not None:  # one utterance: 16 kHz mono int16 PCM
                     if cabin.seats[seat].conv_mode:
-                        await handle_conv_audio(seat, frame["bytes"])
+                        raw = frame["bytes"]   # 1-byte tag (0 final, 1 still-speaking partial) + PCM
+                        await handle_conv_audio(seat, raw[1:], final=not raw or raw[0] == 0)
                     else:
                         await handle_audio(seat, frame["bytes"])
                 else:
@@ -688,20 +731,63 @@ async def handle_conv_text(seat: str, sender: str, text: str) -> None:
         log.warning("live conversation translation failed (%s)", e)
         final = None
     await send(final, done=True)
+    if sender == "passenger":
+        _spawn(maybe_auto_file_from_conv(seat, text, s.lang))
 
 
-async def handle_conv_audio(seat: str, pcm: bytes) -> None:
+_conv_suggested: dict[str, dict[str, float]] = defaultdict(dict)   # seat -> intent -> last-suggested time
+SUGGEST_COOLDOWN_S = 3 * 60   # don't re-pop the same suggestion every time it comes up again in one chat
+
+
+async def maybe_auto_file_from_conv(seat: str, text: str, lang: str) -> None:
+    """Live Conversation assist (engine/assist.py): if the passenger's turn clearly asked for
+    something already on the fixed request list, ask -- the same "did you mean...?" popup Free
+    Talk already shows for typed text (showSuggest in app/passenger/page.jsx), never files
+    anything on its own. Only the passenger's own tap (type: "icon") turns it into a real request,
+    so a wrong guess costs one ignored popup, not a card crew wastes a trip on.
+    Runs after the turn is already on screen, so a slow or unavailable model never delays the chat."""
+    if not assist.available():
+        return
+    try:
+        from engine.translate import translate
+
+        en_text = text if lang == "en" else await asyncio.to_thread(translate, text, lang, "en")
+    except Exception:
+        en_text = text
+    intent = await asyncio.to_thread(assist.classify, en_text, [i.id for i in lexicon.intents])
+    if not intent:
+        return
+    if time.time() - _conv_suggested[seat].get(intent, 0.0) < SUGGEST_COOLDOWN_S:
+        return
+    _conv_suggested[seat][intent] = time.time()
+    i = lexicon.get(intent)
+    guess = {"intent": intent, "icon": i.icon, "label": lexicon.label(intent, lang), "score": 1.0}
+    await to_seat(seat, {"type": "suggest", "heard": text, "guess": guess, "translated": None})
+
+
+async def handle_conv_audio(seat: str, pcm: bytes, final: bool = True) -> None:
+    """`final=False`: the passenger is still talking — this is a quick re-transcribe of the
+    utterance so far, shown only on their own screen as a live caption (never sent to crew,
+    never translated). `final=True`: the real turn, same as before: transcribe, then
+    handle_conv_text streams it through translation to both sides."""
     import numpy as np
 
     if len(pcm) > MAX_AUDIO_S * 16_000 * 2:
+        if not final:
+            return   # a stale partial for an utterance that has since run long; the final will 400 as before
         raise ValueError(f"utterance longer than {MAX_AUDIO_S} s")
     audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
     try:
         tr = await asyncio.to_thread(run_asr, audio, languages.asr_languages(cabin.seats[seat].lang))
     except ImportError:
-        await to_seat(seat, {"type": "error", "detail": "voice unavailable: faster-whisper not installed"})
+        if final:
+            await to_seat(seat, {"type": "error", "detail": "voice unavailable: faster-whisper not installed"})
         return
     text = tr.hypotheses[0].text if tr.hypotheses else ""
+    if not final:
+        if text:
+            await to_seat(seat, {"type": "conv_partial", "seat": seat, "text": text})
+        return
     if text:
         await handle_conv_text(seat, "passenger", text)
 
@@ -722,6 +808,8 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         s.senior = bool(msg.get("senior", s.senior))
         s.pictures = bool(msg.get("pictures", s.pictures))
         s.read = bool(msg.get("read", s.read))
+        acc = msg.get("accessibility", s.accessibility)
+        s.accessibility = acc if acc in (None, *ACCESSIBILITY_PROFILES) else s.accessibility
 
     elif kind == "text":
         await interpret_and_reply(seat, msg.get("text", ""))
@@ -779,21 +867,32 @@ async def crew_ws(ws: WebSocket) -> None:
     if not await auth.crew_socket_ok(ws):
         return
     crew.add(ws)
+    crew_meta[ws] = {"name": None, "zone": "all"}
     await ws.send_json(crew_state())
     try:
         while True:
             msg = await ws.receive_json()
             try:
-                await handle_crew(msg)
+                await handle_crew(ws, msg)
             except (KeyError, ValueError) as e:
                 await ws.send_json({"type": "error", "detail": str(e)})
     except WebSocketDisconnect:
         crew.discard(ws)
+        crew_meta.pop(ws, None)
+        await push_crew()
 
 
-async def handle_crew(msg: dict) -> None:
+async def handle_crew(ws: WebSocket, msg: dict) -> None:
     kind = msg.get("type")
-    if kind == "ack":
+    if kind == "hello":
+        name = (msg.get("name") or "").strip()[:40]
+        zone = msg.get("zone") if msg.get("zone") in {z["id"] for z in CREW_ZONES} else "all"
+        crew_meta[ws] = {"name": name or None, "zone": zone}
+    elif kind == "claim":
+        cabin.claim(msg["card_id"], crew_meta.get(ws, {}).get("name") or "crew")
+    elif kind == "release":
+        cabin.release(msg["card_id"])
+    elif kind == "ack":
         await send_status(cabin.acknowledge(msg["card_id"]), "acknowledged")
     elif kind == "reply":
         card = cabin.reply(msg["card_id"], msg["reply_id"])
@@ -855,4 +954,19 @@ app.include_router(languages.router)
 # screens in apps/. Same URLs either way. AURALINK_UI=classic forces the original screens.
 _NEXT_UI = ROOT / "web" / "out"
 UI_DIR = _NEXT_UI if _NEXT_UI.is_dir() and os.environ.get("AURALINK_UI", "").lower() != "classic" else ROOT / "apps"
-app.mount("/", StaticFiles(directory=UI_DIR, html=True), name="apps")
+
+
+class CleanUrlStaticFiles(StaticFiles):
+    """/passenger serves passenger.html (no visible extension, no redirect), still falling back
+    to the normal index.html / 404.html lookup for everything else StaticFiles already handles."""
+
+    async def get_response(self, path, scope):
+        last_segment = path.rsplit("/", 1)[-1]
+        if last_segment and "." not in last_segment:
+            full_path, stat_result = await anyio.to_thread.run_sync(self.lookup_path, f"{path}.html")
+            if stat_result and stat.S_ISREG(stat_result.st_mode):
+                return self.file_response(full_path, stat_result, scope)
+        return await super().get_response(path, scope)
+
+
+app.mount("/", CleanUrlStaticFiles(directory=UI_DIR, html=True), name="apps")

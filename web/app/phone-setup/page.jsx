@@ -15,7 +15,7 @@ export default function PhoneSetup() {
     if (/android/i.test(navigator.userAgent)) setOs("android");
   }, []);
   if (!info) return <Ambient />;
-  const here = `${info.public_url}/phone-setup.html`;
+  const here = `${info.public_url}/phone-setup`;
   const host = new URL(info.public_url).host;
   const ok = Recorder.supported();
   const cells = [

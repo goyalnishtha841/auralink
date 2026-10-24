@@ -5,6 +5,21 @@ const PREFERRED = { en: ["en-IN", "en-GB", "en-US"], hi: ["hi-IN"], ta: ["ta-IN"
 // plain, natural voices first where the device has them (macOS/iOS also ship character voices)
 const NAMES = { en: ["Rishi", "Veena"], hi: ["Lekha"], ta: ["Vani"], th: ["Kanya"], ja: ["Kyoko", "O-Ren", "Otoya"] };
 
+// Whether any voice (browser TTS or Kokoro) is playing right now, plus a short cooldown after it
+// ends — a phone's mic picks up its own speaker even with echoCancellation on, so Live Conversation
+// (web/components/liveconversation.jsx, app/passenger/page.jsx) mutes listening while this is true,
+// instead of transcribing its own reply back as a new utterance.
+let speaking = false;
+const speakListeners = new Set();
+const COOLDOWN_MS = 350;
+function setSpeaking(v) {
+  if (speaking === v) return;
+  speaking = v;
+  speakListeners.forEach((fn) => fn(v));
+}
+export function isSpeaking() { return speaking; }
+export function onSpeakingChange(fn) { speakListeners.add(fn); return () => speakListeners.delete(fn); }
+
 let voices = [];
 const ready = typeof window === "undefined" ? Promise.resolve([]) : new Promise((resolve) => {
   if (!("speechSynthesis" in window)) return resolve([]);
@@ -38,13 +53,19 @@ export async function canSpeak(lang) {
 export async function speak(lines, lang, { rate = 0.9 } = {}) {
   await ready;
   const voice = voiceFor(lang);
-  if (!voice) return false;
+  const items = [].concat(lines).filter(Boolean);
+  if (!voice || !items.length) return false;
   speechSynthesis.cancel();
-  for (const text of [].concat(lines).filter(Boolean)) {
+  setSpeaking(true);
+  let remaining = items.length;
+  const finish = () => { remaining -= 1; if (remaining <= 0) setTimeout(() => setSpeaking(false), COOLDOWN_MS); };
+  for (const text of items) {
     const u = new SpeechSynthesisUtterance(text);
     u.voice = voice;
     u.lang = voice.lang;
     u.rate = rate;             // a little slower than normal: clearer for seniors and in noise
+    u.onend = finish;
+    u.onerror = finish;
     speechSynthesis.speak(u);
   }
   return true;
@@ -52,6 +73,7 @@ export async function speak(lines, lang, { rate = 0.9 } = {}) {
 
 export function stopSpeaking() {
   if ("speechSynthesis" in window) speechSynthesis.cancel();
+  setSpeaking(false);
 }
 
 // Phones block audio.play() unless it happens inside a real tap/click; a Live Conversation
@@ -84,7 +106,9 @@ export async function speakNatural(lines, lang, opts = {}) {
       const url = URL.createObjectURL(await res.blob());
       const audio = sharedAudio || new Audio();
       audio.src = url;
-      audio.play().catch((e) => console.warn("Auralink: voice playback blocked", e));
+      audio.onended = audio.onerror = () => setTimeout(() => setSpeaking(false), COOLDOWN_MS);
+      setSpeaking(true);
+      audio.play().catch((e) => { console.warn("Auralink: voice playback blocked", e); setSpeaking(false); });
       return true;
     }
   } catch { /* fall through to the browser's own voice */ }

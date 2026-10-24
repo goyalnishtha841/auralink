@@ -6,6 +6,7 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { Recorder, connect, crewFetch, loadConfig, toBase64 } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { Picto } from "@/lib/pictograms";
+import { ACCESSIBILITY_META } from "@/lib/accessibility";
 import { canSpeak, speakNatural as speak, unlockAudio } from "@/lib/speech";
 import { Ambient, AppHeader, ease } from "@/components/ui";
 import { FreeTalkPanel } from "@/components/freetalk";
@@ -41,6 +42,10 @@ export default function Crew() {
   const [paPick, setPaPick] = useState(null);
   const [paN, setPaN] = useState("");
   const [paRecOn, setPaRecOn] = useState(false);
+  const [myName, setMyName] = useState("");
+  const [myZone, setMyZone] = useState("all");
+  const [showMineOnly, setShowMineOnly] = useState(false);
+  const myInfo = useRef({ name: "", zone: "all" });
   const socket = useRef(null), audio = useRef(null), paRec = useRef(null);
   const seenUrgent = useRef(new Set()), announced = useRef(null), announcedSymptom = useRef(new Set());
   const opts = useRef({ soundOn: true, readAloud: false, convMuted: false }); opts.current = { soundOn, readAloud, convMuted };
@@ -74,10 +79,20 @@ export default function Crew() {
     speak(newOnes.map((c) => `${c.urgent ? "至急。" : ""}${c.seat}、${c.crew_ja || (c.guesses[0] ? c.guesses[0].label_ja : "ご用件が不明です")}`), "ja");
   }
 
+  function sendHello(name, zone) {
+    myInfo.current = { name, zone };
+    socket.current?.send({ type: "hello", name, zone });
+  }
+
   useEffect(() => {
     const unlock = () => { audio.current ??= new AudioContext(); unlockAudio(); };
     addEventListener("pointerdown", unlock, { once: true });
     canSpeak("ja").then(setJaVoice);
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem("auralink-crew-id") || "{}"); } catch { /* blocked */ }
+    if (saved.name) { setMyName(saved.name); setShowMineOnly(true); }
+    if (saved.zone) setMyZone(saved.zone);
+    myInfo.current = { name: saved.name || "", zone: saved.zone || "all" };
     loadConfig().then((c) => {
       setCfg(c);
       socket.current = connect("/ws/crew", (msg) => {
@@ -107,12 +122,18 @@ export default function Crew() {
           // crew's reply in their own language (app/passenger/page.jsx's onMessage)
           if (msg.from === "passenger" && msg.done && msg.translated && !opts.current.convMuted) speak(msg.translated, "ja");
         }
-      }, setOnline);
+      }, (on) => { setOnline(on); if (on && myInfo.current.name) sendHello(myInfo.current.name, myInfo.current.zone); });
     });
     return () => { socket.current?.close(); removeEventListener("pointerdown", unlock); };
   }, []); // eslint-disable-line
 
   const send = (m) => socket.current?.send(m);
+
+  function saveIdentity(name, zone) {
+    setMyName(name); setMyZone(zone); setShowMineOnly(true);
+    try { localStorage.setItem("auralink-crew-id", JSON.stringify({ name, zone })); } catch { /* blocked */ }
+    sendHello(name, zone);
+  }
 
   async function paMatch(body) {
     setPa({ busy: true });
@@ -149,6 +170,7 @@ export default function Crew() {
   const PA = Object.fromEntries((cfg.announcements || []).map((a) => [a.id, a]));
   const cards = state?.cards || [];
   const openUrgent = cards.filter((c) => c.urgent && c.status !== "acknowledged");
+  const visibleCards = showMineOnly && myZone !== "all" ? cards.filter((c) => c.urgent || c.zone === myZone) : cards;
 
   return (
     <>
@@ -160,7 +182,26 @@ export default function Crew() {
         <button className="ghost" aria-pressed={soundOn} onClick={() => setSoundOn((x) => !x)}><Icon id="bell" /> {soundOn ? "音 Sound on" : "消音 Muted"}</button>
         <button className="ghost" onClick={() => setPb({ seat: null, lang: "hi" })}><Icon id="chat" /> 会話帳 Phrasebook</button>
         {jaVoice ? <label className="row muted"><input type="checkbox" checked={readAloud} onChange={(e) => setReadAloud(e.target.checked)} /> 読み上げ Read aloud</label> : null}
+        <label className="row muted">自分 Me
+          <input className="mono" style={{ width: 90 }} placeholder="name" value={myName}
+            onChange={(e) => setMyName(e.target.value)}
+            onBlur={() => saveIdentity(myName.trim(), myZone)} /></label>
+        <label className="row muted">担当 Zone
+          <select value={myZone} onChange={(e) => saveIdentity(myName.trim(), e.target.value)}>
+            <option value="all">全体 All</option>
+            {(cfg.crew_zones || []).map((z) => <option key={z.id} value={z.id}>区画 {z.id} · rows {Math.min(...z.seats.map((s) => +s.slice(0, -1)))}-{Math.max(...z.seats.map((s) => +s.slice(0, -1)))}</option>)}
+          </select></label>
+        {myZone !== "all" ? (
+          <button className="ghost" aria-pressed={showMineOnly} onClick={() => setShowMineOnly((x) => !x)}>
+            {showMineOnly ? `自分の区画 ${myZone}` : "全員 Everyone"}
+          </button>
+        ) : null}
       </AppHeader>
+      {(state?.crew_roster?.length) ? (
+        <p className="muted mono" style={{ maxWidth: 1320, margin: "0 auto", padding: "0 20px" }}>
+          乗務員 Crew online: {state.crew_roster.map((m) => `${m.name}${m.zone !== "all" ? ` (${m.zone})` : ""}`).join(" · ")}
+        </p>
+      ) : null}
 
       <main className="app" style={{ maxWidth: 1320 }}>
         <AnimatePresence>
@@ -175,12 +216,12 @@ export default function Crew() {
         <div className="crew-layout">
           <div className="col">
             <section className="panel">
-              <h2>リクエスト Requests</h2>
+              <h2>リクエスト Requests{showMineOnly && myZone !== "all" ? ` · 区画 ${myZone}` : ""}</h2>
               <div className="list">
                 <AnimatePresence initial={false}>
-                  {cards.map((c) => <CardView key={c.id} c={c} cfg={cfg} send={send} onTalk={() => setPb({ seat: c.seat, lang: c.lang })} />)}
+                  {visibleCards.map((c) => <CardView key={c.id} c={c} cfg={cfg} send={send} myName={myName} onTalk={() => setPb({ seat: c.seat, lang: c.lang })} />)}
                 </AnimatePresence>
-                {!cards.length ? <p className="muted" style={{ margin: 0 }}>リクエストなし · No open requests</p> : null}
+                {!visibleCards.length ? <p className="muted" style={{ margin: 0 }}>リクエストなし · No open requests</p> : null}
               </div>
             </section>
             <section className="panel"><h2>ケアラウンド Care round</h2><Round state={state} LABEL={LABEL} send={send} /></section>
@@ -258,11 +299,13 @@ export default function Crew() {
   );
 }
 
-function CardView({ c, cfg, send, onTalk }) {
+function CardView({ c, cfg, send, myName, onTalk }) {
   const [ja, en, tone] = STATUS[c.status] || ["", c.status, "dim"];
+  const mine = c.claimed_by && c.claimed_by === myName;
+  const takenByOther = c.claimed_by && !mine;
   return (
     <motion.div layout className={`item citem ${c.urgent ? "is-urgent" : ""}`} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24, height: 0, padding: 0, margin: 0 }} transition={{ duration: 0.4, ease }}>
-      <span className="who">{c.seat}</span>
+      <span className="who">{c.seat}{c.zone ? <span className="muted" style={{ fontSize: 11, display: "block" }}>区画 {c.zone}</span> : null}</span>
       <div className="body">
         <div className="what">
           {c.intent ? (<><Icon id={c.intent} /><strong>{c.crew_ja}</strong><span className="muted">{c.label_en}</span></>)
@@ -272,6 +315,8 @@ function CardView({ c, cfg, send, onTalk }) {
           {c.symptom_ja ? <span className="pill bad symptom"><Icon id={c.symptom_icon} />症状 {c.symptom_ja} · {c.symptom_en}</span> : null}
           {c.voice_stress != null ? <span className="pill bad" title={`voice-stress heuristic, unvalidated: ${c.voice_stress}`}><Icon id="alert" />声が動揺 Voice sounded distressed</span> : null}
           {c.pictures ? <span className="pill violet" title="This passenger uses picture-only mode">絵のみ · Pictures only</span> : null}
+          {c.accessibility ? <span className="pill bad" title={ACCESSIBILITY_META[c.accessibility]?.en}><Icon id={ACCESSIBILITY_META[c.accessibility]?.icon} />{ACCESSIBILITY_META[c.accessibility]?.ja}</span> : null}
+          {c.claimed_by ? <span className={`pill ${mine ? "ok" : "dim"}`}><Icon id="person" />{mine ? "自分が対応中 You're on this" : `${c.claimed_by} が対応中`}</span> : null}
         </div>
         {c.heard ? <span className="muted">“{c.heard}” · {c.lang}</span> : null}
         <div className="acts">
@@ -279,6 +324,9 @@ function CardView({ c, cfg, send, onTalk }) {
           {cfg.replies.map((r) => <button key={r.id} title={r.en} onClick={() => send({ type: "reply", card_id: c.id, reply_id: r.id })}>{r.ja}</button>)}
           <button onClick={() => send({ type: "close", card_id: c.id })}>完了 Done</button>
           <button onClick={onTalk}><Icon id="chat" /> 話す Talk</button>
+          {mine ? <button onClick={() => send({ type: "release", card_id: c.id })}>手放す Release</button>
+            : <button disabled={takenByOther} title={takenByOther ? `${c.claimed_by} is already on this` : undefined}
+                onClick={() => send({ type: "claim", card_id: c.id })}>引き受ける Claim</button>}
         </div>
       </div>
     </motion.div>
@@ -368,7 +416,7 @@ function Safety({ state, cfg, exitSeats, send }) {
 
 function Needs({ needs, LANG_NAME, onTalk }) {
   if (!needs.length) return <p className="muted" style={{ margin: 0 }}>特記事項なし · Everyone uses English with default settings.</p>;
-  const order = (n) => (n.pictures ? 0 : n.senior ? 1 : 2);
+  const order = (n) => (n.accessibility || n.pictures ? 0 : n.senior ? 1 : 2);
   return (<div className="needs">{[...needs].sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id)).map((n) => (
     <div key={n.id} className="need">
       <span className={`dot ${n.connected ? "on" : ""}`} title={n.connected ? "screen connected" : "not connected"} />
@@ -376,6 +424,7 @@ function Needs({ needs, LANG_NAME, onTalk }) {
       {n.pictures ? <span className="pill violet">絵のみ · Pictures only</span> : null}
       {n.senior ? <span className="pill ok">大きな文字 · Large text</span> : null}
       {n.read ? <span className="pill dim">読み上げ · Read aloud</span> : null}
+      {n.accessibility ? <span className="pill bad"><Icon id={ACCESSIBILITY_META[n.accessibility]?.icon} />{ACCESSIBILITY_META[n.accessibility]?.ja}</span> : null}
       {n.checked_in ? <span className="muted">チェックイン時 · set at check-in</span> : null}
       <button onClick={() => onTalk(n)}><Icon id="chat" /> 話す Talk</button>
     </div>))}</div>);
@@ -390,7 +439,7 @@ function Round({ state, LABEL, send }) {
       <motion.div layout key={st.seat} className={`stop ${st.care ? "care" : ""} ${st.done ? "done" : ""}`}>
         <span className="n">{k + 1}</span><b>{st.seat}</b>
         <span className="what">{items.map(([i, n]) => <span key={i} className="pill dim"><Icon id={i} />{LABEL[i]?.ja}{n > 1 ? ` ×${n}` : ""}</span>)}
-          {st.care ? <span className="pill violet" title="Has not asked for anything for a while.">声かけ Check-in · {st.care.minutes} 分 min quiet{st.care.pictures ? " · 絵のみ" : st.care.senior ? " · 大きな文字" : ""}</span> : null}</span>
+          {st.care ? <span className="pill violet" title="Has not asked for anything for a while.">声かけ Check-in · {st.care.minutes} 分 min quiet{st.care.accessibility ? ` · ${ACCESSIBILITY_META[st.care.accessibility]?.ja}` : st.care.pictures ? " · 絵のみ" : st.care.senior ? " · 大きな文字" : ""}</span> : null}</span>
         {active && !st.done ? <button onClick={() => send({ type: "stop_done", seat: st.seat })}>完了 Done</button> : <span />}
       </motion.div>);
   };

@@ -6,6 +6,44 @@ import { Icon } from "@/lib/icons";
 
 export const ease = [0.2, 0.8, 0.2, 1];
 
+// A horizontally-swipeable row of tiles instead of dumping every option on screen at once.
+// Snaps one tile at a time (good for a thumb) and shows dots for how many more there are.
+export function Carousel({ children, big = false, className = "" }) {
+  const ref = useRef(null);
+  const [index, setIndex] = useState(0);
+  const count = Array.isArray(children) ? children.length : 1;
+
+  function onScroll() {
+    const el = ref.current;
+    const card = el?.firstElementChild;
+    if (!el || !card) return;
+    const style = getComputedStyle(el);
+    const step = card.getBoundingClientRect().width + parseFloat(style.columnGap || style.gap || "14");
+    setIndex(Math.max(0, Math.min(count - 1, Math.round(el.scrollLeft / step))));
+  }
+  function scrollTo(i) {
+    const el = ref.current;
+    const card = el?.children[i];
+    card?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+  }
+
+  return (
+    <div className="carousel-wrap">
+      <div ref={ref} onScroll={onScroll} className={`grid carousel ${big ? "big" : ""} ${className}`}>
+        {children}
+      </div>
+      {count > 1 ? (
+        <div className="carousel-dots" role="tablist" aria-label="More options, swipe to see">
+          {Array.from({ length: count }, (_, k) => (
+            <button key={k} type="button" role="tab" aria-selected={k === index} aria-label={`Option ${k + 1} of ${count}`}
+              className={`dot-mini ${k === index ? "on" : ""}`} onClick={() => scrollTo(k)} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function BrandMark({ size = 34 }) {
   return (
     <svg viewBox="0 0 40 26" width={size} height={(size * 26) / 40} aria-hidden="true" fill="none" strokeLinecap="round">
@@ -104,7 +142,7 @@ export function PinDialog() {
         <span className="mono" style={{ color: "var(--accent)", fontSize: 12, letterSpacing: ".14em" }}>CREW ONLY</span>
         <h2>乗務員PIN <span className="muted" style={{ fontWeight: 400 }}>· Crew PIN</span></h2>
         <p className="muted" style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>Passengers share the cabin Wi-Fi, so crew screens are locked.
-          The 6-digit PIN is on <a href="/start.html" style={{ color: "var(--fg)" }}>the Start page</a> of the laptop running Auralink, or in its terminal.</p>
+          The 6-digit PIN is on <a href="/start" style={{ color: "var(--fg)" }}>the Start page</a> of the laptop running Auralink, or in its terminal.</p>
         <input ref={input} className="pin-input" type="password" inputMode="numeric" autoComplete="off" maxLength={32} required
           aria-label="乗務員PIN / Crew PIN" value={pin} onChange={(e) => setPin(e.target.value)} />
         <p role="alert" style={{ margin: 0, minHeight: "1.4em", color: "var(--bad)" }}>{err}</p>

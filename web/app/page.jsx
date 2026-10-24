@@ -424,7 +424,7 @@ export default function Landing() {
           <nav aria-label="Sections">
             <a href="#problem">Problem</a><a href="#solution">How it works</a><a href="#try">Try it</a><a href="#safety">Safety</a><a href="#proof">Results</a>
           </nav>
-          <a className="btn btn-outline-call" href="/start.html">Start the demo<Icon id="arrow" /></a>
+          <a className="btn btn-outline-call" href="/start">Start the demo<Icon id="arrow" /></a>
         </div>
       </header>
 
@@ -549,17 +549,17 @@ export default function Landing() {
             <Reveal as="p" className="eyebrow">Live demo</Reveal>
             <Reveal as="h2" delay={0.05}>Open the cabin.</Reveal>
             <p className="sub"><HubStatus /></p>
-            <p className="sub">First time? <a href="/start.html"><b>Start here</b></a>: who uses which screen, the seat QR code, the crew PIN, and how it works with no internet.</p>
+            <p className="sub">First time? <a href="/start"><b>Start here</b></a>: who uses which screen, the seat QR code, the crew PIN, and how it works with no internet.</p>
             <div className="launch-grid">
-              {[["/passenger.html?seat=34K", "mic", "Passenger", "Seat 34K. Speak, tap or type a request."],
-                ["/crew.html", "tablet", "Crew tablet", "Request cards, replies and the safety heat map."],
-                ["/judge.html", "wave", "Under the hood", "Every guess, score and decision, live."],
-                ["/record.html", "check", "Record voices", "Help us test with your own accent."]].map(([href, ic, h, p], k) => (
+              {[["/passenger?seat=34K", "mic", "Passenger", "Seat 34K. Speak, tap or type a request."],
+                ["/crew", "tablet", "Crew tablet", "Request cards, replies and the safety heat map."],
+                ["/judge", "wave", "Under the hood", "Every guess, score and decision, live."],
+                ["/record", "check", "Record voices", "Help us test with your own accent."]].map(([href, ic, h, p], k) => (
                 <Reveal as="a" className="launch-card" href={href} key={href} delay={k * 0.07}><Icon id={ic} /><h3>{h}</h3><p>{p}</p><span className="go">Open<Icon id="arrow" /></span></Reveal>
               ))}
             </div>
-            <p className="note">Tip: open Passenger and Crew side by side, or Passenger on your phone. Airport: <a href="/checkin.html">check-in preferences</a>.
-              Demo tools: <a href="/presenter.html">presenter console</a> · <a href="/report.html">flight report</a> · <a href="/phone-setup.html">phone setup</a> · <a href="/seats.html">printable seat QR cards</a> · <a href="/noise.html">cabin-noise player</a>.</p>
+            <p className="note">Tip: open Passenger and Crew side by side, or Passenger on your phone. Airport: <a href="/checkin">check-in preferences</a>.
+              Demo tools: <a href="/presenter">presenter console</a> · <a href="/report">flight report</a> · <a href="/phone-setup">phone setup</a> · <a href="/seats">printable seat QR cards</a> · <a href="/noise">cabin-noise player</a>.</p>
           </div>
         </section>
       </main>

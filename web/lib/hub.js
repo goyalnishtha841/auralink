@@ -98,8 +98,9 @@ export class Recorder {
 // pauses. (Whisper's own Silero VAD, in engine/asr.py, still gates what actually gets
 // transcribed; this is purely about *when* to stop listening and send what was heard.)
 export class VadRecorder {
-  constructor({ onUtterance, onLevel = null, onSpeaking = null, silenceMs = 900, minSpeechMs = 300, maxUtteranceS = 12, threshold = 0.035 } = {}) {
-    Object.assign(this, { onUtterance, onLevel, onSpeaking, silenceMs, minSpeechMs, maxUtteranceS, threshold });
+  constructor({ onUtterance, onLevel = null, onSpeaking = null, onPartial = null, isMuted = null,
+                silenceMs = 900, minSpeechMs = 450, maxUtteranceS = 12, threshold = 0.05, partialEveryMs = 1100 } = {}) {
+    Object.assign(this, { onUtterance, onLevel, onSpeaking, onPartial, isMuted, silenceMs, minSpeechMs, maxUtteranceS, threshold, partialEveryMs });
   }
 
   async start() {
@@ -112,18 +113,37 @@ export class VadRecorder {
     this.chunks = [];
     this.speaking = false;
     this.active = true;
+    this.noiseFloor = this.threshold * 0.6;   // self-calibrates to the room instead of one fixed number
     this.node.onaudioprocess = (e) => {
       if (!this.active) return;
+      if (this.isMuted?.()) {
+        // A reply is playing through the speaker: stop listening rather than risk transcribing
+        // our own voice back as a new utterance. Drop whatever was being captured, cleanly.
+        if (this.speaking) { this.speaking = false; this.chunks = []; this.onSpeaking?.(false); }
+        this.onLevel?.(0);
+        return;
+      }
       const d = new Float32Array(e.inputBuffer.getChannelData(0));
       let sum = 0;
       for (let i = 0; i < d.length; i += 4) sum += d[i] * d[i];
       const level = Math.sqrt(sum / (d.length / 4));
       this.onLevel?.(Math.min(1, level * 6));
       const now = this.ctx.currentTime * 1000;
-      if (level > this.threshold) {
-        if (!this.speaking) { this.speaking = true; this.speechStart = now; this.chunks = []; this.onSpeaking?.(true); }
+      // Needs to clear both a fixed floor (so a dead-silent room still needs real volume) and
+      // 2.2x today's ambient noise (so a humming cabin doesn't count its own hum as speech).
+      const gate = Math.max(this.threshold, this.noiseFloor * 2.2);
+      if (!this.speaking) this.noiseFloor = this.noiseFloor * 0.97 + level * 0.03;   // slow EMA, quiet moments only
+      if (level > gate) {
+        if (!this.speaking) {
+          this.speaking = true; this.speechStart = now; this.chunks = []; this.lastPartialAt = now;
+          this.onSpeaking?.(true);
+        }
         this.chunks.push(d.slice());
         this.silenceStart = now;
+        if (this.onPartial && now - this.lastPartialAt >= this.partialEveryMs) {
+          this.lastPartialAt = now;
+          this.onPartial(toPcm16(this.chunks, this.ctx.sampleRate));
+        }
       } else if (this.speaking) {
         this.chunks.push(d.slice());
         const tooQuiet = now - this.silenceStart > this.silenceMs;

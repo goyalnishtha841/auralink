@@ -35,6 +35,7 @@ class Card(BaseModel):
     translated: str | None = None          # Free Talk: unreviewed machine translation of `heard`, for crew
     lang: str = "en"                                        # passenger's language when asking
     round_id: str | None = None                             # on a care round (hub/rounds.py)
+    claimed_by: str | None = None                            # crew member's name, so only one picks it up
     created_at: float = Field(default_factory=time.time)
     updated_at: float = Field(default_factory=time.time)
     timeline: dict[str, float] = Field(default_factory=dict)   # status -> when it was first reached (flight report)
@@ -46,6 +47,7 @@ class Seat(BaseModel):
     senior: bool = False
     pictures: bool = False   # picture-only mode: crew should answer visually or in person
     read: bool = False       # read aloud on the passenger's phone
+    accessibility: str | None = None   # None, "deaf_hoh", "low_vision", "mobility", "cognitive"
     checked_in: bool = False # preferences set at the airport / gate before boarding
     connected: bool = False
     failed_attempts: int = 0
@@ -211,6 +213,19 @@ class Cabin:
 
     def close(self, card_id: str) -> Card:
         return self._set(self.cards[card_id], "closed")
+
+    def claim(self, card_id: str, crew_name: str) -> Card:
+        """One crew member picks this request up, so others see it is being handled."""
+        card = self.cards[card_id]
+        card.claimed_by = crew_name
+        card.updated_at = time.time()
+        return card
+
+    def release(self, card_id: str) -> Card:
+        card = self.cards[card_id]
+        card.claimed_by = None
+        card.updated_at = time.time()
+        return card
 
     def start_broadcast(self, template_id: str) -> Broadcast:
         self.end_broadcast()
