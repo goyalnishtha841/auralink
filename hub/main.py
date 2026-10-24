@@ -261,6 +261,7 @@ def card_for_crew(card: Card) -> dict:
     data["pictures"] = cabin.seats[card.seat].pictures
     data["accessibility"] = cabin.seats[card.seat].accessibility
     data["zone"] = SEAT_ZONE.get(card.seat)
+    data["name"] = cabin.seats[card.seat].name
     return data
 
 
@@ -290,10 +291,10 @@ def crew_state() -> dict:
         "round_plan": rounds.plan(cabin),
         "round": cabin.round,
         "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
-        "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "accessibility",
+        "seat_needs": [s.model_dump(include={"id", "name", "lang", "senior", "pictures", "read", "accessibility",
                                              "checked_in", "connected"})
                        for s in cabin.seats.values()
-                       if s.lang != "en" or s.senior or s.pictures or s.read or s.accessibility],
+                       if s.lang != "en" or s.senior or s.pictures or s.read or s.accessibility or s.name],
         # Live Conversation panels open right now, so a crew tablet that reconnects mid-call still
         # knows which seats to show (conv_message itself only reaches sockets already connected).
         "conv_seats": [s.id for s in cabin.seats.values() if s.conv_mode],
@@ -948,6 +949,9 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         s.read = bool(msg.get("read", s.read))
         acc = msg.get("accessibility", s.accessibility)
         s.accessibility = acc if acc in (None, *ACCESSIBILITY_PROFILES) else s.accessibility
+        name = msg.get("name")
+        if name:   # only a scanned boarding pass sends this; never erase a name already known
+            s.name = str(name)[:60]
 
     elif kind == "text":
         await interpret_and_reply(seat, msg.get("text", ""))

@@ -54,6 +54,26 @@ def test_split_request_reaches_crew_after_confirm(client):
         assert reply == {"type": "reply", "card_id": water["id"], "text": "अभी लेकर आ रहे हैं।"}
 
 
+def test_scanned_boarding_pass_name_reaches_crew(client):
+    """A name only ever arrives from a scanned boarding pass (web/app/passenger's SeatGate), so
+    crew should see it on the seat's request cards once the passenger says hello with one."""
+    with client.websocket_connect("/ws/crew") as crew, client.websocket_connect("/ws/passenger/34K") as pax:
+        crew_state(crew)
+        pax.send_json({"type": "hello", "lang": "en", "name": "Yuki Tanaka"})
+        pax.send_json({"type": "icon", "intent": "water"})
+        pax.receive_json()
+
+        state = crew_state(crew)
+        while not state["cards"]:
+            state = crew_state(crew)
+        assert state["cards"][0]["name"] == "Yuki Tanaka"
+
+        # a later hello with no name (e.g. a language change) must not erase it
+        pax.send_json({"type": "hello", "lang": "hi"})
+        state = crew_state(crew)
+        assert state["cards"][0]["name"] == "Yuki Tanaka"
+
+
 def test_two_failed_rounds_escalate_to_needs_human(client):
     with client.websocket_connect("/ws/passenger/30A") as pax:
         pax.send_json({"type": "text", "text": "hmm"})

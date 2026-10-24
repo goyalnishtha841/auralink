@@ -16,7 +16,7 @@ export default function Passenger() {
   const st = useRef(null);
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
-  if (!st.current) st.current = { ready: false, awaitingSeat: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, voiceOK: false,
+  if (!st.current) st.current = { ready: false, awaitingSeat: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, name: null, voiceOK: false,
     micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: null,
     conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [], spoken: new Set() } };
   const s = st.current;
@@ -28,7 +28,7 @@ export default function Passenger() {
   const flashRef = useRef(flash); flashRef.current = flash;
 
   const t = (k) => s.strings[k] ?? s.fallback[k] ?? k;
-  const hello = () => socket.current?.send({ type: "hello", lang: s.lang, senior: s.senior, pictures: s.pictures, read: s.readAloud, accessibility: s.accessibility });
+  const hello = () => socket.current?.send({ type: "hello", lang: s.lang, senior: s.senior, pictures: s.pictures, read: s.readAloud, accessibility: s.accessibility, name: s.name || undefined });
   const bigMode = () => s.senior || s.accessibility === "low_vision";
   const pictureMode = () => s.pictures || s.accessibility === "cognitive";
   const say = (lines) => { if (s.readAloud && s.voiceOK && !pictureMode()) speak(lines, s.lang); };
@@ -392,8 +392,8 @@ export default function Passenger() {
   // The shared scanner lands here with no ?seat= at all: one QR code for the whole cabin
   // instead of one per seat (there's no screen on every seat to print one onto). The passenger
   // picks their seat on the map below before anything connects to the hub.
-  function confirmSeat(seat) {
-    s.awaitingSeat = false; bump();
+  function confirmSeat(seat, name) {
+    s.awaitingSeat = false; s.name = name || null; bump();
     boot(seat, params());
   }
 
@@ -639,8 +639,10 @@ function SeatGate({ cfg, onConfirm }) {
             </div>
           ))}
         </div>
-        <button className="primary" disabled={!picked} onClick={() => picked && onConfirm(picked)} style={{ minHeight: 52, fontSize: 16 }}>
-          {picked ? `Continue · Seat ${picked}` : "Pick your seat above"}
+        <button className="primary" disabled={!picked}
+          onClick={() => picked && onConfirm(picked, scanned?.seat === picked ? scanned.name : undefined)}
+          style={{ minHeight: 52, fontSize: 16 }}>
+          {picked ? `Continue · ${scanned?.seat === picked && scanned.name ? `${scanned.name}, seat ` : "Seat "}${picked}` : "Pick your seat above"}
         </button>
       </main>
     </>

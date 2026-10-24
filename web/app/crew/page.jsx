@@ -361,7 +361,10 @@ function CardView({ c, cfg, send, myName, onTalk }) {
   const takenByOther = c.claimed_by && !mine;
   return (
     <motion.div layout className={`item citem ${c.urgent ? "is-urgent" : ""}`} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24, height: 0, padding: 0, margin: 0 }} transition={{ duration: 0.4, ease }}>
-      <span className="who">{c.seat}{c.zone ? <span className="muted" style={{ fontSize: 11, display: "block" }}>区画 {c.zone}</span> : null}</span>
+      <span className="who">{c.seat}
+        {c.name ? <span className="muted" style={{ fontSize: 11, display: "block", fontWeight: 600 }} title="From a scanned boarding pass">{c.name}</span> : null}
+        {c.zone ? <span className="muted" style={{ fontSize: 11, display: "block" }}>区画 {c.zone}</span> : null}
+      </span>
       <div className="body">
         <div className="what">
           {c.intent ? (<><Icon id={c.intent} /><strong>{c.crew_ja}</strong><span className="muted">{c.label_en}</span></>)
@@ -510,7 +513,7 @@ function SeatDetail({ seat, state, cfg, send, myName, LANG_NAME, onTalk, onChat 
   return (
     <div key={seat} style={{ display: "contents" }}>
       <div className="row">
-        <h2 className="grow">{seat}</h2>
+        <h2 className="grow">{seat}{need?.name ? <span className="muted" style={{ fontSize: 15, fontWeight: 500 }}> · {need.name}</span> : null}</h2>
         {need ? <span className="pill dim">{LANG_NAME[need.lang] || need.lang}</span> : null}
         {need?.accessibility ? <span className="pill bad"><Icon id={ACCESSIBILITY_META[need.accessibility].icon} />{ACCESSIBILITY_META[need.accessibility].en}</span> : null}
         <span className={`dot ${need?.connected ? "on" : ""}`} title={need?.connected ? "screen connected" : "not connected"} />
@@ -574,7 +577,7 @@ function Needs({ needs, LANG_NAME, onTalk }) {
   return (<div className="needs">{[...needs].sort((a, b) => order(a) - order(b) || a.id.localeCompare(b.id)).map((n) => (
     <div key={n.id} className="need">
       <span className={`dot ${n.connected ? "on" : ""}`} title={n.connected ? "screen connected" : "not connected"} />
-      <b>{n.id}</b><span className="pill dim">{LANG_NAME[n.lang] || n.lang}</span>
+      <b>{n.id}</b>{n.name ? <span className="muted">{n.name}</span> : null}<span className="pill dim">{LANG_NAME[n.lang] || n.lang}</span>
       {n.pictures ? <span className="pill violet">絵のみ · Pictures only</span> : null}
       {n.senior ? <span className="pill ok">大きな文字 · Large text</span> : null}
       {n.read ? <span className="pill dim">読み上げ · Read aloud</span> : null}
