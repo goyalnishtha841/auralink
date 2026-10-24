@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>Auralink · Cabin noise</title>
   <link rel="stylesheet" href="style.css">
   <style>
@@ -11,7 +12,7 @@
     .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .presets button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
     .meter { height: 26px; border-radius: 13px; background: var(--surface-2); overflow: hidden; }
-    .meter i { display: block; height: 100%; width: 0; border-radius: 13px; background: linear-gradient(90deg, var(--info), var(--accent), var(--bad)); transition: width .08s linear; }
+    .meter i { display: block; height: 100%; width: 0; border-radius: 13px; background: var(--accent); transition: width .08s linear; }
     .readout { display: flex; justify-content: space-between; font: 13px ui-monospace, Menlo, monospace; color: var(--muted); }
     input[type=range] { width: 100%; accent-color: var(--accent); }
     ol { margin: 0; padding-left: 1.2em; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }

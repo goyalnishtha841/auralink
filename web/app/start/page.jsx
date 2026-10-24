@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import { Ambient, AppHeader, Reveal } from "@/components/ui";
 
 const PAGES = [
-  ["/passenger.html?seat=34K", "Passenger", "Passenger’s phone", "Ask for help by speaking, typing or tapping a picture; read replies, briefings and announcements"],
-  ["/crew.html", "Crew tablet", "Cabin crew (PIN)", "Requests in Japanese, one-tap replies, safety briefings, PA captions, care rounds, phrasebook"],
-  ["/checkin.html", "Check-in", "Airport kiosk", "Passenger picks language and needs before boarding; the seat opens set up"],
-  ["/judge.html", "Under the hood", "Jury (PIN)", "How each request was understood, step by step"],
-  ["/presenter.html", "Presenter console", "Presenter (PIN)", "Pitch timer, health check, backup buttons, reset between rehearsals"],
-  ["/report.html", "Flight report", "JAL manager (PIN)", "How the flight went: waiting times, recovery, safety understanding"],
-  ["/seats.html", "Seat QR cards", "Demo setup", "Printable QR cards for each seat"],
-  ["/phone-setup.html", "Phone setup", "Each demo phone, once", "Lets a phone use its microphone with the laptop"],
-  ["/noise.html", "Cabin noise", "Demo", "Plays engine noise to show it works in a loud cabin"],
-  ["/record.html", "Record voices", "Volunteers", "Records test voices so we can measure accuracy"],
+  ["/passenger?seat=34K", "Passenger", "Passenger’s phone", "Ask for help by speaking, typing or tapping a picture; read replies, briefings and announcements"],
+  ["/crew", "Crew tablet", "Cabin crew (PIN)", "Requests in Japanese, one-tap replies, safety briefings, PA captions, care rounds, phrasebook"],
+  ["/checkin", "Check-in", "Airport kiosk", "Passenger picks language and needs before boarding; the seat opens set up"],
+  ["/judge", "Under the hood", "Jury (PIN)", "How each request was understood, step by step"],
+  ["/presenter", "Presenter console", "Presenter (PIN)", "Pitch timer, health check, backup buttons, reset between rehearsals"],
+  ["/report", "Flight report", "JAL manager (PIN)", "How the flight went: waiting times, recovery, safety understanding"],
+  ["/seats", "Seat QR cards", "Demo setup", "Printable QR cards for each seat"],
+  ["/phone-setup", "Phone setup", "Each demo phone, once", "Lets a phone use its microphone with the laptop"],
+  ["/noise", "Cabin noise", "Demo", "Plays engine noise to show it works in a loud cabin"],
+  ["/record", "Record voices", "Volunteers", "Records test voices so we can measure accuracy"],
 ];
 
 export default function Start() {
@@ -52,33 +52,33 @@ export default function Start() {
           <Reveal className="panel t-step" delay={0.05}>
             <span className="num">Step 1 · Passenger</span>
             <h2 className="big">Scan the seat QR code</h2>
-            {info ? <img className="qr" src={`/api/qr?data=${encodeURIComponent(`${base}/passenger.html?seat=34K`)}`} alt="QR code for the passenger screen of seat 34K" /> : null}
+            {info ? <img className="qr" src={`/api/qr?data=${encodeURIComponent(`${base}/passenger?seat=34K`)}`} alt="QR code for the passenger screen of seat 34K" /> : null}
             <p>Point a phone camera at this code. In a real plane it is printed on each seat back. The phone first asks for a language, then the passenger speaks, types or taps a picture.</p>
-            {info && !info.https ? <p className="notice">Typing and tapping pictures work on any phone now. To <b>speak</b> into a phone, it needs a secure link once: follow <a href="/phone-setup.html">Phone setup</a>.</p> : null}
-            <div className="t-links"><a href="/seats.html"><button>Print all seat cards</button></a><a href="/passenger.html?seat=34K" target="_blank" rel="noopener"><button>Open seat 34K here</button></a></div>
+            {info && !info.https ? <p className="notice">Typing and tapping pictures work on any phone now. To <b>speak</b> into a phone, it needs a secure link once: follow <a href="/phone-setup">Phone setup</a>.</p> : null}
+            <div className="t-links"><a href="/seats"><button>Print all seat cards</button></a><a href="/passenger?seat=34K" target="_blank" rel="noopener"><button>Open seat 34K here</button></a></div>
           </Reveal>
           <Reveal className="panel t-step" delay={0.12}>
             <span className="num">Step 2 · Crew</span>
             <h2 className="big">Open the crew tablet</h2>
-            {info ? <img className="qr" src={`/api/qr?data=${encodeURIComponent(`${base}/crew.html`)}`} alt="QR code for the crew tablet" /> : null}
+            {info ? <img className="qr" src={`/api/qr?data=${encodeURIComponent(`${base}/crew`)}`} alt="QR code for the crew tablet" /> : null}
             <p>Open on a tablet (or a second window). It asks once for the <b>crew PIN</b>, so passengers on the same Wi-Fi cannot open it:</p>
             <div className="t-pin" aria-label="Crew PIN">{pin || "······"}</div>
             <p>{pin ? "Shown only on this laptop. Set your own with AURALINK_CREW_PIN when starting Auralink." : "For safety the PIN is only shown on the laptop that runs Auralink, or in its terminal."}</p>
-            <div className="t-links"><a href="/crew.html" target="_blank" rel="noopener"><button className="primary">Open crew tablet</button></a></div>
+            <div className="t-links"><a href="/crew" target="_blank" rel="noopener"><button className="primary">Open crew tablet</button></a></div>
           </Reveal>
           <Reveal className="panel t-step" delay={0.19}>
             <span className="num">Step 3 · Jury</span>
             <h2 className="big">Show how it decides</h2>
             <p><b style={{ color: "var(--fg)" }}>Under the hood</b> shows, live, every guess the speech model made, which words were ignored, how the sounds were matched and why Auralink asked instead of guessing.</p>
             <p>The <b style={{ color: "var(--fg)" }}>presenter console</b> has the pitch timer, a health check and backup buttons if a phone fails on stage.</p>
-            <div className="t-links"><a href="/judge.html" target="_blank" rel="noopener"><button>Under the hood</button></a><a href="/presenter.html" target="_blank" rel="noopener"><button>Presenter console</button></a></div>
+            <div className="t-links"><a href="/judge" target="_blank" rel="noopener"><button>Under the hood</button></a><a href="/presenter" target="_blank" rel="noopener"><button>Presenter console</button></a></div>
           </Reveal>
         </div>
 
         <Reveal className="panel">
           <h2>No phone? Try it on this laptop</h2>
           <p className="muted" style={{ margin: 0 }}>Open both, put the windows side by side, and type <b style={{ color: "var(--fg)" }}>thoda wotter and kambal</b> on the passenger screen. Two cards appear on the crew tablet in Japanese.</p>
-          <div className="t-links"><a href="/passenger.html?seat=34K" target="_blank" rel="noopener"><button className="primary">1 · Passenger (seat 34K)</button></a><a href="/crew.html" target="_blank" rel="noopener"><button className="primary">2 · Crew tablet</button></a></div>
+          <div className="t-links"><a href="/passenger?seat=34K" target="_blank" rel="noopener"><button className="primary">1 · Passenger (seat 34K)</button></a><a href="/crew" target="_blank" rel="noopener"><button className="primary">2 · Crew tablet</button></a></div>
         </Reveal>
 
         <Reveal className="panel">

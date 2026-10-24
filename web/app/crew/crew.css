@@ -1,6 +1,11 @@
-.crew-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.crew-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 960px) { .crew-layout { grid-template-columns: 1fr; } }
 .col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+/* each column scrolls on its own once the page is taller than the screen, instead of one long
+   page scroll -- the requests list growing shouldn't push the cabin map (or vice versa) out of reach */
+@media (min-width: 961px) {
+  .col { max-height: calc(100vh - 32px); overflow-y: auto; position: sticky; top: 16px; padding-right: 4px; scrollbar-width: thin; }
+}
 .alarm { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border-radius: var(--radius); background: rgba(255, 61, 90, 0.12);
   border: 1px solid var(--bad); font-weight: 600; box-shadow: 0 0 60px -20px var(--bad); animation: alarmPulse 1s ease-in-out 4; }
 .alarm b { font: 800 22px var(--display); }
@@ -21,6 +26,28 @@
 .counts span { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 11px; height: 11px; border-radius: 4px; display: inline-block; }
 .seatmap .seat { height: 34px; font-weight: 600; cursor: default; }
+/* the cabin map: a top-down view of the plane, not a spreadsheet -- each row (30, 31, ...) is one
+   column, read front-to-back left-to-right, its 9 seats stacked top-to-bottom with a gap for the
+   aisle. Always on, coloured by open requests and accessibility flags, tappable for detail. */
+.tabbar { display: flex; gap: 6px; flex-wrap: wrap; background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 5px; }
+.tab { flex: 1 1 auto; min-height: 40px; padding: 8px 10px; border: none; border-radius: 10px; background: transparent; font-size: 13.5px; font-weight: 600; white-space: nowrap; }
+.tab .muted { font-weight: 400; }
+.tab.on { background: var(--accent); color: var(--accent-ink); }
+.tab.on .muted { color: var(--accent-ink); opacity: 0.8; }
+.cabinmap-panel { gap: 16px; flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; min-height: 420px; }
+.cabinmap { display: flex; gap: 16px; overflow-x: auto; padding: 6px 2px 10px; -webkit-overflow-scrolling: touch; }
+.cm-row { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; }
+.cm-row-label { font: 700 13px var(--mono); color: var(--faint); }
+.cm-seats { display: flex; flex-direction: column; gap: 6px; }
+.cm-aisle { height: 12px; }
+.cabinmap .seat { width: 46px; height: 46px; border-radius: 12px; cursor: pointer; border: none; padding: 0;
+  min-height: 0; font-weight: 700; font-size: 14px; position: relative; }
+.cabinmap .seat.urgent { background: var(--bad); color: #2a0008; animation: seatPulse 1.2s ease-in-out infinite; }
+.cabinmap .seat.open { background: var(--warn); color: #241400; }
+.cabinmap .seat.picked { outline: 3px solid var(--accent); outline-offset: 2px; }
+.seat-badge { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--violet); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--surface); }
+.seat-badge .ic { width: 13px; height: 13px; color: #160b33; }
 .goto { display: flex; flex-direction: column; gap: 8px; }
 .goto .item { border-color: var(--bad); }
 .goto .picto-box { width: 52px; padding: 4px; }

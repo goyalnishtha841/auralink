@@ -48,12 +48,13 @@ def plan(cabin: Cabin, now: float | None = None) -> dict:
     for c in cabin.cards.values():
         last_contact[c.seat] = max(last_contact.get(c.seat, 0.0), c.created_at)
     for s in cabin.seats.values():
-        if not (s.senior or s.pictures) or not (s.connected or s.checked_in):
+        if not (s.senior or s.pictures or s.accessibility) or not (s.connected or s.checked_in):
             continue
         quiet_for = now - max(last_contact.get(s.id, 0.0), cabin.started_at)
         if quiet_for >= care_after_s() and s.id not in cabin.round_seats():
             stop = stops.setdefault(s.id, {"seat": s.id, "cards": [], "items": [], "care": None})
-            stop["care"] = {"minutes": int(quiet_for // 60), "senior": s.senior, "pictures": s.pictures, "lang": s.lang}
+            stop["care"] = {"minutes": int(quiet_for // 60), "senior": s.senior, "pictures": s.pictures,
+                            "accessibility": s.accessibility, "lang": s.lang}
 
     ordered = sorted(stops.values(), key=lambda st: _route_key(st["seat"]))
     load: dict[str, int] = {}

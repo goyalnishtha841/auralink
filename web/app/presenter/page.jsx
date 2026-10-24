@@ -129,8 +129,8 @@ export default function Presenter() {
               <div className="row"><button className="danger" onClick={reset}>{armed ? "Tap again to reset" : "Reset cabin"}</button>
                 <span className="muted grow">{armed ? "This clears everything on the crew tablet." : "Clears all requests, briefings and exit checks. Phones stay connected."}</span></div></section>
             <section className="panel"><h2>Open screens</h2>
-              <div className="t-links">{[["/passenger.html?seat=34K&lang=hi", "Passenger 34K (Hindi)"], ["/crew.html", "Crew tablet"], ["/judge.html", "Under the hood"], ["/noise.html", "Cabin noise"],
-                ["/seats.html", "Seat cards"], ["/report.html", "Flight report"], ["/phone-setup.html", "Phone setup"], ["/checkin.html", "Check-in (airport)"]].map(([h, l]) =>
+              <div className="t-links">{[["/passenger?seat=34K&lang=hi", "Passenger 34K (Hindi)"], ["/crew", "Crew tablet"], ["/judge", "Under the hood"], ["/noise", "Cabin noise"],
+                ["/seats", "Seat cards"], ["/report", "Flight report"], ["/phone-setup", "Phone setup"], ["/checkin", "Check-in (airport)"]].map(([h, l]) =>
                 <a key={h} href={h} target="_blank" rel="noopener"><button>{l}</button></a>)}</div></section>
           </div>
         </div>

@@ -40,9 +40,16 @@ from engine.matcher import make_similarity, tokenize  # noqa: E402
 SYSTEMS = ["baseline_a", "text", "phonetic_uniform", "phonetic", "hybrid"]
 if (ROOT / "data" / "lexicon" / "phone_costs_learned.json").exists():   # made by scripts/learn_costs.py
     SYSTEMS.append("hybrid_learned")
+try:
+    import fastembed  # noqa: F401
+
+    SYSTEMS.append("trimodal")
+except ImportError:
+    pass
 NAMES = {"baseline_a": "Baseline A: first result, keywords", "text": "Auralink, spelling",
          "phonetic_uniform": "Auralink, phonemes", "phonetic": "Auralink, phonemes + accent costs",
-         "hybrid": "Auralink, hybrid (default)", "hybrid_learned": "Auralink, hybrid, learned costs"}
+         "hybrid": "Auralink, hybrid (default)", "hybrid_learned": "Auralink, hybrid, learned costs",
+         "trimodal": "Auralink, trimodal (+ semantic embeddings)"}
 CACHE = ROOT / "eval" / "cache"
 OUT_MD = ROOT / "eval" / "results.md"
 OUT_JSON = ROOT / "eval" / "results.json"
@@ -193,7 +200,7 @@ def chart(results: dict, path: Path) -> None:
     """Grouped bar chart of first-try accuracy by group, as a standalone SVG for the deck."""
     groups = list(results["hybrid"]["by_group"])
     colors = {"baseline_a": "#7d89ab", "text": "#5b8cff", "phonetic_uniform": "#a87cff", "phonetic": "#3ce8c8",
-              "hybrid": "#ffb547", "hybrid_learned": "#3ddc97"}
+              "hybrid": "#ffb547", "hybrid_learned": "#3ddc97", "trimodal": "#ff6b6b"}
     W, H, left, top, bottom = 900, 380, 48, 30, 70
     gw = (W - left - 20) / len(groups)
     bw = (gw - 18) / len(SYSTEMS)

@@ -1,9 +1,10 @@
 {
-  "_note": "Passenger languages. Adding one = an entry here + data/i18n/<code>.json + words in data/lexicon/intents.json + messages in data/templates/messages.json. No code or retraining. 'english' = the name in English, shown next to the native name; 'asr' = the languages Whisper decodes for that passenger; 'scripts' tells the phonetic matcher which eSpeak-NG voice reads which writing system. 'espeak': null means spelling-only matching for that script; 'spaces': false splits its text into words by longest lexicon match.",
+  "_note": "Passenger languages. Adding one = an entry here + data/i18n/<code>.json + words in data/lexicon/intents.json + messages in data/templates/messages.json. No code or retraining. 'english' = the name in English, shown next to the native name; 'asr' = the languages Whisper decodes for that passenger; 'scripts' tells the phonetic matcher which eSpeak-NG voice reads which writing system. 'espeak': null means spelling-only matching for that script; 'spaces': false splits its text into words by longest lexicon match. Marathi shares Hindi's Devanagari script range, so its lexicon variants are read with the Hindi eSpeak voice (script detection can't tell the two apart) -- a known approximation, same tier as Thai's own documented limit.",
   "languages": [
     {
       "code": "en",
-      "name": "English", "english": "English",
+      "name": "English",
+      "english": "English",
       "asr": [
         "en",
         "hi"
@@ -11,7 +12,8 @@
     },
     {
       "code": "hi",
-      "name": "हिन्दी", "english": "Hindi",
+      "name": "हिन्दी",
+      "english": "Hindi",
       "asr": [
         "en",
         "hi"
@@ -19,7 +21,8 @@
     },
     {
       "code": "ta",
-      "name": "தமிழ்", "english": "Tamil",
+      "name": "தமிழ்",
+      "english": "Tamil",
       "asr": [
         "en",
         "ta"
@@ -27,10 +30,119 @@
     },
     {
       "code": "th",
-      "name": "ไทย", "english": "Thai",
+      "name": "ไทย",
+      "english": "Thai",
       "asr": [
         "en",
         "th"
+      ]
+    },
+    {
+      "code": "zh",
+      "name": "中文",
+      "english": "Chinese",
+      "asr": [
+        "en",
+        "zh"
+      ]
+    },
+    {
+      "code": "es",
+      "name": "Español",
+      "english": "Spanish",
+      "asr": [
+        "en",
+        "es"
+      ]
+    },
+    {
+      "code": "fr",
+      "name": "Français",
+      "english": "French",
+      "asr": [
+        "en",
+        "fr"
+      ]
+    },
+    {
+      "code": "it",
+      "name": "Italiano",
+      "english": "Italian",
+      "asr": [
+        "en",
+        "it"
+      ]
+    },
+    {
+      "code": "pt",
+      "name": "Português",
+      "english": "Portuguese",
+      "asr": [
+        "en",
+        "pt"
+      ]
+    },
+    {
+      "code": "bn",
+      "name": "বাংলা",
+      "english": "Bengali",
+      "asr": [
+        "en",
+        "bn"
+      ]
+    },
+    {
+      "code": "te",
+      "name": "తెలుగు",
+      "english": "Telugu",
+      "asr": [
+        "en",
+        "te"
+      ]
+    },
+    {
+      "code": "mr",
+      "name": "मराठी",
+      "english": "Marathi",
+      "asr": [
+        "en",
+        "mr"
+      ]
+    },
+    {
+      "code": "gu",
+      "name": "ગુજરાતી",
+      "english": "Gujarati",
+      "asr": [
+        "en",
+        "gu"
+      ]
+    },
+    {
+      "code": "kn",
+      "name": "ಕನ್ನಡ",
+      "english": "Kannada",
+      "asr": [
+        "en",
+        "kn"
+      ]
+    },
+    {
+      "code": "ml",
+      "name": "മലയാളം",
+      "english": "Malayalam",
+      "asr": [
+        "en",
+        "ml"
+      ]
+    },
+    {
+      "code": "pa",
+      "name": "ਪੰਜਾਬੀ",
+      "english": "Punjabi",
+      "asr": [
+        "en",
+        "pa"
       ]
     }
   ],
@@ -54,6 +166,50 @@
       "espeak": null,
       "spaces": false,
       "_why": "eSpeak-NG's Thai phonemes are unusable, so Thai script uses spelling matching; Thai has no spaces between words, so text is split by longest lexicon match"
+    },
+    {
+      "name": "Bengali",
+      "from": "0980",
+      "to": "09FF",
+      "espeak": "bn"
+    },
+    {
+      "name": "Gurmukhi",
+      "from": "0A00",
+      "to": "0A7F",
+      "espeak": "pa"
+    },
+    {
+      "name": "Gujarati",
+      "from": "0A80",
+      "to": "0AFF",
+      "espeak": "gu"
+    },
+    {
+      "name": "Telugu",
+      "from": "0C00",
+      "to": "0C7F",
+      "espeak": "te"
+    },
+    {
+      "name": "Kannada",
+      "from": "0C80",
+      "to": "0CFF",
+      "espeak": "kn"
+    },
+    {
+      "name": "Malayalam",
+      "from": "0D00",
+      "to": "0D7F",
+      "espeak": "ml"
+    },
+    {
+      "name": "CJK Unified Ideographs",
+      "from": "4E00",
+      "to": "9FFF",
+      "espeak": "cmn",
+      "spaces": false,
+      "_why": "Chinese has no spaces between words, like Thai: text is split by longest lexicon match"
     }
   ]
 }

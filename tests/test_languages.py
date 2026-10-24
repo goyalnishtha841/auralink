@@ -39,7 +39,8 @@ def test_language_is_complete(code):
 
 def test_config_and_strings_endpoints():
     codes = [lang["code"] for lang in client.get("/api/config").json()["languages"]]
-    assert codes == ["en", "hi", "ta", "th"]
+    assert codes[:4] == ["en", "hi", "ta", "th"]   # the original four stay first; others are additions
+    assert len(codes) == len(set(codes))           # no language registered twice
     ta = client.get("/api/i18n/ta").json()
     assert ta["yes"] == "ஆம்" and "_note" not in ta
     assert client.get("/api/i18n/xx").status_code == 404

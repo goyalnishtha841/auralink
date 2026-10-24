@@ -21,10 +21,11 @@ client = TestClient(main.app)
 
 def test_checkin_saves_and_seat_opens_with_it(fresh):
     r = client.post("/api/checkin", json={"seat": "34K", "lang": "hi", "senior": True, "read": True}).json()
-    assert r["passenger_path"] == "/passenger.html?seat=34K&lang=hi&senior=1&read=1"
-    assert client.get("/api/seat/34K").json() == {"lang": "hi", "senior": True, "pictures": False, "read": True, "checked_in": True}
+    assert r["passenger_path"] == "/passenger?seat=34K&lang=hi&senior=1&read=1"
+    assert client.get("/api/seat/34K").json() == {"lang": "hi", "senior": True, "pictures": False, "read": True,
+                                                   "accessibility": None, "checked_in": True}
     saved = json.loads((fresh / "checkin.json").read_text())
-    assert saved["34K"] == {"lang": "hi", "senior": True, "pictures": False, "read": True}   # seat + preferences only
+    assert saved["34K"] == {"lang": "hi", "senior": True, "pictures": False, "read": True, "accessibility": None}   # seat + preferences only
 
 
 def test_checkin_rejects_unknown_seat_and_language():

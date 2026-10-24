@@ -49,5 +49,20 @@
   "nextPassenger": "Next passenger",
   "announcement": "Cabin announcement",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "suggestTitle": "I'm not fully sure, here's what I understood",
+  "suggestDidYouMean": "Did you mean",
+  "suggestOrSend": "Or send this message to crew (translated, not reviewed)",
+  "suggestSendBtn": "Send to crew",
+  "suggestOrPicture": "Or pick a picture instead",
+  "settingsTitle": "Settings",
+  "liveConv": "Live conversation",
+  "convListening": "Listening… just talk, no need to tap",
+  "convSpeaking": "Hearing you…",
+  "noRequestsTitle": "No requests yet",
+  "noRequestsSub": "Your requests will appear here.",
+  "mute": "Mute voice",
+  "unmute": "Unmute voice",
+  "accessibilityLabel": "Accessibility",
+  "convReplyPlaying": "Reply playing — mic paused"
 }

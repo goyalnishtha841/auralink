@@ -91,11 +91,11 @@ details.t-faq p { color: var(--muted); line-height: 1.6; margin: 8px 0 0; }
 .n-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .n-presets button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .n-meter { height: 26px; border-radius: 13px; background: var(--surface-2); overflow: hidden; }
-.n-meter i { display: block; height: 100%; width: 0; border-radius: 13px; background: linear-gradient(90deg, #fff, var(--accent), var(--bad)); transition: width 0.08s linear; }
+.n-meter i { display: block; height: 100%; width: 0; border-radius: 13px; background: var(--accent); transition: width 0.08s linear; }
 .n-readout { display: flex; justify-content: space-between; font: 13px var(--mono); color: var(--muted); }
 input[type="range"] { width: 100%; accent-color: var(--accent); padding: 0; }
 .n-bars { display: flex; align-items: flex-end; gap: 3px; height: 70px; }
-.n-bars i { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--accent), rgba(255, 91, 91, 0.15)); transition: height 0.08s linear; }
+.n-bars i { flex: 1; border-radius: 3px 3px 0 0; background: var(--accent); transition: height 0.08s linear; }
 ol.t-ol { margin: 0; padding-left: 1.2em; color: var(--muted); display: flex; flex-direction: column; gap: 8px; }
 
 /* record */
@@ -121,7 +121,7 @@ table.rp { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.rp th, table.rp td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 table.rp th { font: 500 11px var(--mono); color: var(--faint); text-transform: uppercase; letter-spacing: 0.08em; }
 table.rp td.n { font-variant-numeric: tabular-nums; text-align: right; width: 56px; }
-.rp-bar { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #fff, var(--accent)); }
+.rp-bar { height: 8px; border-radius: 4px; background: var(--accent); }
 .rp-type { display: flex; align-items: center; gap: 8px; }
 .rp-type .icon .ic { width: 18px; height: 18px; color: var(--accent); }
 .rp-brief { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }

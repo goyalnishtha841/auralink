@@ -345,6 +345,13 @@ Volunteers consent, get a speaker code, and record 24 prompts in about 5 minutes
   using the accent cost matrix in `data/lexicon/phone_costs.json` (v/w, retroflex t/d, ch/च, dropped
   final r, r/l …). The default `hybrid` matcher averages this with spelling similarity; choose with
   `AURALINK_MATCHER=hybrid|phonetic|phonetic_uniform|text`. Without eSpeak-NG it falls back to spelling.
+- **Experimental:** `AURALINK_MATCHER=trimodal` adds a third vote, a small multilingual sentence
+  embedding model (`engine/semantic.py`, `pip install fastembed`, ~90 MB on first use, fully offline
+  after that), aimed at paraphrases that share no sound or spelling with any lexicon word ("I haven't
+  eaten since this morning" -> food). Measured on `data/eval/text_cases.json`, which has no
+  paraphrase cases, it currently trades first-try accuracy for fewer false alarms (91.2% / 12.5% for
+  `hybrid` vs 87.6% / 0% for `trimodal`) — a real cost on today's benchmark, not a proven win. Not the
+  default until it is measured against a paraphrase-style held-out set.
 - **Untuned:** `T1 = 0.70` and `T2 = 0.10` are starting values. Member B tunes them on the
   held-out split.
 
