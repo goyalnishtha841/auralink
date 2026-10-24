@@ -165,6 +165,11 @@ Port 8000 busy (another app, for example another project's server)? `scripts/run
 for example `Auralink: open http://localhost:8001/start.html`. Use that address: `localhost:8000` would
 show the other app. Force a port with `PORT=8005 scripts/run.sh`.
 
+**Settings:** `cp .env.example .env` and set `AURALINK_CREW_PIN` (6 digits). That is the only secret:
+Auralink needs no passwords, accounts or API keys, because nothing goes to the cloud. Every other setting in
+[.env.example](.env.example) is optional and explained there. `scripts/run.sh` and `scripts/demo.sh` read
+`.env` automatically; it is git-ignored, so keep a copy if you delete the folder.
+
 The first start downloads Whisper `base` (~145 MB) into the Hugging Face cache; after that
 everything runs offline. Choose another model with `AURALINK_ASR_MODEL=small scripts/run.sh`.
 
