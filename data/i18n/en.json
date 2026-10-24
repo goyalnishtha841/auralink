@@ -47,5 +47,7 @@
   "savedSeat": "Saved. On board, scan the code on your seat and Auralink opens like this.",
   "scanAtSeat": "Your seat link",
   "nextPassenger": "Next passenger",
-  "announcement": "Cabin announcement"
+  "announcement": "Cabin announcement",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }
