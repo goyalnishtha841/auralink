@@ -61,5 +61,7 @@
   "mute": "गप्प आवाज",
   "unmute": "निःशब्द आवाज",
   "accessibilityLabel": "उपलब्धता",
-  "convReplyPlaying": "प्रतिसाद प्ले  मायक्रो विराम"
+  "convReplyPlaying": "प्रतिसाद प्ले  मायक्रो विराम",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

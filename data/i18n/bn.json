@@ -61,5 +61,7 @@
   "mute": "নিঃশব্দ কণ্ঠ",
   "unmute": "নিরব কণ্ঠ",
   "accessibilityLabel": "অ্যাক্সেসযোগ্যতা",
-  "convReplyPlaying": "সাড়া বাজানো  মাইক বিরতি"
+  "convReplyPlaying": "সাড়া বাজানো  মাইক বিরতি",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

@@ -13,6 +13,8 @@ from engine.prosody import STRESS_FLOOR
 CardStatus = Literal["awaiting_confirm", "urgent_unconfirmed", "confirmed", "needs_human", "acknowledged", "closed"]
 CREW_VISIBLE = {"urgent_unconfirmed", "confirmed", "needs_human", "acknowledged"}
 MAX_ROUNDS = 2  # after this many failed clarifications the crew gets "Needs human help"
+SHAKE_WINDOW_S = 12     # several phones shaking within this window looks like turbulence, not passengers
+SHAKE_SEATS = 5         # ...once at least this many distinct seats have shaken
 
 # JAL 787 economy layout, 3-3-3
 SEAT_IDS = [f"{row}{letter}" for row in range(30, 36) for letter in "ABCDEGHJK"]
@@ -29,7 +31,7 @@ class Card(BaseModel):
     urgent: bool = False
     confident: bool = True   # False: show a choice between close candidates instead of yes/no
     reply_id: str | None = None
-    source: Literal["voice", "text", "picture"] = "text"   # how the passenger asked
+    source: Literal["voice", "text", "picture", "shake"] = "text"   # how the passenger asked
     symptom: str | None = None                              # medical requests: what the passenger tapped
     voice_stress: float | None = None                      # engine/prosody.py: sounded distressed, words unclear
     translated: str | None = None          # Free Talk: unreviewed machine translation of `heard`, for crew
@@ -95,6 +97,8 @@ class Cabin:
         self.round: dict | None = None        # care round in progress (hub/rounds.py)
         self.past_rounds: list[dict] = []
         self.last_visit: dict[str, float] = {}   # seat -> when crew last stopped there on a round
+        self.shake_events: list[tuple[float, str]] = []   # recent (time, seat) shake-to-call taps
+        self.turbulence: dict | None = None   # {seats, at} once enough seats shook at once
         self.started_at = time.time()
         self._ids = itertools.count(1)
 
@@ -108,6 +112,8 @@ class Cabin:
         self.round = None
         self.past_rounds.clear()
         self.last_visit.clear()
+        self.shake_events.clear()
+        self.turbulence = None
         self.started_at = time.time()
         self.phase = "cruise"
         for seat in self.seats.values():
@@ -147,10 +153,12 @@ class Cabin:
                                            voice_stress=round(voice_stress, 3) if distressed else None)
         return result, cards, escalated
 
-    def icon_request(self, seat: str, intent: str) -> Card:
+    def icon_request(self, seat: str, intent: str, source: str = "picture") -> Card:
         self._check_intent(intent)
         self.seats[seat].failed_attempts = 0
-        return self._new_card(seat, "confirmed", intent=intent, urgent=self.lex.is_urgent(intent), source="picture")
+        if source == "shake":
+            self._record_shake(seat)
+        return self._new_card(seat, "confirmed", intent=intent, urgent=self.lex.is_urgent(intent), source=source)
 
     def escalate_free_text(self, seat: str, heard: str, translated: str | None) -> Card:
         """The passenger explicitly chose to send something outside the fixed list, after seeing
@@ -305,7 +313,20 @@ class Cabin:
         visible = [c for c in self.cards.values() if c.status in CREW_VISIBLE]
         return sorted(visible, key=lambda c: (not c.urgent, c.status == "acknowledged", c.created_at))
 
+    def clear_turbulence(self) -> None:
+        self.turbulence = None
+        self.shake_events = []
+
     # helpers
+
+    def _record_shake(self, seat: str) -> None:
+        """5+ seats shaking their phones within a few seconds looks like turbulence, not passengers calling."""
+        now = time.time()
+        self.shake_events = [(t, s) for t, s in self.shake_events if now - t <= SHAKE_WINDOW_S]
+        self.shake_events.append((now, seat))
+        seats = sorted({s for _, s in self.shake_events})
+        if len(seats) >= SHAKE_SEATS:
+            self.turbulence = {"seats": seats, "at": now}
 
     def _new_card(self, seat: str, status: CardStatus, **fields) -> Card:
         card = Card(id=f"c{next(self._ids)}", seat=seat, status=status, lang=self.seats[seat].lang, **fields)

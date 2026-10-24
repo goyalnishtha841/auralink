@@ -285,6 +285,7 @@ def crew_state() -> dict:
         "cards": [card_for_crew(c) for c in cabin.crew_cards()],
         "heatmap": cabin.heatmap(),
         "broadcast": briefing,
+        "turbulence": cabin.turbulence,
         "exit_checks": [{**c.model_dump(), "connected": cabin.seats[c.seat].connected}
                         for c in cabin.exit_checks.values()],
         "round_plan": rounds.plan(cabin),
@@ -886,7 +887,7 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         if msg.get("card_id"):
             card = cabin.confirm(msg["card_id"], msg["intent"])
         else:
-            card = cabin.icon_request(seat, msg["intent"])
+            card = cabin.icon_request(seat, msg["intent"], source=msg.get("source", "picture"))
         await send_status(card, "urgent" if card.urgent else "sent")
         await ask_symptom(card)
 
@@ -979,6 +980,8 @@ async def handle_crew(ws: WebSocket, msg: dict) -> None:
             await _send(sockets, {"type": "safety", "broadcast_id": b.id, "template": view})
     elif kind == "end_broadcast":
         cabin.end_broadcast()
+    elif kind == "dismiss_turbulence":
+        cabin.clear_turbulence()
     elif kind == "start_round":
         r = cabin.start_round(rounds.plan(cabin))
         for pos, stop in enumerate(r["stops"], 1):

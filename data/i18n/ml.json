@@ -61,5 +61,7 @@
   "mute": "നിശബ്ദ ശബ്ദം",
   "unmute": "നിശബ്ദമായ ശബ്ദം",
   "accessibilityLabel": "പ്രവേശനക്ഷമത",
-  "convReplyPlaying": "മൈക്രോസോഫ്റ്റ് നിർത്തി"
+  "convReplyPlaying": "മൈക്രോസോഫ്റ്റ് നിർത്തി",
+  "shakeHint": "Tip: shake your phone to call the crew",
+  "shakeSent": "Calling the crew…"
 }

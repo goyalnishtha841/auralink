@@ -1,9 +1,9 @@
 "use client";
 import "./landing.css";
-import { AnimatePresence, motion, useMotionValue, useScroll, useSpring, useTransform, animate, useInView } from "framer-motion";
+import { AnimatePresence, motion, useScroll, useTransform, animate, useInView } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/lib/icons";
-import { BrandMark, Reveal, ease } from "@/components/ui";
+import { BrandMark, Reveal, Sakura, ease } from "@/components/ui";
 
 const WORDS = [
   ["understood.", "en"], ["समझा गया।", "hi"], ["伝わる。", "ja"], ["เข้าใจแล้ว", "th"], ["புரிந்தது.", "ta"], ["dimengerti.", "id"],
@@ -33,12 +33,13 @@ function Ribbons() {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current, ctx = canvas.getContext("2d"), noise = makeSimplex();
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // one clear, quiet thread — not a tangle of lines (the point is noise resolving to one request)
     const lines = [
-      ["255,91,91", 0.95, 1.6], ["255,255,255", 0.55, 1.1], ["255,138,122", 0.6, 1.2], ["255,255,255", 0.3, 0.9], ["255,91,91", 0.45, 1],
+      ["255,91,91", 0.28, 1],
     ];
-    const mouse = { x: -9999, y: -9999 };
-    let w = 0, h = 0, t = 0, raf = 0, visible = true;
+    // static: drawn once (and again on resize), never animated or moved by the pointer
+    let w = 0, h = 0;
+    const t = 0.35;
     const resize = () => {
       const dpr = Math.min(devicePixelRatio || 1, 2);
       w = canvas.clientWidth; h = canvas.clientHeight;
@@ -50,32 +51,32 @@ function Ribbons() {
       ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = "lighter";
       const mobile = w < 900;
-      const cy = h * (mobile ? 0.36 : 0.55), end = mobile ? 1 : 0.7, amp = Math.min(h * 0.2, 150);
+      const cy = h * (mobile ? 0.36 : 0.55), end = mobile ? 1 : 0.7, amp = Math.min(h * 0.05, 34);
       lines.forEach(([rgb, alpha, width], idx) => {
         ctx.beginPath();
         for (let x = 0; x <= w * end + 6; x += 5) {
           const u = x / (w * end);
-          const chaos = 1 - sm(0.25, 0.95, u);
-          const d = Math.hypot(x - mouse.x, cy - mouse.y), stir = 1 + (1 - Math.min(1, d / 360)) * 0.9;
+          const chaos = 1 - sm(0.1, 0.75, u);
+          const stir = 1;
           const n = noise(x * 0.0022 * stir, idx * 9.7 + t);
           const pulse = Math.sin(t * 0.6 + idx) * 0.12 + 0.88;
-          const y = cy + n * amp * (chaos * 0.95 + 0.05) * pulse * stir + (idx - 2) * 12 * chaos;
+          const y = cy + n * amp * (chaos * 0.55 + 0.12) * pulse * stir + (idx - (lines.length - 1) / 2) * 16 * chaos;
           x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        ctx.strokeStyle = `rgba(${rgb},${alpha})`;
-        ctx.lineWidth = width * 6; ctx.globalAlpha = 0.12; ctx.stroke();
+        const grad = ctx.createLinearGradient(0, 0, w * end, 0);
+        grad.addColorStop(0, `rgba(${rgb},0)`);
+        grad.addColorStop(0.3, `rgba(${rgb},${alpha * 0.5})`);
+        grad.addColorStop(0.75, `rgba(${rgb},${alpha})`);
+        grad.addColorStop(1, `rgba(${rgb},0)`);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = width * 4; ctx.globalAlpha = 0.045; ctx.stroke();
         ctx.lineWidth = width; ctx.globalAlpha = 1; ctx.stroke();
       });
       ctx.globalCompositeOperation = "source-over";
     }
-    const loop = () => { t += 0.0042; draw(); raf = requestAnimationFrame(loop); };
-    const run = () => { cancelAnimationFrame(raf); if (!reduce && visible && !document.hidden) loop(); };
-    const onMove = (e) => { const b = canvas.getBoundingClientRect(); mouse.x = e.clientX - b.left; mouse.y = e.clientY - b.top; };
-    addEventListener("resize", resize); addEventListener("pointermove", onMove, { passive: true });
-    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; run(); }); io.observe(canvas);
-    document.addEventListener("visibilitychange", run);
-    resize(); run();
-    return () => { cancelAnimationFrame(raf); removeEventListener("resize", resize); removeEventListener("pointermove", onMove); io.disconnect(); document.removeEventListener("visibilitychange", run); };
+    addEventListener("resize", resize);
+    resize();
+    return () => removeEventListener("resize", resize);
   }, []);
   return <canvas className="hero-canvas" ref={ref} aria-hidden="true" />;
 }
@@ -91,6 +92,44 @@ function Petals() {
   return (
     <div className="petals" aria-hidden="true">
       {petals.map((p) => <i key={p.key} className="petal" style={{ left: p.left, "--s": p.s, "--d": p.d, "--delay": p.delay, "--sway": p.sway }} />)}
+    </div>
+  );
+}
+
+/* sakura soundwave divider: sits in the whitespace between two sections only (never above the first
+   section, never inside a card). One glowing coral→white curve, a small cropped branch framing each
+   edge, a few static scattered petals — reused as-is between every major section. */
+const DIVIDER_PETALS = [
+  { s: "9px", left: "16%", top: "28%", r: "-18deg", o: 0.5 },
+  { s: "7px", left: "27%", top: "62%", r: "24deg", o: 0.4 },
+  { s: "11px", left: "46%", top: "18%", r: "8deg", o: 0.45 },
+  { s: "8px", left: "62%", top: "66%", r: "-30deg", o: 0.4 },
+  { s: "10px", left: "78%", top: "32%", r: "16deg", o: 0.5 },
+  { s: "7px", left: "88%", top: "58%", r: "-10deg", o: 0.38 },
+];
+function Divider() {
+  return (
+    <div className="divider" aria-hidden="true">
+      <img className="divider-branch left" src="/sakura-branch.svg" alt="" />
+      <svg className="divider-wave" viewBox="0 0 1200 90" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#ff5b5b" stopOpacity="0" />
+            <stop offset="0.18" stopColor="#ff5b5b" stopOpacity="0.85" />
+            <stop offset="0.5" stopColor="#ffd2c4" stopOpacity="0.95" />
+            <stop offset="0.82" stopColor="#ff5b5b" stopOpacity="0.85" />
+            <stop offset="1" stopColor="#ff5b5b" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d="M0 45 C 150 10, 300 80, 450 45 C 600 14, 750 76, 900 45 C 1000 24, 1100 60, 1200 45"
+          fill="none" stroke="url(#waveGrad)" strokeWidth="10" opacity="0.12" />
+        <path d="M0 45 C 150 10, 300 80, 450 45 C 600 14, 750 76, 900 45 C 1000 24, 1100 60, 1200 45"
+          fill="none" stroke="url(#waveGrad)" strokeWidth="1.6" />
+      </svg>
+      <img className="divider-branch right" src="/sakura-branch.svg" alt="" />
+      {DIVIDER_PETALS.map((p, i) => (
+        <i key={i} className="divider-petal" style={{ left: p.left, top: p.top, "--s": p.s, "--r": p.r, "--o": p.o }} />
+      ))}
     </div>
   );
 }
@@ -118,23 +157,16 @@ function Rotor() {
 }
 
 function Hero() {
-  const mx = useMotionValue(0), my = useMotionValue(0);
-  const sx = useSpring(mx, { stiffness: 40, damping: 18 }), sy = useSpring(my, { stiffness: 40, damping: 18 });
   const { scrollY } = useScroll();
   const imgY = useTransform(scrollY, [0, 800], [0, 120]);
   const copyY = useTransform(scrollY, [0, 800], [0, -60]);
   const fade = useTransform(scrollY, [0, 600], [1, 0.2]);
-  useEffect(() => {
-    const on = (e) => { mx.set((e.clientX / innerWidth - 0.5) * -18); my.set((e.clientY / innerHeight - 0.5) * -12); };
-    addEventListener("pointermove", on, { passive: true });
-    return () => removeEventListener("pointermove", on);
-  }, [mx, my]);
   const up = (d) => ({ initial: { opacity: 0, y: 26 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.9, delay: d, ease } });
   return (
     <section className="hero" id="top">
       <motion.div className="hero-art" aria-hidden="true" initial={{ opacity: 0, scale: 1.06 }} animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.8, ease }} style={{ y: imgY }}>
-        <motion.img src="/hero.jpg" alt="" style={{ x: sx, y: sy }} />
+        <img src="/hero.jpg" alt="" />
       </motion.div>
       <Ribbons />
       <Petals />
@@ -416,7 +448,7 @@ export default function Landing() {
   }, []);
   return (
     <>
-      <div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" />
+      <div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /><Sakura count={24} />
       <a className="skip" href="#main">Skip to content</a>
       <header className={`nav ${scrolled ? "scrolled" : ""}`}>
         <div className="wrap nav-inner">
@@ -457,6 +489,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="onboard">
           <div className="wrap story-grid">
             <div>
@@ -468,6 +502,8 @@ export default function Landing() {
             <Reveal delay={0.15}><Story /></Reveal>
           </div>
         </section>
+
+        <Divider />
 
         <section className="section" id="solution">
           <div className="wrap">
@@ -486,6 +522,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="try">
           <div className="wrap">
             <Reveal as="p" className="eyebrow">Try the real engine</Reveal>
@@ -494,6 +532,8 @@ export default function Landing() {
             <Lab />
           </div>
         </section>
+
+        <Divider />
 
         <section className="section" id="safety">
           <div className="wrap safety-grid">
@@ -514,6 +554,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="cabin">
           <div className="wrap">
             <Reveal as="p" className="eyebrow">Built for a real cabin</Reveal>
@@ -529,6 +571,8 @@ export default function Landing() {
           </div>
         </section>
 
+        <Divider />
+
         <section className="section" id="proof">
           <div className="wrap">
             <Reveal as="p" className="eyebrow">Measured, not promised</Reveal>
@@ -543,6 +587,8 @@ export default function Landing() {
               We are recording real volunteers, including seniors, to measure accuracy, wrong-action rate and recovery properly.</Reveal>
           </div>
         </section>
+
+        <Divider />
 
         <section className="section launch" id="launch">
           <div className="wrap">
@@ -570,6 +616,11 @@ export default function Landing() {
             <p>Auralink does not just hear passengers. It makes sure they are understood, and that they understand.</p></div>
           <p className="foot-small">Thapar Japan Hackathon 2026 · Problem statement JAL-PS-02. A prototype communication aid, not a certified safety system.
             Built with Whisper, Silero VAD, eSpeak NG, FastAPI, Next.js and open fonts (OFL). Quality depends on speech recognition; extreme noise or rare speech may still need crew judgement.</p>
+        </div>
+        <div className="wrap foot-legal">
+          <p className="foot-copy">© 2026 The Auralink team · Code released under the <a href="https://github.com/goyalnishtha841/auralink/blob/main/LICENSE">MIT License</a></p>
+          <p>Student prototype. Not affiliated with, endorsed by or sponsored by Japan Airlines; “JAL” and “Japan Airlines” are trademarks of their owner, used here only to name the hackathon problem statement.</p>
+          <p>Third-party components keep their own licences: Whisper, faster-whisper, Silero VAD, FastAPI, Next.js, React and Framer Motion: MIT · eSpeak NG: GPL-3.0 · fonts: SIL OFL 1.1.</p>
         </div>
       </footer>
     </>
