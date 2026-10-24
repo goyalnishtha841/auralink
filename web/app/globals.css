@@ -249,13 +249,20 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 /* align-items: flex-start (not center): a row wider than the viewport must only overflow to the
    right (scrollable, revealing the far seats) -- centering it would clip equally off both edges,
    hiding the row-number label on the left with no way to scroll back to it. */
-.seatgate-map { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; max-height: 50vh; overflow: auto; padding: 4px; }
-.seatgate-row { display: flex; align-items: center; gap: 6px; flex: none; min-width: 100%; }
-.seatgate-row-label { position: sticky; left: 4px; width: 16px; font: 700 11px var(--mono); color: var(--faint);
+.seatgate-map { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; max-height: 50vh; overflow: auto; padding: 4px; }
+.seatgate-row { display: flex; align-items: center; gap: 5px; flex: none; min-width: 100%; }
+.seatgate-row-label { position: sticky; left: 4px; width: 14px; font: 700 10.5px var(--mono); color: var(--faint);
   text-align: right; flex: none; background: var(--bg); z-index: 1; }
-.seatgate-seats { display: flex; gap: 4px; flex: none; }
-.seatgate-aisle, .seatgate-missing { width: 7px; flex: none; }
-.seatgate-seat { width: 29px; height: 29px; border-radius: 8px; font-weight: 700; font-size: 12px; padding: 0; min-height: 0; cursor: pointer; flex: none; }
+.seatgate-seats { display: flex; gap: 3px; flex: none; }
+.seatgate-aisle, .seatgate-missing { width: 6px; flex: none; }
+/* 27px fits the full 9-across row (with the aisle gaps) on common phone widths (~360px+) without
+   needing to scroll; .seatgate-map still scrolls as a fallback on anything narrower. */
+.seatgate-seat { width: 27px; height: 27px; border-radius: 7px; font-weight: 700; font-size: 11.5px; padding: 0; min-height: 0; cursor: pointer; flex: none; }
+@media (max-width: 360px) {
+  .seatgate-seat { width: 24px; height: 24px; border-radius: 6px; font-size: 11px; }
+  .seatgate-seats { gap: 2px; }
+  .seatgate-row { gap: 4px; }
+}
 .seatgate-seat.picked, .seatgate-seat.picked:hover { background: var(--ok) !important; color: #04210f !important; border-color: var(--ok) !important; }
 .seatgate-seat:hover:not(:disabled) { border-color: var(--accent); }
 
