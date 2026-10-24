@@ -149,7 +149,7 @@ brew install espeak-ng          # phoneme matcher; apt install espeak-ng on Linu
 scripts/run.sh
 ```
 
-**Then open <http://localhost:8000/start.html> on the same laptop.** The Start page explains everything in
+**Then open the Start page address the script prints (usually <http://localhost:8000/start.html>) on the same laptop.** The Start page explains everything in
 plain words: how phones reach the laptop with no internet, the seat QR code to scan, the crew PIN (shown
 only on this laptop), and what every page is for. To try it alone, open **Passenger** and **Crew** side by
 side, choose a language on the passenger screen, and type "thoda wotter and kambal".
@@ -160,8 +160,15 @@ side, choose a language on the passenger screen, and type "thoda wotter and kamb
 | Cabin crew | `/crew.html` | Tablet on the same Wi-Fi; enters the crew PIN once |
 | Jury | `/judge.html` | Under the hood: how each request was understood (crew PIN) |
 
-Port 8000 busy (another app, for example another project's server)? Start on another port:
-`PORT=8001 scripts/run.sh`, then use 8001 in the addresses above.
+Port 8000 busy (another app, for example another project's server)? `scripts/run.sh` and
+`scripts/demo.sh` then pick the next free port by themselves (8001, 8002 ...) and print the exact address,
+for example `Auralink: open http://localhost:8001/start.html`. Use that address: `localhost:8000` would
+show the other app. Force a port with `PORT=8005 scripts/run.sh`.
+
+**Settings:** `cp .env.example .env` and set `AURALINK_CREW_PIN` (6 digits). That is the only secret:
+Auralink needs no passwords, accounts or API keys, because nothing goes to the cloud. Every other setting in
+[.env.example](.env.example) is optional and explained there. `scripts/run.sh` and `scripts/demo.sh` read
+`.env` automatically; it is git-ignored, so keep a copy if you delete the folder.
 
 The first start downloads Whisper `base` (~145 MB) into the Hugging Face cache; after that
 everything runs offline. Choose another model with `AURALINK_ASR_MODEL=small scripts/run.sh`.

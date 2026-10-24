@@ -12,3 +12,6 @@ models/
 # speech-to-text transcripts; will include volunteer speech
 eval/cache/
 data/flight/
+
+# local settings (crew PIN); the template .env.example is committed
+.env
