@@ -459,7 +459,7 @@ export default function Passenger() {
     <div className={`${bigMode() ? "big" : ""} ${pictureMode() ? "pictures" : ""}`}>
       <Ambient />
       {flashFrame}
-      <header className="app-header">
+      <header className="app-header pax-header">
         <span className="hdr-icon-btn" aria-hidden="true"><span className={`dot ${s.online ? "on" : ""}`} title="Connection" /></span>
         <div className="grow">
           <h1><AnimatePresence mode="wait"><motion.span key={s.titleOverride || "t"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>{s.titleOverride || t("title")}</motion.span></AnimatePresence></h1>

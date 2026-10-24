@@ -100,16 +100,16 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 .brand svg { width: 34px; height: 22px; }
 main.app { padding: clamp(14px, 3vw, 28px); display: flex; flex-direction: column; gap: 18px; max-width: 1180px; margin: 0 auto; }
 
-/* passenger shell: a single phone-width column reads as a half-empty page on a tablet or laptop.
-   From 760px up, split into a working column (ask + picture grid) and a status sidebar
-   (requests), so the layout actually uses the extra width instead of just centering a phone. */
-main.app.pax-shell { max-width: 980px; }
-.pax-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
-@media (min-width: 760px) {
-  main.app.pax-shell { max-width: 1320px; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; gap: 24px; }
-  .pax-col-side { position: sticky; top: 18px; max-height: calc(100vh - 36px); overflow: auto; }
-}
-@media (min-width: 1400px) { main.app.pax-shell { max-width: 1480px; } }
+/* passenger shell: a single centered column, same order on every screen size (how can we help →
+   type or say → tap a picture → your requests) — a two-column split read as an odd, disconnected
+   layout on a laptop, so this just widens the one column a little instead of splitting it. */
+main.app.pax-shell { max-width: 760px; }
+.pax-col { display: flex; flex-direction: column; gap: 18px; min-width: 0; width: 100%; }
+@media (min-width: 900px) { main.app.pax-shell { max-width: 820px; } }
+/* the header bar normally spans the full width; on the passenger screen, match it to the same
+   centered column as the content below so the two don't look like different layouts stacked. */
+.app-header.pax-header { max-width: 760px; margin-left: auto; margin-right: auto; }
+@media (min-width: 900px) { .app-header.pax-header { max-width: 820px; } }
 
 /* crew shell: same idea as the passenger shell — the two-column request/cabin-map layout
    already reflows, it was just pinned to a phone-era 1320px regardless of screen size. */
