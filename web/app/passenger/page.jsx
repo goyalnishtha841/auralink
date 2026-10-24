@@ -268,12 +268,14 @@ export default function Passenger() {
       s.conv.partial = "";
       const i = s.conv.messages.findIndex((m) => m.id === msg.id);
       if (i >= 0) s.conv.messages[i] = msg; else s.conv.messages = [...s.conv.messages, msg];
-      // One device, two languages (like a translator held between two people): it speaks the
-      // crew's reply in the passenger's own language, AND speaks the passenger's own words back
-      // in Japanese -- the same translation crew would hear -- so Live Conversation works even
-      // when only one screen is open. The mic mutes itself while either plays (isSpeaking, above).
+      // Crew's reply is always spoken here, in the passenger's language. The passenger's own
+      // line is only ALSO spoken here, in Japanese, when no crew tablet is actually connected --
+      // real two-device use already has crew's own tablet speak that side (crew/page.jsx), so a
+      // real passenger's phone isn't narrating Japanese at them after every sentence; testing
+      // solo with one screen, there is no other device to do it, so this one does both.
       // spoken: a message can be re-delivered (a "done" resend, a reconnect) -- speak it once.
-      if (msg.done && msg.translated && !s.conv.muted && !s.conv.spoken.has(msg.id)) {
+      const shouldSpeak = msg.from === "crew" || !msg.crew_listening;
+      if (shouldSpeak && msg.done && msg.translated && !s.conv.muted && !s.conv.spoken.has(msg.id)) {
         s.conv.spoken.add(msg.id);
         speak(msg.translated, msg.from === "crew" ? s.lang : "ja");
       }
@@ -505,13 +507,17 @@ export default function Passenger() {
 
 function IntentGrid({ intents, lang, onPick, big = false }) {
   return (
-    <Carousel big={big}>
-      {intents.map((i, k) => (
-        <motion.button key={i.id} className="tile" onClick={() => onPick(i.id)} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.03 * k, duration: 0.45, ease }} whileTap={{ scale: 0.95 }}
-          style={big ? { fontWeight: 600 } : undefined}>
-          <Icon id={i.id} />{i.label[lang] || i.label.en}
-        </motion.button>))}
+    <Carousel big={big} stacked>
+      {intents.map((i, k) => {
+        const label = i.label[lang] || i.label.en;
+        return (
+          <motion.button key={i.id} className="tile compact" onClick={() => onPick(i.id)}
+            title={label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.03 * k, duration: 0.45, ease }} whileTap={{ scale: 0.95 }}>
+            <Icon id={i.id} />{label}
+          </motion.button>
+        );
+      })}
     </Carousel>
   );
 }

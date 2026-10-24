@@ -754,7 +754,11 @@ async def handle_conv_text(seat: str, sender: str, text: str) -> None:
 
     async def send(partial: str, done: bool = False) -> None:
         msg = {"type": "conv_message", "seat": seat, "id": mid, "from": sender,
-              "original": text, "translated": partial, "done": done}
+              "original": text, "translated": partial, "done": done,
+              # lets the passenger's own screen decide whether to also speak its own line out
+              # loud: only worth it solo-testing with no crew tablet actually listening, since a
+              # connected crew tablet already speaks it (see app/passenger/page.jsx onMessage).
+              "crew_listening": bool(crew)}
         await to_seat(seat, msg)
         await _send(crew, msg)
 

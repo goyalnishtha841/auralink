@@ -8,10 +8,11 @@ export const ease = [0.2, 0.8, 0.2, 1];
 
 // A horizontally-swipeable row of tiles instead of dumping every option on screen at once.
 // Snaps one tile at a time (good for a thumb) and shows dots for how many more there are.
-export function Carousel({ children, big = false, className = "" }) {
+export function Carousel({ children, big = false, stacked = false, className = "" }) {
   const ref = useRef(null);
   const [index, setIndex] = useState(0);
   const count = Array.isArray(children) ? children.length : 1;
+  const cols = stacked ? Math.ceil(count / 2) : count;   // stacked: 2 tiles per column, 1 dot per column
 
   function onScroll() {
     const el = ref.current;
@@ -19,23 +20,23 @@ export function Carousel({ children, big = false, className = "" }) {
     if (!el || !card) return;
     const style = getComputedStyle(el);
     const step = card.getBoundingClientRect().width + parseFloat(style.columnGap || style.gap || "14");
-    setIndex(Math.max(0, Math.min(count - 1, Math.round(el.scrollLeft / step))));
+    setIndex(Math.max(0, Math.min(cols - 1, Math.round(el.scrollLeft / step))));
   }
   function scrollTo(i) {
     const el = ref.current;
-    const card = el?.children[i];
+    const card = el?.children[stacked ? i * 2 : i];
     card?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
   }
 
   return (
     <div className="carousel-wrap">
-      <div ref={ref} onScroll={onScroll} className={`grid carousel ${big ? "big" : ""} ${className}`}>
+      <div ref={ref} onScroll={onScroll} className={`grid carousel ${big ? "big" : ""} ${stacked ? "stacked" : ""} ${className}`}>
         {children}
       </div>
-      {count > 1 ? (
+      {cols > 1 ? (
         <div className="carousel-dots" role="tablist" aria-label="More options, swipe to see">
-          {Array.from({ length: count }, (_, k) => (
-            <button key={k} type="button" role="tab" aria-selected={k === index} aria-label={`Option ${k + 1} of ${count}`}
+          {Array.from({ length: cols }, (_, k) => (
+            <button key={k} type="button" role="tab" aria-selected={k === index} aria-label={`Option ${k + 1} of ${cols}`}
               className={`dot-mini ${k === index ? "on" : ""}`} onClick={() => scrollTo(k)} />
           ))}
         </div>

@@ -150,3 +150,22 @@ def test_a_second_suggestion_for_the_same_intent_is_suppressed_for_a_while(monke
 
 async def _noop():
     return None
+
+
+def test_crew_listening_flag_reflects_whether_a_tablet_is_actually_connected(client, monkeypatch):
+    """app/passenger/page.jsx only speaks the passenger's own line out loud (in Japanese) when
+    this is False -- real two-device use already has crew's own tablet speak that side, so a
+    real passenger's phone shouldn't also narrate Japanese at them after every sentence."""
+    import asyncio
+
+    sent = []
+    monkeypatch.setattr(main, "to_seat", lambda seat, msg: sent.append(msg) or _noop())
+
+    monkeypatch.setattr(main, "crew", set())
+    asyncio.run(main.handle_conv_text("30A", "passenger", "hi"))
+    assert sent and all(m["crew_listening"] is False for m in sent)
+
+    with client.websocket_connect("/ws/crew"):
+        sent.clear()
+        asyncio.run(main.handle_conv_text("30A", "passenger", "hi"))
+        assert sent and all(m["crew_listening"] is True for m in sent)
