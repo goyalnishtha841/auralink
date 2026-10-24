@@ -10,6 +10,16 @@ const WORDS = [
 ];
 const splitStop = (w) => (/[.。।]$/.test(w) ? [w.slice(0, -1), w.slice(-1)] : [w, ""]);
 
+// Smooth-scroll only for this page's own section jumps (not a global `scroll-behavior: smooth`,
+// which also slows down and overshoots ordinary trackpad/wheel scrolling everywhere else).
+function jumpTo(e) {
+  const id = e.currentTarget.getAttribute("href")?.slice(1);
+  const el = id && document.getElementById(id);
+  if (!el) return;
+  e.preventDefault();
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 /* ---------- hero: sound ribbons that start chaotic and calm into the window (meaning: noisy speech → one clear request) ---------- */
 function makeSimplex() {
   const F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
@@ -162,8 +172,8 @@ function Hero() {
           <motion.p className="lede" {...up(0.68)}>Auralink helps passengers and cabin crew understand each other across languages and accents in
             <strong> real time</strong>. When speech is unclear, it <strong>asks the passenger a simple question</strong> instead of guessing.</motion.p>
           <motion.div className="hero-cta" {...up(0.8)}>
-            <a className="btn btn-call" href="#try"><Icon id="keyboard" />Try the engine</a>
-            <a className="btn btn-ghost" href="#problem">See the problem<Icon id="arrow" /></a>
+            <a className="btn btn-call" href="#try" onClick={jumpTo}><Icon id="keyboard" />Try the engine</a>
+            <a className="btn btn-ghost" href="#problem" onClick={jumpTo}>See the problem<Icon id="arrow" /></a>
           </motion.div>
           <motion.ul className="hero-points" {...up(0.95)}>
             <li><Icon id="wifi_off" />Works offline in the cabin</li>
@@ -425,9 +435,9 @@ export default function Landing() {
       <a className="skip" href="#main">Skip to content</a>
       <header className={`nav ${scrolled ? "scrolled" : ""}`}>
         <div className="wrap nav-inner">
-          <a className="brand" href="#top" aria-label="Auralink home"><BrandMark /><span>Auralink</span></a>
+          <a className="brand" href="#top" aria-label="Auralink home" onClick={jumpTo}><BrandMark /><span>Auralink</span></a>
           <nav aria-label="Sections">
-            <a href="#problem">Problem</a><a href="#solution">How it works</a><a href="#try">Try it</a><a href="#safety">Safety</a><a href="#proof">Results</a>
+            <a href="#problem" onClick={jumpTo}>Problem</a><a href="#solution" onClick={jumpTo}>How it works</a><a href="#try" onClick={jumpTo}>Try it</a><a href="#safety" onClick={jumpTo}>Safety</a><a href="#proof" onClick={jumpTo}>Results</a>
           </nav>
           <a className="btn btn-outline-call" href="/start.html">Start the demo<Icon id="arrow" /></a>
         </div>
@@ -571,7 +581,7 @@ export default function Landing() {
 
       <footer className="foot">
         <div className="wrap foot-inner">
-          <div><a className="brand" href="#top"><BrandMark /><span>Auralink</span></a>
+          <div><a className="brand" href="#top" onClick={jumpTo}><BrandMark /><span>Auralink</span></a>
             <p>Auralink does not just hear passengers. It makes sure they are understood, and that they understand.</p></div>
           <p className="foot-small">Thapar Japan Hackathon 2026 · Problem statement JAL-PS-02. A prototype communication aid, not a certified safety system.
             Built with Whisper, Silero VAD, eSpeak NG, FastAPI, Next.js and open fonts (OFL). Quality depends on speech recognition; extreme noise or rare speech may still need crew judgement.</p>
