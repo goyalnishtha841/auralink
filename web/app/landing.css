@@ -89,7 +89,7 @@
 /* isolation: isolate keeps the z-index: -1 glows below exactly contained and ordered within this
    section (same trick .hero uses), instead of being swallowed by the <html>/<body> overflow+background
    interaction that otherwise hides negative-z fixed/absolute content site-wide. */
-.section { position: relative; padding: clamp(80px, 11vw, 140px) 0; border-top: 1px solid var(--line-strong); overflow: hidden; isolation: isolate;
+.section { position: relative; padding: clamp(80px, 11vw, 140px) 0; overflow: hidden; isolation: isolate;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 30%); }
 .section::before { content: ""; position: absolute; z-index: -1; pointer-events: none;
   top: -16vh; left: -14vw; width: 62vw; height: 58vh; max-width: 760px; max-height: 620px;
@@ -99,8 +99,10 @@
   background: radial-gradient(circle, rgba(122, 139, 255, 0.22), transparent 66%); }
 .section:nth-of-type(even)::before { left: auto; right: -14vw; background: radial-gradient(circle, rgba(255, 91, 91, 0.3), transparent 68%); }
 .section:nth-of-type(even) > .wrap::after { right: auto; left: -14vw; }
-.section::after { content: ""; position: absolute; top: -1px; left: 0; width: 120px; height: 1px; background: linear-gradient(90deg, var(--accent), transparent); }
-.section:nth-of-type(even)::after { left: auto; right: 0; background: linear-gradient(270deg, var(--accent), transparent); }
+/* a thin sakura branch, not a hard rule, marks where one section ends and the next begins */
+.section::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 44px; z-index: 1;
+  background: url("/branch-divider.svg") top center / 100% 100% no-repeat; opacity: 0.8; pointer-events: none; }
+.section:nth-of-type(even)::after { transform: scaleX(-1); }
 .section > .wrap { position: relative; }
 .eyebrow { display: flex; align-items: center; gap: 12px; font: 500 12px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0 0 18px; }
 .eyebrow::before { content: ""; width: 30px; height: 1px; background: var(--accent); }

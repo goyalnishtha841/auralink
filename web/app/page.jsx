@@ -33,9 +33,9 @@ function Ribbons() {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current, ctx = canvas.getContext("2d"), noise = makeSimplex();
-    // one clear thread, one soft echo — not a tangle of lines (the point is noise resolving to one request)
+    // one clear, quiet thread — not a tangle of lines (the point is noise resolving to one request)
     const lines = [
-      ["255,91,91", 0.46, 1.25], ["255,255,255", 0.14, 0.8],
+      ["255,91,91", 0.28, 1],
     ];
     // static: drawn once (and again on resize), never animated or moved by the pointer
     let w = 0, h = 0;
@@ -51,16 +51,16 @@ function Ribbons() {
       ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = "lighter";
       const mobile = w < 900;
-      const cy = h * (mobile ? 0.36 : 0.55), end = mobile ? 1 : 0.7, amp = Math.min(h * 0.15, 110);
+      const cy = h * (mobile ? 0.36 : 0.55), end = mobile ? 1 : 0.7, amp = Math.min(h * 0.05, 34);
       lines.forEach(([rgb, alpha, width], idx) => {
         ctx.beginPath();
         for (let x = 0; x <= w * end + 6; x += 5) {
           const u = x / (w * end);
-          const chaos = 1 - sm(0.25, 0.95, u);
+          const chaos = 1 - sm(0.1, 0.75, u);
           const stir = 1;
           const n = noise(x * 0.0022 * stir, idx * 9.7 + t);
           const pulse = Math.sin(t * 0.6 + idx) * 0.12 + 0.88;
-          const y = cy + n * amp * (chaos * 0.95 + 0.05) * pulse * stir + (idx - (lines.length - 1) / 2) * 16 * chaos;
+          const y = cy + n * amp * (chaos * 0.55 + 0.12) * pulse * stir + (idx - (lines.length - 1) / 2) * 16 * chaos;
           x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         const grad = ctx.createLinearGradient(0, 0, w * end, 0);
@@ -69,7 +69,7 @@ function Ribbons() {
         grad.addColorStop(0.75, `rgba(${rgb},${alpha})`);
         grad.addColorStop(1, `rgba(${rgb},0)`);
         ctx.strokeStyle = grad;
-        ctx.lineWidth = width * 6; ctx.globalAlpha = 0.07; ctx.stroke();
+        ctx.lineWidth = width * 4; ctx.globalAlpha = 0.045; ctx.stroke();
         ctx.lineWidth = width; ctx.globalAlpha = 1; ctx.stroke();
       });
       ctx.globalCompositeOperation = "source-over";
