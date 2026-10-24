@@ -5,7 +5,7 @@ import { Ambient, AppHeader, BrandMark, Reveal } from "@/components/ui";
 import { Icon } from "@/lib/icons";
 
 const PAGES = [
-  ["/passenger?seat=34K", "mic", "Passenger", "Passenger’s phone", "Ask for help by speaking, typing or tapping a picture; read replies, briefings and announcements"],
+  ["/passenger", "mic", "Passenger", "Passenger’s phone", "Pick a seat, then ask for help by speaking, typing or tapping a picture; read replies, briefings and announcements"],
   ["/crew", "tablet", "Crew tablet", "Cabin crew (PIN)", "Requests in Japanese, one-tap replies, safety briefings, PA captions, care rounds, phrasebook"],
   ["/checkin", "qr", "Check-in", "Airport kiosk", "Passenger picks language and needs before boarding; the seat opens set up"],
   ["/judge", "question", "Under the hood", "Jury (PIN)", "How each request was understood, step by step"],
