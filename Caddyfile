@@ -1,0 +1,9 @@
+# Reverse proxy with automatic HTTPS (Let's Encrypt). The passenger phone's microphone only
+# works over HTTPS (or localhost), so this is required, not optional, for a public deploy.
+#
+# Point this at either a real domain, or <your-vm-public-ip>.nip.io (free, no DNS setup: nip.io
+# resolves that hostname straight back to the IP in it) -- replace the placeholder below with
+# whichever one you're using.
+your-domain-or-ip.nip.io {
+    reverse_proxy hub:8000
+}

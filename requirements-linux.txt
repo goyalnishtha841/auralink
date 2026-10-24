@@ -1,0 +1,12 @@
+# Same as requirements.txt, minus mlx-lm: that package only ships wheels for Apple Silicon macOS
+# and cannot be installed on Linux. engine/assist.py already handles its absence gracefully
+# (assist.available() returns False), so Live Conversation's LLM-assist feature is simply off here.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+faster-whisper>=1.1
+phonemizer>=3.2
+segno>=1.6
+fastembed>=0.9
+transformers>=4.40
+kokoro-onnx>=0.4
