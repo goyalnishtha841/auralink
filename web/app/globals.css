@@ -245,6 +245,16 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .seat.pop { transform: scale(1.18); }
 @keyframes seatPulse { 50% { box-shadow: 0 0 0 6px rgba(255, 61, 90, 0.25); } }
 
+/* seat gate: shared-scanner passengers pick their own seat on a plane-shaped map before anything connects */
+.seatgate-map { display: flex; flex-direction: column; gap: 8px; align-items: center; max-height: 50vh; overflow: auto; padding: 4px; }
+.seatgate-row { display: flex; align-items: center; gap: 6px; flex: none; }
+.seatgate-row-label { width: 16px; font: 700 11px var(--mono); color: var(--faint); text-align: right; flex: none; }
+.seatgate-seats { display: flex; gap: 4px; flex: none; }
+.seatgate-aisle, .seatgate-missing { width: 7px; flex: none; }
+.seatgate-seat { width: 29px; height: 29px; border-radius: 8px; font-weight: 700; font-size: 12px; padding: 0; min-height: 0; cursor: pointer; flex: none; }
+.seatgate-seat.picked, .seatgate-seat.picked:hover { background: var(--ok) !important; color: #04210f !important; border-color: var(--ok) !important; }
+.seatgate-seat:hover:not(:disabled) { border-color: var(--accent); }
+
 /* safety pictograms */
 .picto { width: 100%; height: auto; color: var(--fg); display: block; }
 .picto .acc { stroke: var(--accent); }

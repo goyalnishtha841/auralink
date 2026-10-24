@@ -272,6 +272,7 @@ export default function Crew() {
                     {briefing.summary || "Nothing needs a summary right now."}
                   </p>
                 ) : <p className="muted" style={{ margin: 0, fontSize: 13 }}>Tap "AI briefing" for a one-glance read of what needs attention, from the facts already on this screen. Tap any seat for its detail.</p>}
+                <MapLegend />
                 <CabinMap state={state} cfg={cfg} exitSeats={exitSeats} selected={pickedSeat} onSelect={(s) => setPickedSeat(s === pickedSeat ? null : s)} />
               </section>
             ) : null}
@@ -435,6 +436,24 @@ function CrewFreeTalk({ cfg, LANG_NAME }) {
   );
 }
 
+// Cabin map colour key, so crew don't have to guess what a colour means mid-flight.
+// Keep in sync with CabinMap's statusFor() and crew.css's .cabinmap .seat.* rules.
+const MAP_LEGEND = [
+  ["urgent", "var(--bad)", "至急 Urgent", "e.g. possible medical"],
+  ["accessibility", "var(--violet)", "要配慮 Accessibility", "request from a passenger with an accessibility need"],
+  ["open", "var(--warn)", "対応待ち Open request", "waiting, not yet urgent"],
+  ["idle", "var(--idle)", "リクエストなし No request", ""],
+];
+function MapLegend() {
+  return (
+    <div className="map-legend" role="note" aria-label="Cabin map colour key">
+      {MAP_LEGEND.map(([key, color, label, hint]) => (
+        <span key={key} className="map-legend-item" title={hint || undefined}><i className="sw" style={{ background: color }} />{label}</span>
+      ))}
+    </div>
+  );
+}
+
 function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
   if (!state) return null;
   const heat = state.heatmap || {};
@@ -446,6 +465,7 @@ function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
   function statusFor(id) {
     const cards = cardsBySeat[id];
     if (cards?.some((c) => c.urgent && c.status !== "acknowledged")) return "urgent";
+    if (cards?.some((c) => c.accessibility)) return "accessibility";
     if (cards?.length) return "open";
     return heat[id] === "offline" ? "offline" : "idle";
   }

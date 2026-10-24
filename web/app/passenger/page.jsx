@@ -1,7 +1,7 @@
 "use client";
 // Passenger seat screen. Same protocol and behaviour as the original apps/passenger.html.
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { Recorder, VadRecorder, connect, loadConfig, params } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { ACCESSIBILITY_META } from "@/lib/accessibility";
@@ -15,8 +15,8 @@ export default function Passenger() {
   const st = useRef(null);
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
-  if (!st.current) st.current = { ready: false, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, voiceOK: false,
-    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: "34K",
+  if (!st.current) st.current = { ready: false, awaitingSeat: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, voiceOK: false,
+    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: null,
     conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [], spoken: new Set() } };
   const s = st.current;
   const socket = useRef(null);
@@ -353,23 +353,17 @@ export default function Passenger() {
     </div>);
   }
 
-  useEffect(() => {
-    addEventListener("pointerdown", unlockAudio, { once: true });
-    let alive = true, markReady;
+  const aliveRef = useRef(true);
+
+  function boot(seat, p) {
+    s.seat = seat;
+    let markReady;
     const ready = new Promise((r) => (markReady = r));
-    const p = params();
-    s.seat = p.get("seat") || "34K";
-    s.lang = p.get("lang") || "en";
-    s.senior = p.get("senior") === "1";
-    s.pictures = p.get("mode") === "pictures";
-    s.readAloud = p.get("read") === "1";
-    s.accessibility = ACCESSIBILITY_META[p.get("accessibility")] ? p.get("accessibility") : null;
-    socket.current = connect(`/ws/passenger/${s.seat}`, (msg) => ready.then(() => alive && onMessage(msg)), (on) => {
+    socket.current = connect(`/ws/passenger/${s.seat}`, (msg) => ready.then(() => aliveRef.current && onMessage(msg)), (on) => {
       s.online = on; bump();
       if (on) ready.then(() => hello());
     });
     (async () => {
-      s.cfg = await loadConfig();
       let checkedIn = false;
       if (!["lang", "senior", "mode", "read", "accessibility"].some((k) => p.has(k))) {
         try {
@@ -392,9 +386,34 @@ export default function Passenger() {
       markReady();
       if (askLanguage) chooseLanguage();
     })();
-    return () => { alive = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); removeEventListener("pointerdown", unlockAudio); };
+  }
+
+  // The shared scanner lands here with no ?seat= at all: one QR code for the whole cabin
+  // instead of one per seat (there's no screen on every seat to print one onto). The passenger
+  // picks their seat on the map below before anything connects to the hub.
+  function confirmSeat(seat) {
+    s.awaitingSeat = false; bump();
+    boot(seat, params());
+  }
+
+  useEffect(() => {
+    addEventListener("pointerdown", unlockAudio, { once: true });
+    const p = params();
+    s.lang = p.get("lang") || "en";
+    s.senior = p.get("senior") === "1";
+    s.pictures = p.get("mode") === "pictures";
+    s.readAloud = p.get("read") === "1";
+    s.accessibility = ACCESSIBILITY_META[p.get("accessibility")] ? p.get("accessibility") : null;
+    (async () => {
+      s.cfg = await loadConfig();
+      const seatParam = p.get("seat");
+      if (seatParam) boot(seatParam, p);
+      else { s.awaitingSeat = true; bump(); }
+    })();
+    return () => { aliveRef.current = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); removeEventListener("pointerdown", unlockAudio); };
   }, []); // eslint-disable-line
 
+  if (s.awaitingSeat) return <SeatGate cfg={s.cfg} onConfirm={confirmSeat} />;
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
 
   const reqs = [...s.requests.values()].reverse();
@@ -502,6 +521,48 @@ export default function Passenger() {
           </motion.div>) : null}
       </AnimatePresence>
     </div>
+  );
+}
+
+// One scanner for the whole cabin (no screen on every seat to print a per-seat QR onto): the
+// passenger taps their own seat on a plane-shaped map before anything connects to the hub, the
+// same layout the crew tablet uses so it reads the same way on both sides.
+function SeatGate({ cfg, onConfirm }) {
+  const [picked, setPicked] = useState(null);
+  if (!cfg) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
+  const rows = [...new Set(cfg.seats.map((x) => x.slice(0, -1)))];
+  const known = new Set(cfg.seats);
+  return (
+    <>
+      <Ambient />
+      <main className="app" style={{ maxWidth: 420, minHeight: "100dvh", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20, paddingBottom: 28 }}>
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ font: "800 24px/1.25 var(--display)", margin: "0 0 4px" }}>Which seat are you in?</h1>
+          <p className="muted" style={{ margin: 0 }}>Tap your seat, then continue.</p>
+        </div>
+        <div className="seatgate-map">
+          {rows.map((row) => (
+            <div className="seatgate-row" key={row}>
+              <span className="seatgate-row-label">{row}</span>
+              <div className="seatgate-seats">
+                {["A", "B", "C", null, "D", "E", "G", null, "H", "J", "K"].map((letter, i) => {
+                  if (!letter) return <span className="seatgate-aisle" key={`gap-${i}`} />;
+                  const id = row + letter;
+                  if (!known.has(id)) return <span className="seatgate-missing" key={id} />;
+                  return (
+                    <button key={id} type="button" className={`seat seatgate-seat ${picked === id ? "picked pop" : ""}`}
+                      aria-pressed={picked === id} aria-label={`Seat ${id}`} onClick={() => setPicked(id)}>{letter}</button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <button className="primary" disabled={!picked} onClick={() => picked && onConfirm(picked)} style={{ minHeight: 52, fontSize: 16 }}>
+          {picked ? `Continue · Seat ${picked}` : "Pick your seat above"}
+        </button>
+      </main>
+    </>
   );
 }
 
