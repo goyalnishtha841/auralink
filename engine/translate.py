@@ -34,6 +34,9 @@ MODEL_REPO = "entai2965/nllb-200-distilled-600M-ctranslate2"
 # plus Japanese, the crew's language. Add here, not per-caller, when a language is added.
 NLLB_LANG = {
     "en": "eng_Latn", "hi": "hin_Deva", "ta": "tam_Taml", "th": "tha_Thai", "ja": "jpn_Jpan",
+    "zh": "zho_Hans", "es": "spa_Latn", "fr": "fra_Latn", "it": "ita_Latn", "pt": "por_Latn",
+    "bn": "ben_Beng", "te": "tel_Telu", "mr": "mar_Deva", "gu": "guj_Gujr", "kn": "kan_Knda",
+    "ml": "mal_Mlym", "pa": "pan_Guru",
 }
 
 _shared = None

@@ -34,6 +34,14 @@ VOICE = {
     "en": ("af_heart", "en-us"),
     "hi": ("hf_alpha", "hi"),
     "ja": ("jf_alpha", "ja"),
+    "zh": ("zf_xiaoxiao", "cmn"),
+    "es": ("ef_dora", "es"),
+    "fr": ("ff_siwis", "fr-fr"),
+    "it": ("if_sara", "it"),
+    "pt": ("pf_dora", "pt-br"),
+    # Bengali, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi: no Kokoro voice for these
+    # (see the module docstring's language list). voice_for() returns None for them, same as
+    # Tamil/Thai, and the caller falls back to the browser's own offline voice.
 }
 
 _shared = None

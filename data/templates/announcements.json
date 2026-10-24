@@ -1,337 +1,616 @@
 {
- "_note": "Cabin announcements (PA) that Auralink can caption. The crew speak as usual, in Japanese or English; the hub matches what it heard to one of these by its key phrases and, after the crew tap Send, shows the pre-written text on every seat in that passenger's language. Nothing is machine-translated: an announcement that is not here is not captioned, and the crew are told so. 'slot' is a number taken from the speech (minutes or gate) and put into text_n as {n}. Some Japanese keys are spellings Whisper writes for the same sound (効果 for 降下 'kōka', 伝統 for 点灯): the announcement is matched by how it sounds, like passenger requests.",
- "announcements": [
-  {
-   "id": "seatbelt_on",
-   "icon": "seatbelt",
-   "slot": null,
-   "keys": {
-    "en": [
-     "seatbelt sign",
-     "seat belt sign",
-     "fasten your seatbelt",
-     "fasten your seat belt",
-     "turned on",
-     "switched on",
-     "illuminated"
-    ],
-    "ja": [
-     "シートベル",
-     "ベルト着用",
-     "着用のサイン",
-     "点灯",
-     "伝統しました",
-     "お締め"
-    ]
-   },
-   "not": {
-    "en": [
-     "turned off",
-     "switched off"
-    ],
-    "ja": [
-     "消灯"
-    ]
-   },
-   "title": {
-    "en": "Seatbelt sign on",
-    "ja": "シートベルト着用サイン点灯"
-   },
-   "text": {
-    "en": "The seatbelt sign is on. Please return to your seat and fasten your seatbelt.",
-    "hi": "सीट बेल्ट का संकेत चालू है। कृपया अपनी सीट पर लौटें और सीट बेल्ट बाँध लें।",
-    "ta": "சீட் பெல்ட் அறிகுறி எரிகிறது. உங்கள் இருக்கைக்குத் திரும்பி சீட் பெல்ட்டை அணியுங்கள்.",
-    "th": "สัญญาณรัดเข็มขัดนิรภัยเปิดแล้ว กรุณากลับไปที่ที่นั่งและรัดเข็มขัดนิรภัย",
-    "ja": "シートベルト着用サインが点灯しました。お席に戻り、シートベルトをお締めください。"
-   }
-  },
-  {
-   "id": "seatbelt_off",
-   "icon": "seatbelt_off",
-   "slot": null,
-   "keys": {
-    "en": [
-     "seatbelt sign",
-     "seat belt sign",
-     "turned off",
-     "switched off",
-     "move about",
-     "keep your seatbelt fastened while seated"
-    ],
-    "ja": [
-     "シートベル",
-     "消灯",
-     "お立ちになる"
-    ]
-   },
-   "not": {
-    "en": [
-     "turned on",
-     "switched on",
-     "illuminated"
-    ],
-    "ja": [
-     "点灯"
-    ]
-   },
-   "title": {
-    "en": "Seatbelt sign off",
-    "ja": "シートベルト着用サイン消灯"
-   },
-   "text": {
-    "en": "The seatbelt sign is off. You may move around. Please keep your seatbelt fastened while seated.",
-    "hi": "सीट बेल्ट का संकेत बंद है। आप चल-फिर सकते हैं। बैठे रहने पर सीट बेल्ट बाँधे रखें।",
-    "ta": "சீட் பெல்ட் அறிகுறி அணைந்தது. நீங்கள் நடமாடலாம். அமர்ந்திருக்கும்போது சீட் பெல்ட்டை அணிந்திருங்கள்.",
-    "th": "สัญญาณรัดเข็มขัดนิรภัยปิดแล้ว ลุกเดินได้ เมื่อนั่งอยู่กรุณารัดเข็มขัดไว้",
-    "ja": "シートベルト着用サインが消灯しました。お座りの際はシートベルトをお締めください。"
-   }
-  },
-  {
-   "id": "meal",
-   "icon": "meal",
-   "slot": null,
-   "keys": {
-    "en": [
-     "meal service",
-     "dinner service",
-     "lunch service",
-     "breakfast service",
-     "dinner",
-     "lunch",
-     "breakfast",
-     "serving",
-     "meal",
-     "drinks"
-    ],
-    "ja": [
-     "お食事",
-     "食事",
-     "お飲み物",
-     "サービス"
-    ]
-   },
-   "title": {
-    "en": "Meal service",
-    "ja": "お食事のサービス"
-   },
-   "text": {
-    "en": "We will now begin our meal service. Please put your seat back upright and open your table.",
-    "hi": "अब हम भोजन परोसना शुरू करेंगे। कृपया सीट सीधी करें और अपनी टेबल खोलें।",
-    "ta": "இப்போது உணவு வழங்கத் தொடங்குகிறோம். இருக்கையை நேராக்கி, மேசையைத் திறங்கள்.",
-    "th": "เรากำลังจะเริ่มบริการอาหาร กรุณาปรับพนักพิงให้ตรงและเปิดโต๊ะ",
-    "ja": "これよりお食事のサービスを始めます。座席の背を元の位置に戻し、テーブルをお出しください。"
-   }
-  },
-  {
-   "id": "descent",
-   "icon": "descent",
-   "slot": "minutes",
-   "keys": {
-    "en": [
-     "descent",
-     "begin our descent",
-     "started our descent",
-     "landing",
-     "we will be landing",
-     "minutes"
-    ],
-    "ja": [
-     "降下",
-     "着陸",
-     "到着予定",
-     "効果を始め",
-     "着陸の予定",
-     "着力"
-    ]
-   },
-   "title": {
-    "en": "Starting descent",
-    "ja": "降下開始"
-   },
-   "text": {
-    "en": "We have started our descent. Please return to your seat and fasten your seatbelt.",
-    "hi": "विमान नीचे उतरना शुरू कर चुका है। कृपया अपनी सीट पर लौटें और सीट बेल्ट बाँध लें।",
-    "ta": "விமானம் இறங்கத் தொடங்கியுள்ளது. உங்கள் இருக்கைக்குத் திரும்பி சீட் பெல்ட்டை அணியுங்கள்.",
-    "th": "เครื่องบินเริ่มลดระดับแล้ว กรุณากลับไปที่ที่นั่งและรัดเข็มขัดนิรภัย",
-    "ja": "当機は降下を始めました。お席に戻り、シートベルトをお締めください。"
-   },
-   "text_n": {
-    "en": "We have started our descent and will land in about {n} minutes. Please return to your seat and fasten your seatbelt.",
-    "hi": "विमान नीचे उतरना शुरू कर चुका है, लगभग {n} मिनट में उतरेगा। कृपया अपनी सीट पर लौटें और सीट बेल्ट बाँध लें।",
-    "ta": "விமானம் இறங்கத் தொடங்கியுள்ளது, சுமார் {n} நிமிடங்களில் தரையிறங்கும். உங்கள் இருக்கைக்குத் திரும்பி சீட் பெல்ட்டை அணியுங்கள்.",
-    "th": "เครื่องบินเริ่มลดระดับแล้ว และจะลงจอดในอีกประมาณ {n} นาที กรุณากลับไปที่ที่นั่งและรัดเข็มขัดนิรภัย",
-    "ja": "当機は降下を始めました。あと約{n}分で着陸します。お席に戻り、シートベルトをお締めください。"
-   }
-  },
-  {
-   "id": "arrived",
-   "icon": "arrived",
-   "slot": "gate",
-   "keys": {
-    "en": [
-     "welcome to",
-     "we have landed",
-     "just landed",
-     "arrived",
-     "remain seated",
-     "gate"
-    ],
-    "ja": [
-     "到着",
-     "ようこそ",
-     "ゲート",
-     "そのままお待ち"
-    ]
-   },
-   "title": {
-    "en": "Arrived",
-    "ja": "到着"
-   },
-   "text": {
-    "en": "We have arrived. Please stay seated until the seatbelt sign is off.",
-    "hi": "हम पहुँच गए हैं। सीट बेल्ट का संकेत बंद होने तक कृपया बैठे रहें।",
-    "ta": "நாம் வந்து சேர்ந்துவிட்டோம். சீட் பெல்ட் அறிகுறி அணையும் வரை அமர்ந்திருங்கள்.",
-    "th": "เรามาถึงแล้ว กรุณานั่งรอจนกว่าสัญญาณรัดเข็มขัดจะดับ",
-    "ja": "到着いたしました。シートベルト着用サインが消えるまでお席でお待ちください。"
-   },
-   "text_n": {
-    "en": "We have arrived at gate {n}. Please stay seated until the seatbelt sign is off.",
-    "hi": "हम गेट {n} पर पहुँच गए हैं। सीट बेल्ट का संकेत बंद होने तक कृपया बैठे रहें।",
-    "ta": "நாம் கேட் {n}-க்கு வந்து சேர்ந்துவிட்டோம். சீட் பெல்ட் அறிகுறி அணையும் வரை அமர்ந்திருங்கள்.",
-    "th": "เรามาถึงประตู {n} แล้ว กรุณานั่งรอจนกว่าสัญญาณรัดเข็มขัดจะดับ",
-    "ja": "{n}番ゲートに到着いたしました。シートベルト着用サインが消えるまでお席でお待ちください。"
-   }
-  },
-  {
-   "id": "delay",
-   "icon": "clock",
-   "slot": "minutes",
-   "keys": {
-    "en": [
-     "delay",
-     "delayed",
-     "waiting for",
-     "thank you for your patience",
-     "air traffic",
-     "minutes"
-    ],
-    "ja": [
-     "遅れ",
-     "お待ち",
-     "ご迷惑",
-     "出発が"
-    ]
-   },
-   "title": {
-    "en": "Delay",
-    "ja": "遅延"
-   },
-   "text": {
-    "en": "We are delayed. We will tell you more soon. Thank you for your patience.",
-    "hi": "हमें देर हो रही है। जल्द ही और जानकारी देंगे। धैर्य के लिए धन्यवाद।",
-    "ta": "தாமதமாகிறது. விரைவில் மேலும் தெரிவிப்போம். பொறுமைக்கு நன்றி.",
-    "th": "เที่ยวบินล่าช้า เราจะแจ้งข้อมูลเพิ่มเติมเร็วๆ นี้ ขอบคุณที่รอ",
-    "ja": "ただいま遅れが生じております。詳しくは追ってお知らせします。ご理解をお願いいたします。"
-   },
-   "text_n": {
-    "en": "We are delayed by about {n} minutes. Thank you for your patience.",
-    "hi": "हमें लगभग {n} मिनट की देर है। धैर्य के लिए धन्यवाद।",
-    "ta": "சுமார் {n} நிமிடங்கள் தாமதமாகிறது. பொறுமைக்கு நன்றி.",
-    "th": "เที่ยวบินล่าช้าประมาณ {n} นาที ขอบคุณที่รอ",
-    "ja": "約{n}分の遅れが生じております。ご理解をお願いいたします。"
-   }
-  },
-  {
-   "id": "doctor",
-   "icon": "medical",
-   "slot": null,
-   "keys": {
-    "en": [
-     "doctor",
-     "nurse",
-     "medical professional",
-     "medical training",
-     "on board",
-     "call button"
-    ],
-    "ja": [
-     "お医者様",
-     "医師",
-     "看護師",
-     "医療関係",
-     "お客様の中に"
-    ]
-   },
-   "title": {
-    "en": "Doctor needed",
-    "ja": "医師の呼び出し"
-   },
-   "text": {
-    "en": "Is there a doctor or nurse on board? If you are one, please press the call button or tell a crew member.",
-    "hi": "क्या विमान में कोई डॉक्टर या नर्स है? अगर आप हैं, तो कृपया कॉल बटन दबाएँ या किसी क्रू सदस्य को बताएँ।",
-    "ta": "விமானத்தில் மருத்துவர் அல்லது செவிலியர் யாராவது இருக்கிறீர்களா? இருந்தால், அழைப்பு பொத்தானை அழுத்துங்கள் அல்லது குழுவினரிடம் சொல்லுங்கள்.",
-    "th": "มีแพทย์หรือพยาบาลบนเครื่องไหม ถ้าคุณเป็น กรุณากดปุ่มเรียกหรือบอกลูกเรือ",
-    "ja": "お客様の中にお医者様または看護師の方はいらっしゃいますか。呼び出しボタンを押すか、乗務員にお知らせください。"
-   }
-  },
-  {
-   "id": "rest",
-   "icon": "moon",
-   "slot": null,
-   "keys": {
-    "en": [
-     "dim the cabin lights",
-     "dimming",
-     "lights",
-     "rest",
-     "sleep",
-     "reading light"
-    ],
-    "ja": [
-     "照明",
-     "暗く",
-     "お休み"
-    ]
-   },
-   "title": {
-    "en": "Lights dimmed",
-    "ja": "照明を暗くします"
-   },
-   "text": {
-    "en": "We are dimming the cabin lights so you can rest. Use your reading light or call button if you need anything.",
-    "hi": "आराम के लिए केबिन की रोशनी धीमी की जा रही है। ज़रूरत हो तो रीडिंग लाइट या कॉल बटन का उपयोग करें।",
-    "ta": "நீங்கள் ஓய்வெடுக்க விளக்குகளை மங்கச் செய்கிறோம். ஏதாவது தேவையென்றால் வாசிப்பு விளக்கு அல்லது அழைப்பு பொத்தானைப் பயன்படுத்துங்கள்.",
-    "th": "เรากำลังหรี่ไฟในห้องโดยสารเพื่อให้คุณพักผ่อน หากต้องการสิ่งใด ใช้ไฟอ่านหนังสือหรือปุ่มเรียก",
-    "ja": "ごゆっくりお休みいただけるよう、客室の照明を暗くいたします。ご用の際は読書灯または呼び出しボタンをご利用ください。"
-   }
-  },
-  {
-   "id": "duty_free",
-   "icon": "bag",
-   "slot": null,
-   "keys": {
-    "en": [
-     "duty free",
-     "duty-free",
-     "shopping",
-     "in-flight sales"
-    ],
-    "ja": [
-     "免税品",
-     "機内販売"
-    ]
-   },
-   "title": {
-    "en": "Duty-free sales",
-    "ja": "免税品販売"
-   },
-   "text": {
-    "en": "Duty-free sales are starting. The crew will come down the aisle; you can also see the catalogue in your seat pocket.",
-    "hi": "ड्यूटी-फ़्री बिक्री शुरू हो रही है। क्रू गलियारे में आएँगे; सीट की जेब में कैटलॉग भी है।",
-    "ta": "வரியில்லா விற்பனை தொடங்குகிறது. குழுவினர் நடைபாதையில் வருவார்கள்; இருக்கைப் பையில் பட்டியலும் உள்ளது.",
-    "th": "เริ่มจำหน่ายสินค้าปลอดภาษีแล้ว ลูกเรือจะเดินผ่านทางเดิน ดูแคตตาล็อกได้ในกระเป๋าหน้าที่นั่ง",
-    "ja": "これより免税品の販売を始めます。乗務員が通路を回ります。座席ポケットのカタログもご覧ください。"
-   }
-  }
- ]
+  "_note": "Cabin announcements (PA) that Auralink can caption. The crew speak as usual, in Japanese or English; the hub matches what it heard to one of these by its key phrases and, after the crew tap Send, shows the pre-written text on every seat in that passenger's language. Nothing is machine-translated: an announcement that is not here is not captioned, and the crew are told so. 'slot' is a number taken from the speech (minutes or gate) and put into text_n as {n}. Some Japanese keys are spellings Whisper writes for the same sound (効果 for 降下 'kōka', 伝統 for 点灯): the announcement is matched by how it sounds, like passenger requests.",
+  "announcements": [
+    {
+      "id": "seatbelt_on",
+      "icon": "seatbelt",
+      "slot": null,
+      "keys": {
+        "en": [
+          "seatbelt sign",
+          "seat belt sign",
+          "fasten your seatbelt",
+          "fasten your seat belt",
+          "turned on",
+          "switched on",
+          "illuminated"
+        ],
+        "ja": [
+          "シートベル",
+          "ベルト着用",
+          "着用のサイン",
+          "点灯",
+          "伝統しました",
+          "お締め"
+        ]
+      },
+      "not": {
+        "en": [
+          "turned off",
+          "switched off"
+        ],
+        "ja": [
+          "消灯"
+        ]
+      },
+      "title": {
+        "en": "Seatbelt sign on",
+        "ja": "シートベルト着用サイン点灯",
+        "zh": "安全带上线",
+        "es": "Signo de cinturón de seguridad",
+        "fr": "Signe de ceinture de sécurité",
+        "it": "Segnale di cintura di sicurezza",
+        "pt": "Segmentação do cinto de segurança",
+        "bn": "সিট বেল্ট সাইন ইন",
+        "te": "సీట్బెల్ట్ సైన్ ఆన్",
+        "mr": "सीटबेल्ट साइन ऑन",
+        "gu": "સીટબેલ્ટ સાઇન પર",
+        "kn": "ಸೀಟ್ ಬೆಲ್ಟ್ ಸೈನ್ ಆನ್",
+        "ml": "സീറ്റ് ബെൽറ്റ് അടയാളം",
+        "pa": "ਸੀਟ ਬੈਲਟ ਦੀ ਨਿਸ਼ਾਨੀ",
+        "hi": "सीट बेल्ट साइन ऑन",
+        "ta": "சீட் பெல்ட் அடையாளம்",
+        "th": "ป้ายเข็มขัดที่ติด"
+      },
+      "text": {
+        "en": "The seatbelt sign is on. Please return to your seat and fasten your seatbelt.",
+        "hi": "सीट बेल्ट का संकेत चालू है। कृपया अपनी सीट पर लौटें और सीट बेल्ट बाँध लें।",
+        "ta": "சீட் பெல்ட் அறிகுறி எரிகிறது. உங்கள் இருக்கைக்குத் திரும்பி சீட் பெல்ட்டை அணியுங்கள்.",
+        "th": "สัญญาณรัดเข็มขัดนิรภัยเปิดแล้ว กรุณากลับไปที่ที่นั่งและรัดเข็มขัดนิรภัย",
+        "ja": "シートベルト着用サインが点灯しました。お席に戻り、シートベルトをお締めください。",
+        "zh": "请回到座位,把安全带挂起来.",
+        "es": "La señal del cinturón de seguridad está encendida. Por favor vuelva a su asiento y fija su cinturón de seguridad.",
+        "fr": "Le panneau de ceinture est allumé. Retournez à votre place et attachez votre ceinture.",
+        "it": "Il segnale della cintura di sicurezza è acceso.",
+        "pt": "O sinal do cinto de segurança está ligado.",
+        "bn": "সিকিউরিটি বেল্ট সাইন চালু আছে দয়া করে আপনার আসনে ফিরে আসুন এবং আপনার সিকিউরিটি বেল্ট সংযুক্ত করুন।",
+        "te": "భద్రతా బెల్ట్ సైన్ ఆన్ ఉంది. దయచేసి మీ సీటుకు తిరిగి వెళ్లి మీ భద్రతా బెల్ట్ను కట్టుకోండి.",
+        "mr": "सीट बेल्टचा साइन चालू आहे. कृपया आपल्या सीटवर परत जा आणि आपला सीट बेल्ट बांधा.",
+        "gu": "સીટબેલ્ટનું ચિહ્ન ચાલુ છે. કૃપા કરીને તમારી સીટ પર પાછા જાઓ અને તમારા સીટબેલ્ટને બંધ કરો.",
+        "kn": "ಸುರಕ್ಷತಾ ಬೆಲ್ಟ್ ಸೈನ್ ಆನ್ ಆಗಿದೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಆಸನಕ್ಕೆ ಹಿಂತಿರುಗಿ ಮತ್ತು ನಿಮ್ಮ ಸುರಕ್ಷತಾ ಬೆಲ್ಟ್ ಅನ್ನು ಜೋಡಿಸಿ.",
+        "ml": "സീറ്റ് ബെൽറ്റ് അടയാളം ഓണാക്കിയിട്ടുണ്ട്. ദയവായി നിങ്ങളുടെ സീറ്റിലേക്ക് മടങ്ങുകയും നിങ്ങളുടെ സീറ്റ് ബെൽറ്റ് ഉറപ്പിക്കുകയും ചെയ്യുക.",
+        "pa": "ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਸੀਟ 'ਤੇ ਵਾਪਸ ਜਾਓ ਅਤੇ ਆਪਣਾ ਬੈਲਟ ਬੰਨ੍ਹੋ।"
+      }
+    },
+    {
+      "id": "seatbelt_off",
+      "icon": "seatbelt_off",
+      "slot": null,
+      "keys": {
+        "en": [
+          "seatbelt sign",
+          "seat belt sign",
+          "turned off",
+          "switched off",
+          "move about",
+          "keep your seatbelt fastened while seated"
+        ],
+        "ja": [
+          "シートベル",
+          "消灯",
+          "お立ちになる"
+        ]
+      },
+      "not": {
+        "en": [
+          "turned on",
+          "switched on",
+          "illuminated"
+        ],
+        "ja": [
+          "点灯"
+        ]
+      },
+      "title": {
+        "en": "Seatbelt sign off",
+        "ja": "シートベルト着用サイン消灯",
+        "zh": "安全带签字",
+        "es": "Desactivar el cinturón de seguridad",
+        "fr": "S' éteindre de la ceinture",
+        "it": "Signale di disattivazione della cintura di sicurezza",
+        "pt": "Desligamento do cinto de segurança",
+        "bn": "সিট বেল্ট সাইন অফ",
+        "te": "సీట్బెల్ట్ సంతకం ఆఫ్",
+        "mr": "सीटबेल्ट साइन ऑफ",
+        "gu": "સીટબેલ્ટ સાઇન બંધ",
+        "kn": "ಸೀಟ್ ಬೆಲ್ಟ್ ಸೈನ್ ಆಫ್",
+        "ml": "സീറ്റ് ബെൽറ്റ് അടയാളം ഓഫ്",
+        "pa": "ਸੀਟ ਬੈਲਟ ਦਾ ਦਸਤਖਤ ਬੰਦ",
+        "hi": "सीट बेल्ट साइन ऑफ",
+        "ta": "சீட் பெல்ட் சைன் ஆஃப்",
+        "th": "ปิดเซ็นต์เข็มขัด"
+      },
+      "text": {
+        "en": "The seatbelt sign is off. You may move around. Please keep your seatbelt fastened while seated.",
+        "hi": "सीट बेल्ट का संकेत बंद है। आप चल-फिर सकते हैं। बैठे रहने पर सीट बेल्ट बाँधे रखें।",
+        "ta": "சீட் பெல்ட் அறிகுறி அணைந்தது. நீங்கள் நடமாடலாம். அமர்ந்திருக்கும்போது சீட் பெல்ட்டை அணிந்திருங்கள்.",
+        "th": "สัญญาณรัดเข็มขัดนิรภัยปิดแล้ว ลุกเดินได้ เมื่อนั่งอยู่กรุณารัดเข็มขัดไว้",
+        "ja": "シートベルト着用サインが消灯しました。お座りの際はシートベルトをお締めください。",
+        "zh": "安全带的标志已关闭.你可以移动.请把安全带固定在座位.",
+        "es": "El signo del cinturón de seguridad está apagado. Puede moverse. Por favor mantenga su cinturón de seguridad atado mientras esté sentado.",
+        "fr": "Le panneau de la ceinture de sécurité est éteint, vous pouvez vous déplacer.",
+        "it": "Il segnale della cintura di sicurezza è spento, potete muovervi.",
+        "pt": "O sinal do cinto de segurança está desligado, pode mover-se, por favor, mantenha o cinto de segurança apertado enquanto estiver sentado.",
+        "bn": "সিকিউরিটি বেল্টের সিগন্যালটি বন্ধ, আপনি ঘুরে বেড়াতে পারেন। আপনি বসে থাকাকালীন সিকিউরিটি বেল্টটি সংযুক্ত রাখুন।",
+        "te": "భద్రతా బెల్ట్ సైన్ ఆఫ్ ఉంది. మీరు చుట్టూ తరలించవచ్చు. మీరు కూర్చున్నప్పుడు మీ భద్రతా బెల్ట్ కట్టుబడి ఉంచండి దయచేసి.",
+        "mr": "सीट बेल्टचा सिग्नल बंद आहे. तुम्ही फिरू शकता. कृपया सीट बेल्ट बांधून ठेवा.",
+        "gu": "સીટબેલ્ટનું ચિહ્ન બંધ છે. તમે આસપાસ ખસેડી શકો છો. કૃપા કરીને બેસીને તમારા સીટબેલ્ટને બંધ રાખો.",
+        "kn": "ಸೀಟ್ ಬೆಲ್ಟ್ ಸೈನ್ ಆಫ್ ಆಗಿದೆ. ನೀವು ಚಲಿಸಬಹುದು. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸೀಟ್ ಬೆಲ್ಟ್ ಅನ್ನು ಕುಳಿತುಕೊಳ್ಳುವಾಗ ಜೋಡಿಸಿ.",
+        "ml": "സീറ്റ് ബെൽറ്റ് അടയാളം അപ്രാപ്തമാണ്. നിങ്ങള് ക്ക് ചുറ്റും സഞ്ചരിക്കാം. സീറ്റ് ബെൽറ്റ് ഇരിക്കുമ്പോള് ദയവായി അറ്റാച്ചുചെയ്തിരിക്കുക.",
+        "pa": "ਸੀਟ ਬੈਲਟ ਦਾ ਚਿੰਨ੍ਹ ਬੰਦ ਹੈ ਤੁਸੀਂ ਆ ਸਕਦੇ ਹੋ ਕਿਰਪਾ ਕਰਕੇ ਬੈਠੇ ਸਮੇਂ ਆਪਣੇ ਸੀਟ ਬੈਲਟ ਨੂੰ ਬੰਨ੍ਹਿਆ ਰੱਖੋ।"
+      }
+    },
+    {
+      "id": "meal",
+      "icon": "meal",
+      "slot": null,
+      "keys": {
+        "en": [
+          "meal service",
+          "dinner service",
+          "lunch service",
+          "breakfast service",
+          "dinner",
+          "lunch",
+          "breakfast",
+          "serving",
+          "meal",
+          "drinks"
+        ],
+        "ja": [
+          "お食事",
+          "食事",
+          "お飲み物",
+          "サービス"
+        ]
+      },
+      "title": {
+        "en": "Meal service",
+        "ja": "お食事のサービス",
+        "zh": "餐饮服务",
+        "es": "Servicio de comidas",
+        "fr": "Service de repas",
+        "it": "Servizio dei pasti",
+        "pt": "Serviço de refeições",
+        "bn": "খাবার পরিবেশন",
+        "te": "భోజన సేవ",
+        "mr": "जेवण सेवा",
+        "gu": "ભોજન સેવા",
+        "kn": "ಊಟ ಸೇವೆ",
+        "ml": "ഭക്ഷണ സേവനം",
+        "pa": "ਖਾਣੇ ਦੀ ਸੇਵਾ",
+        "hi": "भोजन सेवा",
+        "ta": "உணவு சேவை",
+        "th": "บริการอาหาร"
+      },
+      "text": {
+        "en": "We will now begin our meal service. Please put your seat back upright and open your table.",
+        "hi": "अब हम भोजन परोसना शुरू करेंगे। कृपया सीट सीधी करें और अपनी टेबल खोलें।",
+        "ta": "இப்போது உணவு வழங்கத் தொடங்குகிறோம். இருக்கையை நேராக்கி, மேசையைத் திறங்கள்.",
+        "th": "เรากำลังจะเริ่มบริการอาหาร กรุณาปรับพนักพิงให้ตรงและเปิดโต๊ะ",
+        "ja": "これよりお食事のサービスを始めます。座席の背を元の位置に戻し、テーブルをお出しください。",
+        "zh": "我们现在开始餐饮服务. 请把座位起来,打开桌子.",
+        "es": "Ahora comenzaremos nuestro servicio de comida. Por favor, vuelvan a sentarse y abran su mesa.",
+        "fr": "Nous allons maintenant commencer notre service de repas.",
+        "it": "Ora inizieremo il servizio del pasto, si prega di rimettersi seduti e aprire il tavolo.",
+        "pt": "Vamos começar a servir a refeição, por favor, coloque o seu lugar de volta e abra a sua mesa.",
+        "bn": "আমরা এখন আমাদের খাবার পরিবেশন শুরু করব. দয়া করে আপনার আসনটি পুনরুদ্ধার করুন এবং আপনার টেবিলটি খুলুন।",
+        "te": "మేము ఇప్పుడు మా భోజనం సేవను ప్రారంభిస్తాము. దయచేసి మీ సీటును తిరిగి ఎత్తండి మరియు మీ టేబుల్ను తెరవండి.",
+        "mr": "आपण आता आपल्या जेवणाची सेवा सुरू करू. कृपया आपली सीट उचलून घ्या आणि आपला टेबल उघडा.",
+        "gu": "હવે અમે ભોજનની સેવા શરૂ કરીશું. કૃપા કરીને તમારી બેઠક ઊભી કરો અને તમારો ટેબલ ખોલો.",
+        "kn": "ನಾವು ಈಗ ಊಟದ ಸೇವೆಯನ್ನು ಪ್ರಾರಂಭಿಸುತ್ತೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಆಸನವನ್ನು ಮತ್ತೆ ಎದ್ದು ನಿಲ್ಲಿಸಿ ಮತ್ತು ನಿಮ್ಮ ಮೇಜನ್ನು ತೆರೆಯಿರಿ.",
+        "ml": "ഞങ്ങൾ ഇപ്പോൾ ഭക്ഷണം കഴിക്കാൻ തുടങ്ങും. ദയവായി നിങ്ങളുടെ സീറ്റ് തിരിഞ്ഞു വയ്ക്കുക. നിങ്ങളുടെ മേശ തുറക്കുക.",
+        "pa": "ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਸੀਟ ਵਾਪਸ ਖੜ੍ਹੀ ਕਰੋ ਅਤੇ ਆਪਣਾ ਮੇਜ਼ ਖੋਲ੍ਹੋ।"
+      }
+    },
+    {
+      "id": "descent",
+      "icon": "descent",
+      "slot": "minutes",
+      "keys": {
+        "en": [
+          "descent",
+          "begin our descent",
+          "started our descent",
+          "landing",
+          "we will be landing",
+          "minutes"
+        ],
+        "ja": [
+          "降下",
+          "着陸",
+          "到着予定",
+          "効果を始め",
+          "着陸の予定",
+          "着力"
+        ]
+      },
+      "title": {
+        "en": "Starting descent",
+        "ja": "降下開始",
+        "zh": "开始下降",
+        "es": "Descenso inicial",
+        "fr": "Début de la descente",
+        "it": "Iniziare la discesa",
+        "pt": "Descenso inicial",
+        "bn": "অবতরণ শুরু",
+        "te": "దిగడం ప్రారంభం",
+        "mr": "प्रारंभी उतरणे",
+        "gu": "ઉતરાણની શરૂઆત",
+        "kn": "ಆರಂಭಿಕ ಇಳಿಯುವಿಕೆ",
+        "ml": "താഴ്വരയുടെ തുടക്കം",
+        "pa": "ਉਤਰਾਅ-ਚੜ੍ਹਾਅ ਸ਼ੁਰੂ",
+        "hi": "अवतरण की शुरुआत",
+        "ta": "இறங்குதல் தொடக்கம்",
+        "th": "เริ่มลง"
+      },
+      "text": {
+        "en": "We have started our descent. Please return to your seat and fasten your seatbelt.",
+        "hi": "विमान नीचे उतरना शुरू कर चुका है। कृपया अपनी सीट पर लौटें और सीट बेल्ट बाँध लें।",
+        "ta": "விமானம் இறங்கத் தொடங்கியுள்ளது. உங்கள் இருக்கைக்குத் திரும்பி சீட் பெல்ட்டை அணியுங்கள்.",
+        "th": "เครื่องบินเริ่มลดระดับแล้ว กรุณากลับไปที่ที่นั่งและรัดเข็มขัดนิรภัย",
+        "ja": "当機は降下を始めました。お席に戻り、シートベルトをお締めください。",
+        "zh": "我们已经开始下降了,请回到座位,",
+        "es": "Hemos comenzado nuestro descenso, por favor regresen a sus asientos y sujeten su cinturón de seguridad.",
+        "fr": "Nous avons commencé notre descente. Retournez à votre place et attachez votre ceinture.",
+        "it": "Abbiamo iniziato la discesa, tornate a sedere e fissate la cintura.",
+        "pt": "Começamos a descida, por favor, voltem ao vosso assento e apertem o cinto de segurança.",
+        "bn": "আমরা আমাদের অবতরণ শুরু করেছি. দয়া করে আপনার আসনে ফিরে যান এবং আপনার সিকিউরিটি বেল্ট বন্ধ করুন.",
+        "te": "మేము దిగడం ప్రారంభించాము. దయచేసి మీ సీటుకు తిరిగి వెళ్లి మీ భద్రతా బెల్ట్ను కట్టుకోండి.",
+        "mr": "आम्ही उतरण्यास सुरुवात केली आहे. कृपया आपल्या सीटवर परत जा आणि आपला सुरक्षा पट्टा बांधा.",
+        "gu": "કૃપા કરીને તમારી સીટ પર પાછા આવો અને તમારા સીટબેલ્ટને બંધ કરો.",
+        "kn": "ನಾವು ಇಳಿಯಲು ಪ್ರಾರಂಭಿಸಿದ್ದೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಆಸನಕ್ಕೆ ಹಿಂತಿರುಗಿ ಮತ್ತು ನಿಮ್ಮ ಭದ್ರತಾ ಬೆಲ್ಟ್ ಅನ್ನು ಜೋಡಿಸಿ.",
+        "ml": "ഞങ്ങൾ ഇറങ്ങാൻ തുടങ്ങിയിരിക്കുന്നു. ദയവായി നിങ്ങളുടെ സീറ്റിലേക്ക് മടങ്ങുകയും നിങ്ങളുടെ സുരക്ഷാ ബെൽറ്റ് ഉറപ്പിക്കുകയും ചെയ്യുക.",
+        "pa": "ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਸੀਟ 'ਤੇ ਵਾਪਸ ਜਾਓ ਅਤੇ ਆਪਣਾ ਬੈਲਟ ਬੰਨ੍ਹੋ।"
+      },
+      "text_n": {
+        "en": "We have started our descent and will land in about {n} minutes. Please return to your seat and fasten your seatbelt.",
+        "hi": "विमान नीचे उतरना शुरू कर चुका है, लगभग {n} मिनट में उतरेगा। कृपया अपनी सीट पर लौटें और सीट बेल्ट बाँध लें।",
+        "ta": "விமானம் இறங்கத் தொடங்கியுள்ளது, சுமார் {n} நிமிடங்களில் தரையிறங்கும். உங்கள் இருக்கைக்குத் திரும்பி சீட் பெல்ட்டை அணியுங்கள்.",
+        "th": "เครื่องบินเริ่มลดระดับแล้ว และจะลงจอดในอีกประมาณ {n} นาที กรุณากลับไปที่ที่นั่งและรัดเข็มขัดนิรภัย",
+        "ja": "当機は降下を始めました。あと約{n}分で着陸します。お席に戻り、シートベルトをお締めください。",
+        "zh": "我们已经开始下降,我们将在{n}分钟内降落.",
+        "es": "Hemos comenzado nuestro descenso y aterrizaremos en unos {n} minutos.",
+        "fr": "Nous avons commencé notre descente et atterrirons dans {n} minutes.",
+        "it": "Abbiamo iniziato la discesa e atterreremo tra {n} minuti.",
+        "pt": "Começámos a nossa descida e aterraremos em cerca de {n} minutos.",
+        "bn": "আমরা অবতরণ শুরু করেছি এবং প্রায় {n} মিনিটের মধ্যে অবতরণ করব দয়া করে আপনার আসনে ফিরে আসুন এবং আপনার সিকিউরিটি বেল্ট সংযুক্ত করুন।",
+        "te": "మేము దిగడం ప్రారంభించాము మరియు సుమారు {n} నిమిషాల్లో ల్యాండ్ అవుతాము. దయచేసి మీ సీటుకు తిరిగి వెళ్లి మీ భద్రతా బెల్ట్ను కట్టుకోండి.",
+        "mr": "आम्ही उतरण्यास सुरुवात केली आहे आणि सुमारे {n} मिनिटांत उतरणार आहोत. कृपया आपल्या सीटवर परत जा आणि आपला सुरक्षितता पट्टा बांधा.",
+        "gu": "અમે નીચે ઉતરવાનું શરૂ કર્યું છે અને લગભગ {n} મિનિટમાં ઉતરાણ કરીશું. કૃપા કરીને તમારી સીટ પર પાછા આવો અને તમારા સીટબેલ્ટને બંધ કરો.",
+        "kn": "ನಾವು ಇಳಿಯಲು ಪ್ರಾರಂಭಿಸಿದ್ದೇವೆ ಮತ್ತು ಸುಮಾರು {n} ನಿಮಿಷಗಳಲ್ಲಿ ಇಳಿಯುತ್ತೇವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಆಸನಕ್ಕೆ ಹಿಂತಿರುಗಿ ಮತ್ತು ನಿಮ್ಮ ಭದ್ರತಾ ಬೆಲ್ಟ್ ಅನ್ನು ಜೋಡಿಸಿ.",
+        "ml": "നാം ഇറങ്ങാൻ തുടങ്ങിയിട്ടുണ്ട്. {n} മിനിറ്റിനകം ഇറങ്ങും. ദയവായി നിങ്ങളുടെ സീറ്റിലേക്ക് മടങ്ങുക.",
+        "pa": "ਅਸੀਂ ਉਤਰਨਾ ਸ਼ੁਰੂ ਕਰ ਦਿੱਤਾ ਹੈ ਅਤੇ ਲਗਭਗ {n} ਮਿੰਟਾਂ ਵਿੱਚ ਉਤਰਾਂਗੇ ਕਿਰਪਾ ਕਰਕੇ ਆਪਣੀ ਸੀਟ ਤੇ ਵਾਪਸ ਜਾਓ ਅਤੇ ਆਪਣਾ ਸੀਟ ਬੈਲਟ ਬੰਨ੍ਹੋ।"
+      }
+    },
+    {
+      "id": "arrived",
+      "icon": "arrived",
+      "slot": "gate",
+      "keys": {
+        "en": [
+          "welcome to",
+          "we have landed",
+          "just landed",
+          "arrived",
+          "remain seated",
+          "gate"
+        ],
+        "ja": [
+          "到着",
+          "ようこそ",
+          "ゲート",
+          "そのままお待ち"
+        ]
+      },
+      "title": {
+        "en": "Arrived",
+        "ja": "到着",
+        "zh": "到了",
+        "es": "Llegado",
+        "fr": "Ils sont arrivés.",
+        "it": "Arrivato",
+        "pt": "Chegou",
+        "bn": "আগমন",
+        "te": "చేరింది",
+        "mr": "आगमन",
+        "gu": "પહોંચ્યા",
+        "kn": "ಆಗಮಿಸಿದ",
+        "ml": "എത്തി",
+        "pa": "ਪਹੁੰਚਿਆ",
+        "hi": "आ गया",
+        "ta": "வருகை",
+        "th": "มาถึง"
+      },
+      "text": {
+        "en": "We have arrived. Please stay seated until the seatbelt sign is off.",
+        "hi": "हम पहुँच गए हैं। सीट बेल्ट का संकेत बंद होने तक कृपया बैठे रहें।",
+        "ta": "நாம் வந்து சேர்ந்துவிட்டோம். சீட் பெல்ட் அறிகுறி அணையும் வரை அமர்ந்திருங்கள்.",
+        "th": "เรามาถึงแล้ว กรุณานั่งรอจนกว่าสัญญาณรัดเข็มขัดจะดับ",
+        "ja": "到着いたしました。シートベルト着用サインが消えるまでお席でお待ちください。",
+        "zh": "我们已经到达了,请保持座位,直到安全带标志关闭.",
+        "es": "Hemos llegado, por favor, permanezcan sentados hasta que el cinturón de seguridad esté apagado.",
+        "fr": "S'il vous plaît, restez assis jusqu'à ce que la ceinture de sécurité soit éteinte.",
+        "it": "Siamo arrivati, restate seduti finche' il segnale della cintura non e' spento.",
+        "pt": "Por favor, fiquem sentados até que o sinal do cinto de segurança esteja desligado.",
+        "bn": "সিকিউরিটি বেল্ট সাইন বন্ধ না হওয়া পর্যন্ত দয়া করে বসে থাকুন।",
+        "te": "మేము వచ్చాము. దయచేసి భద్రతా బెల్ట్ సైన్ ఆఫ్ వరకు కూర్చుని ఉండండి.",
+        "mr": "आम्ही पोहोचलो आहोत. कृपया सीट बेल्ट बंद होईपर्यंत बसून राहा.",
+        "gu": "કૃપા કરીને સીટબેલ્ટનું ચિહ્ન બંધ ન થાય ત્યાં સુધી બેઠા રહો.",
+        "kn": "ನಾವು ಬಂದಿದ್ದೇವೆ ದಯವಿಟ್ಟು ಸೀಟ್ ಬೆಲ್ಟ್ ಸೈನ್ ಆಫ್ ಆಗುವವರೆಗೆ ಕುಳಿತುಕೊಳ್ಳಿ.",
+        "ml": "സീറ്റ് ബെൽറ്റ് അടയാളം അപ്രത്യക്ഷമാകുന്നതുവരെ ഇരിക്കുക.",
+        "pa": "ਕਿਰਪਾ ਕਰਕੇ ਉਦੋਂ ਤੱਕ ਬੈਠੋ ਜਦੋਂ ਤੱਕ ਸੀਟ ਬੈਲਟ ਦਾ ਚਿੰਨ੍ਹ ਬੰਦ ਨਹੀਂ ਹੁੰਦਾ."
+      },
+      "text_n": {
+        "en": "We have arrived at gate {n}. Please stay seated until the seatbelt sign is off.",
+        "hi": "हम गेट {n} पर पहुँच गए हैं। सीट बेल्ट का संकेत बंद होने तक कृपया बैठे रहें।",
+        "ta": "நாம் கேட் {n}-க்கு வந்து சேர்ந்துவிட்டோம். சீட் பெல்ட் அறிகுறி அணையும் வரை அமர்ந்திருங்கள்.",
+        "th": "เรามาถึงประตู {n} แล้ว กรุณานั่งรอจนกว่าสัญญาณรัดเข็มขัดจะดับ",
+        "ja": "{n}番ゲートに到着いたしました。シートベルト着用サインが消えるまでお席でお待ちください。",
+        "zh": "我们已经到达了{n}号门,请保持座位,直到安全带标志关闭.",
+        "es": "Hemos llegado a la puerta {n}. Por favor, permanezcan sentados hasta que el signo del cinturón de seguridad esté apagado.",
+        "fr": "Nous sommes arrivés à la porte {n}. Restez assis jusqu'à ce que la ceinture de sécurité soit éteinte.",
+        "it": "Siamo arrivati al cancello {n}, restate seduti finche' il segnale della cintura non e' spento.",
+        "pt": "Chegamos ao portão {n}. Por favor, fiquem sentados até que o sinal do cinto de segurança esteja desligado.",
+        "bn": "আমরা গেট {n} এ পৌঁছেছি, দয়া করে সিকিউরিটি বেল্ট সাইন বন্ধ না হওয়া পর্যন্ত বসে থাকুন।",
+        "te": "మేము గేట్ {n} చేరుకున్నాము. దయచేసి సీట్ బెల్ట్ సైన్ ఆఫ్ అయ్యే వరకు కూర్చోండి.",
+        "mr": "आम्ही गेट {n} वर पोहोचलो आहोत. कृपया सीट बेल्ट बंद होईपर्यंत बसून राहा.",
+        "gu": "અમે ગેટ {n} પર પહોંચ્યા છે. સીટબેલ્ટનું ચિહ્ન બંધ ન થાય ત્યાં સુધી કૃપા કરીને બેઠા રહો.",
+        "kn": "ನಾವು ಗೇಟ್ {n} ಕ್ಕೆ ಬಂದಿದ್ದೇವೆ. ದಯವಿಟ್ಟು ಸೀಟ್ ಬೆಲ್ಟ್ ಸೈನ್ ಆಫ್ ಆಗುವವರೆಗೆ ಕುಳಿತುಕೊಳ್ಳಿ.",
+        "ml": "നാം ഗേറ്റ് {n} ലേക്ക് എത്തിയിരിക്കുന്നു. ദയവായി സീറ്റ് ബെൽറ്റ് അടയാളം ഓഫാകുന്നതുവരെ ഇരിക്കുക.",
+        "pa": "ਅਸੀਂ ਗੇਟ {n} 'ਤੇ ਪਹੁੰਚ ਗਏ ਹਾਂ, ਕਿਰਪਾ ਕਰਕੇ ਉਦੋਂ ਤੱਕ ਬੈਠੋ ਜਦੋਂ ਤੱਕ ਸੀਟ ਬੈਲਟ ਦਾ ਚਿੰਨ੍ਹ ਬੰਦ ਨਹੀਂ ਹੁੰਦਾ।"
+      }
+    },
+    {
+      "id": "delay",
+      "icon": "clock",
+      "slot": "minutes",
+      "keys": {
+        "en": [
+          "delay",
+          "delayed",
+          "waiting for",
+          "thank you for your patience",
+          "air traffic",
+          "minutes"
+        ],
+        "ja": [
+          "遅れ",
+          "お待ち",
+          "ご迷惑",
+          "出発が"
+        ]
+      },
+      "title": {
+        "en": "Delay",
+        "ja": "遅延",
+        "zh": "延迟",
+        "es": "El retraso",
+        "fr": "Un retard",
+        "it": "Ritardo",
+        "pt": "O atraso",
+        "bn": "বিলম্ব",
+        "te": "ఆలస్యం",
+        "mr": "उशीर",
+        "gu": "વિલંબ",
+        "kn": "ವಿಳಂಬ",
+        "ml": "കാലതാമസം",
+        "pa": "ਦੇਰੀ",
+        "hi": "विलंब",
+        "ta": "தாமதம்",
+        "th": "ความช้า"
+      },
+      "text": {
+        "en": "We are delayed. We will tell you more soon. Thank you for your patience.",
+        "hi": "हमें देर हो रही है। जल्द ही और जानकारी देंगे। धैर्य के लिए धन्यवाद।",
+        "ta": "தாமதமாகிறது. விரைவில் மேலும் தெரிவிப்போம். பொறுமைக்கு நன்றி.",
+        "th": "เที่ยวบินล่าช้า เราจะแจ้งข้อมูลเพิ่มเติมเร็วๆ นี้ ขอบคุณที่รอ",
+        "ja": "ただいま遅れが生じております。詳しくは追ってお知らせします。ご理解をお願いいたします。",
+        "zh": "我们迟到,我们会很快告诉你更多.谢谢你的耐心.",
+        "es": "Estamos retrasados, le diremos más pronto. Gracias por su paciencia.",
+        "fr": "Nous sommes en retard, on vous en dira plus bientôt.",
+        "it": "Siamo in ritardo, vi diremo di più presto.",
+        "pt": "Estamos atrasados, vamos dizer mais logo.",
+        "bn": "আপনার ধৈর্যের জন্য আপনাকে ধন্যবাদ।",
+        "te": "మేము ఆలస్యంగా ఉన్నాము. త్వరలో మేము మీకు మరింత తెలియజేస్తాము. మీ సహనానికి ధన్యవాదాలు.",
+        "mr": "आम्हाला उशीर झाला आहे. लवकरच आम्ही तुम्हाला अधिक सांगेन. धीराबद्दल धन्यवाद.",
+        "gu": "અમે વિલંબ કરી રહ્યા છીએ. અમે તમને ટૂંક સમયમાં વધુ જણાવીશું. તમારા ધીરજ માટે આભાર.",
+        "kn": "ನಾವು ವಿಳಂಬವಾಗಿದ್ದೇವೆ. ನಾವು ಶೀಘ್ರದಲ್ಲೇ ನಿಮಗೆ ಹೇಳುತ್ತೇವೆ. ನಿಮ್ಮ ತಾಳ್ಮೆಗಾಗಿ ಧನ್ಯವಾದಗಳು.",
+        "ml": "ഞങ്ങള് ക്ക് വൈകിപ്പോയി. അധികം വൈകാതെ ഞങ്ങള് നിങ്ങളോട് കൂടുതലൊക്കെ പറയും. ക്ഷമയ്ക്ക് നന്ദി.",
+        "pa": "ਸਾਨੂੰ ਦੇਰੀ ਹੋ ਗਈ ਹੈ. ਅਸੀਂ ਤੁਹਾਨੂੰ ਛੇਤੀ ਹੀ ਹੋਰ ਦੱਸਾਂਗੇ. ਤੁਹਾਡਾ ਧੀਰਜ ਲਈ ਧੰਨਵਾਦ."
+      },
+      "text_n": {
+        "en": "We are delayed by about {n} minutes. Thank you for your patience.",
+        "hi": "हमें लगभग {n} मिनट की देर है। धैर्य के लिए धन्यवाद।",
+        "ta": "சுமார் {n} நிமிடங்கள் தாமதமாகிறது. பொறுமைக்கு நன்றி.",
+        "th": "เที่ยวบินล่าช้าประมาณ {n} นาที ขอบคุณที่รอ",
+        "ja": "約{n}分の遅れが生じております。ご理解をお願いいたします。",
+        "zh": "我们延迟了{n}分钟,感谢您的耐心.",
+        "es": "Estamos retrasados unos {n} minutos.",
+        "fr": "Nous sommes en retard d'environ {n} minutes.",
+        "it": "Siamo ritardati di circa {n} minuti.",
+        "pt": "Estamos atrasados cerca de {n} minutos.",
+        "bn": "আমরা প্রায় {n} মিনিট দেরি আশা করছি।",
+        "te": "మేము సుమారు {n} నిమిషాల ఆలస్యం. మీ సహనానికి ధన్యవాదాలు.",
+        "mr": "आम्हाला सुमारे {n} मिनिटे उशीर झाला आहे.",
+        "gu": "અમને આશરે {n} મિનિટ વિલંબ થયો છે. તમારા ધીરજ બદલ આભાર.",
+        "kn": "ನಾವು ಸುಮಾರು {n} ನಿಮಿಷ ವಿಳಂಬವಾಗಿದ್ದೇವೆ. ನಿಮ್ಮ ತಾಳ್ಮೆಗೆ ಧನ್ಯವಾದಗಳು.",
+        "ml": "നമുക്ക് {n} മിനുട്ട് വൈകി. ക്ഷമയ്ക്ക് നന്ദി.",
+        "pa": "ਅਸੀਂ ਲਗਭਗ {n} ਮਿੰਟ ਦੇਰੀ ਨਾਲ ਹਾਂ ਤੁਹਾਡਾ ਧੀਰਜ ਲਈ ਧੰਨਵਾਦ।"
+      }
+    },
+    {
+      "id": "doctor",
+      "icon": "medical",
+      "slot": null,
+      "keys": {
+        "en": [
+          "doctor",
+          "nurse",
+          "medical professional",
+          "medical training",
+          "on board",
+          "call button"
+        ],
+        "ja": [
+          "お医者様",
+          "医師",
+          "看護師",
+          "医療関係",
+          "お客様の中に"
+        ]
+      },
+      "title": {
+        "en": "Doctor needed",
+        "ja": "医師の呼び出し",
+        "zh": "医生需要",
+        "es": "Necesitaba un médico.",
+        "fr": "Le docteur était nécessaire.",
+        "it": "Mi serviva un dottore.",
+        "pt": "Doutor necessário.",
+        "bn": "ডাক্তার দরকার ছিল",
+        "te": "డాక్టర్ అవసరం",
+        "mr": "डॉक्टरांची गरज होती",
+        "gu": "ડૉક્ટર જરૂર",
+        "kn": "ವೈದ್ಯರ ಅವಶ್ಯಕತೆ",
+        "ml": "ഡോക്ടറെ വേണം.",
+        "pa": "ਡਾਕਟਰ ਦੀ ਲੋੜ ਸੀ",
+        "hi": "डॉक्टर की जरूरत थी",
+        "ta": "மருத்துவர் தேவை",
+        "th": "หมอต้องการ"
+      },
+      "text": {
+        "en": "Is there a doctor or nurse on board? If you are one, please press the call button or tell a crew member.",
+        "hi": "क्या विमान में कोई डॉक्टर या नर्स है? अगर आप हैं, तो कृपया कॉल बटन दबाएँ या किसी क्रू सदस्य को बताएँ।",
+        "ta": "விமானத்தில் மருத்துவர் அல்லது செவிலியர் யாராவது இருக்கிறீர்களா? இருந்தால், அழைப்பு பொத்தானை அழுத்துங்கள் அல்லது குழுவினரிடம் சொல்லுங்கள்.",
+        "th": "มีแพทย์หรือพยาบาลบนเครื่องไหม ถ้าคุณเป็น กรุณากดปุ่มเรียกหรือบอกลูกเรือ",
+        "ja": "お客様の中にお医者様または看護師の方はいらっしゃいますか。呼び出しボタンを押すか、乗務員にお知らせください。",
+        "zh": "如果您是一名医生或护士,请按电话按或告诉船员.",
+        "es": "¿Hay un médico o enfermera a bordo? Si usted es uno de ellos, por favor presione el botón de llamada o informe a un miembro de la tripulación.",
+        "fr": "S'il y a un médecin ou une infirmière à bord, appuyez sur le bouton d'appel ou dites-le à un membre de l'équipage.",
+        "it": "C'è un medico o un'infermiera a bordo?",
+        "pt": "Se você é um deles, pressione o botão de chamada ou informe um membro da tripulação.",
+        "bn": "আপনি যদি একজন ডাক্তার বা নার্স হন, তাহলে কল বোতাম টিপুন অথবা একজন ক্রু সদস্যকে জানান।",
+        "te": "మీరు ఒక వైద్యుడు లేదా నర్సు ఉంటే, దయచేసి కాల్ బటన్ను నొక్కండి లేదా సిబ్బందికి తెలియజేయండి.",
+        "mr": "जर तुम्ही त्यापैकी एक असाल तर कृपया कॉल बटण दाबा किंवा चालक दल सदस्याला सांगा.",
+        "gu": "શું બોર્ડ પર કોઈ ડૉક્ટર અથવા નર્સ છે? જો તમે એક છો, તો કૃપા કરીને કૉલ બટન દબાવો અથવા ક્રૂ સભ્યને કહો.",
+        "kn": "ವಿಮಾನದಲ್ಲಿ ವೈದ್ಯರು ಅಥವಾ ದಾದಿಯರಿದ್ದಾರೆಯೇ? ನೀವು ಒಬ್ಬರಾಗಿದ್ದರೆ, ದಯವಿಟ್ಟು ಕರೆ ಬಟನ್ ಒತ್ತಿ ಅಥವಾ ಸಿಬ್ಬಂದಿಗೆ ತಿಳಿಸಿ.",
+        "ml": "ബോർഡിൽ ഒരു ഡോക്ടറോ നഴ്സുവോ ഉണ്ടോ? നിങ്ങൾ അതിലൊരാളാണെങ്കിൽ, ദയവായി കോൾ ബട്ടൺ അമർത്തുക അല്ലെങ്കിൽ ഒരു ക്രൂ അംഗത്തോടു പറയുക.",
+        "pa": "ਕੀ ਜਹਾਜ਼ 'ਤੇ ਕੋਈ ਡਾਕਟਰ ਜਾਂ ਨਰਸ ਹੈ? ਜੇ ਤੁਸੀਂ ਇੱਕ ਹੋ, ਤਾਂ ਕਿਰਪਾ ਕਰਕੇ ਕਾਲ ਬਟਨ ਦਬਾਓ ਜਾਂ ਕਿਸੇ ਕਰੂ ਮੈਂਬਰ ਨੂੰ ਦੱਸੋ।"
+      }
+    },
+    {
+      "id": "rest",
+      "icon": "moon",
+      "slot": null,
+      "keys": {
+        "en": [
+          "dim the cabin lights",
+          "dimming",
+          "lights",
+          "rest",
+          "sleep",
+          "reading light"
+        ],
+        "ja": [
+          "照明",
+          "暗く",
+          "お休み"
+        ]
+      },
+      "title": {
+        "en": "Lights dimmed",
+        "ja": "照明を暗くします",
+        "zh": "灯光淡",
+        "es": "Las luces apagadas",
+        "fr": "Les lumières éteintes",
+        "it": "Luce attenuata",
+        "pt": "Luzes atenuadas",
+        "bn": "আলোকসজ্জা নিষ্ক্রিয়",
+        "te": "లైట్లు మృదువయ్యాయి",
+        "mr": "प्रकाशाचा अंधार",
+        "gu": "પ્રકાશ અસ્પષ્ટ",
+        "kn": "ದೀಪಗಳು ಮಂದವಾಗಿವೆ",
+        "ml": "വെളിച്ചം അസ്തമിച്ചു",
+        "pa": "ਲਾਈਟਾਂ ਡਿੱਗ ਗਈਆਂ",
+        "hi": "रोशनी धुंधली",
+        "ta": "விளக்குகள் மங்கியது",
+        "th": "แสงอ่อน"
+      },
+      "text": {
+        "en": "We are dimming the cabin lights so you can rest. Use your reading light or call button if you need anything.",
+        "hi": "आराम के लिए केबिन की रोशनी धीमी की जा रही है। ज़रूरत हो तो रीडिंग लाइट या कॉल बटन का उपयोग करें।",
+        "ta": "நீங்கள் ஓய்வெடுக்க விளக்குகளை மங்கச் செய்கிறோம். ஏதாவது தேவையென்றால் வாசிப்பு விளக்கு அல்லது அழைப்பு பொத்தானைப் பயன்படுத்துங்கள்.",
+        "th": "เรากำลังหรี่ไฟในห้องโดยสารเพื่อให้คุณพักผ่อน หากต้องการสิ่งใด ใช้ไฟอ่านหนังสือหรือปุ่มเรียก",
+        "ja": "ごゆっくりお休みいただけるよう、客室の照明を暗くいたします。ご用の際は読書灯または呼び出しボタンをご利用ください。",
+        "zh": "如果需要任何东西,请使用阅读灯或电话按.",
+        "es": "Disminuimos las luces de la cabina para que puedas descansar.",
+        "fr": "On éteint les lumières de la cabine pour que vous puissiez vous reposer.",
+        "it": "Stiamo attenuando le luci della cabina in modo che tu possa riposare usa la tua luce di lettura o il pulsante di chiamata se hai bisogno di qualcosa.",
+        "pt": "Vamos atenuar as luzes da cabine para que possa descansar, use a luz de leitura ou o botão de chamada se precisar de alguma coisa.",
+        "bn": "আমরা ক্যাবিনের লাইটগুলো dimming করছি যাতে আপনি বিশ্রাম করতে পারেন. আপনার পাঠ্য আলো বা কল বোতাম ব্যবহার করুন যদি আপনি কিছু প্রয়োজন.",
+        "te": "మీరు విశ్రాంతి చేయవచ్చు కాబట్టి మేము క్యాబిన్ లైట్లు అస్పష్టంగా ఉంటాయి. మీ పఠనం లైట్ లేదా కాల్ బటన్ ఉపయోగించండి మీరు ఏదైనా అవసరం ఉంటే.",
+        "mr": "आपण आराम करू शकता म्हणून आम्ही कॅबिन लाइट्स dimming आहेत.",
+        "gu": "અમે કેબિનેટ લાઇટને અસ્પષ્ટ કરી રહ્યા છીએ જેથી તમે આરામ કરી શકો. તમારા વાંચન લાઇટ અથવા કૉલ બટનનો ઉપયોગ કરો જો તમને કંઈપણની જરૂર હોય.",
+        "kn": "ನಾವು ಕ್ಯಾಬಿನ್ ದೀಪಗಳನ್ನು ಮಂದಗೊಳಿಸುತ್ತಿದ್ದೇವೆ ಆದ್ದರಿಂದ ನೀವು ವಿಶ್ರಾಂತಿ ಪಡೆಯಬಹುದು. ನಿಮ್ಮ ಓದುವ ಬೆಳಕನ್ನು ಅಥವಾ ಕರೆ ಬಟನ್ ಬಳಸಿ ನಿಮಗೆ ಏನಾದರೂ ಅಗತ್ಯವಿದ್ದರೆ.",
+        "ml": "നിങ്ങള് ക്ക് വിശ്രമം കിട്ടാന് കാബിന് റെ ലൈറ്റുകൾ മങ്ങുന്നു. നിങ്ങള് ക്ക് എന്തെങ്കിലും ആവശ്യമുണ്ടെങ്കില് നിങ്ങളുടെ വായന ലൈറ്റ് ഉപയോഗിക്കുക.",
+        "pa": "ਅਸੀਂ ਕੈਬਿਨ ਲਾਈਟਾਂ ਨੂੰ ਬੁਝਾ ਰਹੇ ਹਾਂ ਤਾਂ ਜੋ ਤੁਸੀਂ ਆਰਾਮ ਕਰ ਸਕੋ. ਆਪਣੀ ਪੜ੍ਹਨ ਵਾਲੀ ਲਾਈਟ ਜਾਂ ਕਾਲ ਬਟਨ ਦੀ ਵਰਤੋਂ ਕਰੋ ਜੇ ਤੁਹਾਨੂੰ ਕੁਝ ਚਾਹੀਦਾ ਹੈ."
+      }
+    },
+    {
+      "id": "duty_free",
+      "icon": "bag",
+      "slot": null,
+      "keys": {
+        "en": [
+          "duty free",
+          "duty-free",
+          "shopping",
+          "in-flight sales"
+        ],
+        "ja": [
+          "免税品",
+          "機内販売"
+        ]
+      },
+      "title": {
+        "en": "Duty-free sales",
+        "ja": "免税品販売",
+        "zh": "免税销售",
+        "es": "Ventas libres de impuestos",
+        "fr": "Ventes sans droits de douane",
+        "it": "Vendite duty-free",
+        "pt": "Vendas isentas de direitos",
+        "bn": "শুল্কবিহীন বিক্রয়",
+        "te": "పన్ను రహిత అమ్మకాలు",
+        "mr": "करमुक्त विक्री",
+        "gu": "કરમુક્ત વેચાણ",
+        "kn": "ತೆರಿಗೆ ರಹಿತ ಮಾರಾಟ",
+        "ml": "നികുതിയില്ലാത്ത വിൽപ്പന",
+        "pa": "ਟੈਕਸ ਮੁਕਤ ਵਿਕਰੀ",
+        "hi": "शुल्क मुक्त बिक्री",
+        "ta": "வரி விலக்கு விற்பனை",
+        "th": "ขายฟรีภาษี"
+      },
+      "text": {
+        "en": "Duty-free sales are starting. The crew will come down the aisle; you can also see the catalogue in your seat pocket.",
+        "hi": "ड्यूटी-फ़्री बिक्री शुरू हो रही है। क्रू गलियारे में आएँगे; सीट की जेब में कैटलॉग भी है।",
+        "ta": "வரியில்லா விற்பனை தொடங்குகிறது. குழுவினர் நடைபாதையில் வருவார்கள்; இருக்கைப் பையில் பட்டியலும் உள்ளது.",
+        "th": "เริ่มจำหน่ายสินค้าปลอดภาษีแล้ว ลูกเรือจะเดินผ่านทางเดิน ดูแคตตาล็อกได้ในกระเป๋าหน้าที่นั่ง",
+        "ja": "これより免税品の販売を始めます。乗務員が通路を回ります。座席ポケットのカタログもご覧ください。",
+        "zh": "无关税的销售开始. 机组人员将下走廊;",
+        "es": "Las ventas libres de impuestos están comenzando. La tripulación vendrá por el pasillo; también puede ver el catálogo en el bolsillo de su asiento.",
+        "fr": "L'équipage descendra dans l'allée, vous pourrez également voir le catalogue dans la poche de votre siège.",
+        "it": "Le vendite duty-free iniziano, l'equipaggio scenderà per il corridoio, potete vedere anche il catalogo nella tasca del vostro sedile.",
+        "pt": "As vendas estão a começar, a tripulação vai descer o corredor, você também pode ver o catálogo no bolso do seu assento.",
+        "bn": "শুল্কবিহীন বিক্রয় শুরু হচ্ছে। ক্রু উপসাগর থেকে নেমে আসবে; আপনি আপনার আসনের পকেটে ক্যাটালগ দেখতে পারেন।",
+        "te": "పన్ను రహిత అమ్మకాలు ప్రారంభమవుతున్నాయి. సిబ్బంది కారిడార్ దిగువకు వస్తారు; మీరు మీ సీటు జేబులో జాబితాను కూడా చూడవచ్చు.",
+        "mr": "करमुक्त विक्री सुरू होत आहे. कर्मचारी हॉलमधून खाली येतील; तुम्ही तुमच्या सीटच्या खिशात कॅटलॉग देखील पाहू शकता.",
+        "gu": "ડ્યુટી ફ્રી વેચાણ શરૂ થઈ રહ્યું છે. ક્રૂ પેસેજ નીચે આવશે; તમે તમારી સીટની ખિસ્સામાં સૂચિ પણ જોઈ શકો છો.",
+        "kn": "ತೆರಿಗೆ ರಹಿತ ಮಾರಾಟಗಳು ಪ್ರಾರಂಭವಾಗುತ್ತವೆ. ಸಿಬ್ಬಂದಿ ಕಾಲುದಾರಿ ಕೆಳಗೆ ಬರುತ್ತಾರೆ; ನೀವು ನಿಮ್ಮ ಸೀಟ್ ಪಾಕೆಟ್ನಲ್ಲಿ ಕ್ಯಾಟಲಾಗ್ ಅನ್ನು ಸಹ ನೋಡಬಹುದು.",
+        "ml": "നികുതിയില്ലാത്ത വിൽപ്പന ആരംഭിക്കുന്നു. സംഘം ഇടനാഴിയിലൂടെ വരും; നിങ്ങളുടെ സീറ്റ് പോക്കറ്റിലെ കാറ്റലോഗും നിങ്ങൾക്ക് കാണാം.",
+        "pa": "ਕਰਜ਼ ਮੁਕਤ ਵਿਕਰੀ ਸ਼ੁਰੂ ਹੋ ਰਹੀ ਹੈ. ਚਾਲਕ ਦਲ ਰਸਤੇ ਤੋਂ ਹੇਠਾਂ ਆਵੇਗਾ; ਤੁਸੀਂ ਆਪਣੀ ਸੀਟ ਜੇਬ ਵਿੱਚ ਕੈਟਾਲਾਗ ਵੀ ਦੇਖ ਸਕਦੇ ਹੋ।"
+      }
+    }
+  ]
 }

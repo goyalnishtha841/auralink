@@ -109,3 +109,33 @@ def classify(text: str, intent_ids: list[str]) -> str | None:
     match = re.search(r"[a-z_]+", out.lower())
     word = match.group(0) if match else ""
     return word if word in intent_ids else None
+
+
+BRIEFING_SYSTEM = """You help cabin crew get the state of the cabin in one glance. You are given \
+short facts, one per line, already pulled from the real request system -- never invent, add or \
+guess anything beyond them. Write 1-2 short plain-English sentences a busy crew member can read in \
+two seconds: what needs attention first (urgent and overdue items), then a brief total. No \
+greeting, no "here is a summary", just the sentences."""
+
+
+def summarize(facts: list[str]) -> str | None:
+    """`facts`: short English bullet-style lines already derived from the cabin's real state
+    (hub/main.py crew_briefing) -- e.g. "31C: urgent, possible medical, unacknowledged for 4 min".
+    Returns a short plain-English summary, or None on no facts or any failure. Read-only and
+    advisory: this never creates, changes or closes anything, only describes what's already there."""
+    if not facts:
+        return None
+    try:
+        from mlx_lm import generate
+
+        model, tokenizer = _model()
+        user = "Facts:\n" + "\n".join(f"- {f}" for f in facts)
+        rendered = tokenizer.apply_chat_template(
+            [{"role": "system", "content": BRIEFING_SYSTEM}, {"role": "user", "content": user}],
+            add_generation_prompt=True, tokenize=False,
+        )
+        out = generate(model, tokenizer, prompt=rendered, max_tokens=120, verbose=False)
+    except Exception as e:
+        log.warning("live assist summarize failed (%s)", e)
+        return None
+    return out.strip() or None

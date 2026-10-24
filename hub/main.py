@@ -43,6 +43,10 @@ MAX_AUDIO_S = 10
 # Each one switches the passenger UI (captions/vibration, large text, picture-first, ...) and
 # shows the crew a badge so they know *how* to help, not just what was asked.
 ACCESSIBILITY_PROFILES = ("deaf_hoh", "low_vision", "mobility", "cognitive")
+ACCESSIBILITY_LABEL_EN = {
+    "deaf_hoh": "deaf/hard of hearing", "low_vision": "low vision",
+    "mobility": "reduced mobility", "cognitive": "prefers simple/picture screens",
+}
 # Free Talk needs ctranslate2 + transformers + a ~2.4 GB model (downloaded once, then offline).
 # Heavy enough that it is opt-out rather than always-on: AURALINK_FREE_TALK=0 hides it even when
 # the dependencies are installed, for a laptop that would rather keep the RAM for Whisper.
@@ -441,6 +445,33 @@ def status() -> dict:
         "briefing": cabin.broadcast.template_id if cabin.broadcast else None,
         "restored_from": restored_at,
     }
+
+
+@app.get("/api/crew/briefing", dependencies=CREW)
+async def crew_briefing() -> dict:
+    """On-demand, read-only: a couple of plain-English sentences on what needs attention right
+    now, from engine/assist.py's local LLM. Built only from facts the crew screen already shows
+    (open requests, how long they've waited, accessibility-flagged seats that have gone quiet) --
+    this never creates, changes or closes anything, so a bad summary costs a wasted glance, never
+    a wrong action."""
+    now = time.time()
+    facts = []
+    for c in cabin.crew_cards():
+        age_min = int((now - c.created_at) // 60)
+        what = (lexicon.get(c.intent).label.get("en", c.intent) if c.intent
+                else c.translated or "an unclear request")
+        facts.append(f"seat {c.seat}: {'URGENT, ' if c.urgent else ''}{what}, "
+                     f"{'acknowledged' if c.status == 'acknowledged' else 'not yet acknowledged'}, "
+                     f"{age_min} min ago")
+    care_after_min = rounds.care_after_s() / 60
+    for sid, seat in cabin.seats.items():
+        if seat.accessibility and (seat.connected or seat.checked_in):
+            quiet_min = int((now - cabin.last_visit.get(sid, cabin.started_at)) // 60)
+            if quiet_min >= care_after_min:
+                facts.append(f"seat {sid}: {ACCESSIBILITY_LABEL_EN[seat.accessibility]}, "
+                             f"no contact for {quiet_min} min")
+    summary = await asyncio.to_thread(assist.summarize, facts) if assist.available() and facts else None
+    return {"summary": summary, "facts": facts}
 
 
 @app.post("/api/presenter/reset", dependencies=CREW)

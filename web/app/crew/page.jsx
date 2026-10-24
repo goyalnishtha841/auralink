@@ -8,7 +8,7 @@ import { Icon } from "@/lib/icons";
 import { Picto } from "@/lib/pictograms";
 import { ACCESSIBILITY_META } from "@/lib/accessibility";
 import { canSpeak, speakNatural as speak, unlockAudio } from "@/lib/speech";
-import { Ambient, AppHeader, ease } from "@/components/ui";
+import { Ambient, AppHeader, Sheet, ease } from "@/components/ui";
 import { FreeTalkPanel } from "@/components/freetalk";
 import { ConvThread, MuteButton } from "@/components/liveconversation";
 
@@ -27,6 +27,13 @@ const HEAT = {
   offline: ["端末なし", "No device", "var(--idle)"],
 };
 const VERDICT = { sure: ["一致 Matched", "ok"], check: ["要確認 Please check", "call"], none: ["該当なし Not in library", "bad"] };
+const RIGHT_TABS = [
+  { id: "map", ja: "客室図", en: "Cabin map" },
+  { id: "safety", ja: "安全案内", en: "Safety" },
+  { id: "pa", ja: "アナウンス", en: "Announcements" },
+  { id: "chat", ja: "会話", en: "Live chat" },
+  { id: "exit", ja: "非常口", en: "Exit check" },
+];
 
 export default function Crew() {
   const [cfg, setCfg] = useState(null);
@@ -37,6 +44,10 @@ export default function Crew() {
   const [convMuted, setConvMuted] = useState(false);
   const [jaVoice, setJaVoice] = useState(false);
   const [pb, setPb] = useState(null);           // {seat, lang}
+  const [pickedSeat, setPickedSeat] = useState(null);
+  const [rightTab, setRightTab] = useState("map");
+  const [briefing, setBriefing] = useState(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
   const [conv, setConv] = useState({});         // seat -> { open, messages: [] }
   const [pa, setPa] = useState(null);           // match result | {busy} | {error} | {sent}
   const [paPick, setPaPick] = useState(null);
@@ -133,6 +144,17 @@ export default function Crew() {
     setMyName(name); setMyZone(zone); setShowMineOnly(true);
     try { localStorage.setItem("auralink-crew-id", JSON.stringify({ name, zone })); } catch { /* blocked */ }
     sendHello(name, zone);
+  }
+
+  async function refreshBriefing() {
+    setBriefingLoading(true);
+    try {
+      const res = await crewFetch("/api/crew/briefing");
+      setBriefing(await res.json());
+    } catch {
+      setBriefing({ summary: null });
+    }
+    setBriefingLoading(false);
   }
 
   async function paMatch(body) {
@@ -233,12 +255,40 @@ export default function Crew() {
           </div>
 
           <div className="col">
+            <div className="tabbar" role="tablist">
+              {RIGHT_TABS.filter((t) => t.id !== "chat" || cfg.free_talk).map((t) => (
+                <button key={t.id} type="button" role="tab" aria-selected={rightTab === t.id}
+                  className={`tab ${rightTab === t.id ? "on" : ""}`} onClick={() => setRightTab(t.id)}>
+                  {t.ja}<span className="muted"> {t.en}</span>
+                </button>))}
+            </div>
+
+            {rightTab === "map" ? (
+              <section className="panel cabinmap-panel">
+                <div className="row"><h2 className="grow" style={{ margin: 0 }}>客室図 Cabin map</h2>
+                  <button className="ghost" onClick={refreshBriefing} disabled={briefingLoading}><Icon id="chat" />{briefingLoading ? "…" : "AI briefing"}</button></div>
+                {briefing ? (
+                  <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+                    {briefing.summary || "Nothing needs a summary right now."}
+                  </p>
+                ) : <p className="muted" style={{ margin: 0, fontSize: 13 }}>Tap "AI briefing" for a one-glance read of what needs attention, from the facts already on this screen. Tap any seat for its detail.</p>}
+                <CabinMap state={state} cfg={cfg} exitSeats={exitSeats} selected={pickedSeat} onSelect={(s) => setPickedSeat(s === pickedSeat ? null : s)} />
+              </section>
+            ) : null}
+            <Sheet content={pickedSeat ? (
+              <SeatDetail seat={pickedSeat} state={state} cfg={cfg} send={send} myName={myName} LANG_NAME={LANG_NAME}
+                onTalk={(lang) => setPb({ seat: pickedSeat, lang })} onChat={() => { setRightTab("chat"); setPickedSeat(null); }} />
+            ) : null} onClose={() => setPickedSeat(null)} />
+
+            {rightTab === "safety" ? (
             <section className="panel">
               <h2>安全案内 Safety briefing</h2>
               <div className="row">{cfg.safety.map((x) => <button key={x.id} onClick={() => send({ type: "broadcast", template_id: x.id })}>{x.title.ja} · {x.title.en}</button>)}</div>
               <Safety state={state} cfg={cfg} exitSeats={exitSeats} send={send} />
             </section>
+            ) : null}
 
+            {rightTab === "pa" ? (
             <section className="panel">
               <h2>機内アナウンス字幕 Live PA captions</h2>
               <p className="muted" style={{ margin: 0 }}>Make the announcement as usual, with the tablet listening. Every seat sees it in its own language. Only announcements in the library are captioned; nothing is machine-translated.</p>
@@ -275,10 +325,14 @@ export default function Crew() {
               {state?.pa_log?.length ? <div className="pa-log"><strong>送信履歴 Sent</strong>{state.pa_log.map((a, k) => (
                 <span key={k}><Icon id={a.icon} /> {new Date(a.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} {a.title_ja} · {a.text_en}</span>))}</div> : null}
             </section>
+            ) : null}
 
-            {cfg.free_talk ? <CrewLiveConversation conv={conv} send={send} muted={convMuted} onToggleMute={() => setConvMuted((m) => !m)} /> : null}
-            {cfg.free_talk ? <CrewFreeTalk cfg={cfg} LANG_NAME={LANG_NAME} /> : null}
+            {rightTab === "chat" && cfg.free_talk ? (<>
+              <CrewLiveConversation conv={conv} send={send} muted={convMuted} onToggleMute={() => setConvMuted((m) => !m)} />
+              <CrewFreeTalk cfg={cfg} LANG_NAME={LANG_NAME} />
+            </>) : null}
 
+            {rightTab === "exit" ? (
             <section className="panel">
               <h2>非常口座席の確認 Exit-row check</h2>
               <p className="muted" style={{ margin: 0 }}>Picture check at boarding. Supports your own briefing and confirmation; it does not replace it.</p>
@@ -290,6 +344,7 @@ export default function Crew() {
                 return <motion.div layout key={c.seat} className="exit-item" title={why}><b>{c.seat}</b><span className={`pill ${tone}`}>{label}</span></motion.div>;
               })}</div>
             </section>
+            ) : null}
           </div>
         </div>
       </main>
@@ -377,6 +432,85 @@ function CrewFreeTalk({ cfg, LANG_NAME }) {
           {cfg.languages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
         </select>
       } />
+  );
+}
+
+function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
+  if (!state) return null;
+  const heat = state.heatmap || {};
+  const needBySeat = Object.fromEntries((state.seat_needs || []).map((n) => [n.id, n]));
+  const cardsBySeat = {};
+  for (const c of state.cards || []) (cardsBySeat[c.seat] ||= []).push(c);
+  const rows = [...new Set(cfg.seats.map((x) => x.slice(0, -1)))];
+
+  function statusFor(id) {
+    const cards = cardsBySeat[id];
+    if (cards?.some((c) => c.urgent && c.status !== "acknowledged")) return "urgent";
+    if (cards?.length) return "open";
+    return heat[id] === "offline" ? "offline" : "idle";
+  }
+
+  // Laid out like looking down at the plane: each row of the cabin (30, 31, ...) is one column,
+  // read front-to-back left-to-right; the 3 seats on each side of the aisle stack top-to-bottom
+  // within it, with a gap for the aisle itself -- not a spreadsheet of rows and letters.
+  return (
+    <div className="cabinmap">
+      {rows.map((row) => (
+        <div className="cm-row" key={row}>
+          <span className="cm-row-label">{row}</span>
+          <div className="cm-seats">
+            {["A", "B", "C", null, "D", "E", "G", null, "H", "J", "K"].map((letter, i) => {
+              if (!letter) return <span className="cm-aisle" key={`gap-${i}`} />;
+              const id = row + letter;
+              const cards = cardsBySeat[id];
+              const need = needBySeat[id];
+              const bits = [id];
+              if (cards?.length) bits.push(`${cards.length} open request${cards.length > 1 ? "s" : ""}`);
+              if (need?.accessibility) bits.push(ACCESSIBILITY_META[need.accessibility]?.en);
+              if (exitSeats.has(id)) bits.push("exit row");
+              return (
+                <button key={id} type="button" className={`seat ${statusFor(id)} ${exitSeats.has(id) ? "exit" : ""} ${selected === id ? "picked" : ""}`}
+                  title={bits.join(" · ")} aria-label={bits.join(", ")} onClick={() => onSelect(id)}>
+                  {letter}
+                  {need?.accessibility ? <span className="seat-badge"><Icon id={ACCESSIBILITY_META[need.accessibility].icon} /></span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>))}
+    </div>
+  );
+}
+
+function SeatDetail({ seat, state, cfg, send, myName, LANG_NAME, onTalk, onChat }) {
+  const cards = (state?.cards || []).filter((c) => c.seat === seat);
+  const need = (state?.seat_needs || []).find((n) => n.id === seat);
+  const lang = need?.lang || "hi";
+  const convOpen = state?.conv_seats?.includes(seat);
+  return (
+    <div key={seat} style={{ display: "contents" }}>
+      <div className="row">
+        <h2 className="grow">{seat}</h2>
+        {need ? <span className="pill dim">{LANG_NAME[need.lang] || need.lang}</span> : null}
+        {need?.accessibility ? <span className="pill bad"><Icon id={ACCESSIBILITY_META[need.accessibility].icon} />{ACCESSIBILITY_META[need.accessibility].en}</span> : null}
+        <span className={`dot ${need?.connected ? "on" : ""}`} title={need?.connected ? "screen connected" : "not connected"} />
+      </div>
+      {convOpen ? (
+        <div className="row">
+          <span className="pill violet"><Icon id="chat" />自由会話中 Live conversation open</span>
+          <button className="ghost" onClick={onChat}>開く Open chat</button>
+        </div>
+      ) : null}
+      {cards.length ? (
+        <div className="list">
+          <AnimatePresence initial={false}>
+            {cards.map((c) => <CardView key={c.id} c={c} cfg={cfg} send={send} myName={myName} onTalk={() => onTalk(c.lang || lang)} />)}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <p className="muted" style={{ margin: 0 }}>No open requests for this seat. <button className="link" onClick={() => onTalk(lang)}>話す Talk</button></p>
+      )}
+    </div>
   );
 }
 
