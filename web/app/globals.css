@@ -3,11 +3,11 @@
 :root {
   --bg: #050505;
   --bg-2: #0a0a0b;
-  --surface: #0e0e10;
-  --surface-2: #151518;
-  --surface-3: #1c1c20;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.16);
+  --surface: #121214;
+  --surface-2: #19191d;
+  --surface-3: #212126;
+  --line: rgba(255, 255, 255, 0.11);
+  --line-strong: rgba(255, 255, 255, 0.22);
   --fg: #f5f5f5;
   --muted: #b5b5b5;
   --faint: #7c7c82;
@@ -36,6 +36,13 @@ body { overscroll-behavior: none; }
 body {
   margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
   font: 400 15px/1.55 var(--body); -webkit-font-smoothing: antialiased; overflow-x: clip;
+  /* <html> and <body> both set a background + a non-visible overflow-x (needed to stop horizontal
+     scroll bounce). Without isolation, that combination makes browsers mishandle z-index: -1 fixed
+     children two different ways: either swallowed entirely behind the root's own background, or (if
+     bumped to z-index: 0 to dodge that) incorrectly painted ON TOP of ordinary static content like
+     the footer. Isolating body gives it one unambiguous stacking context, so z-index: -1 decorative
+     layers (.ambient, .sakura) sit correctly behind real content, everywhere on every page. */
+  isolation: isolate;
 }
 a { color: inherit; }
 ::selection { background: var(--accent); color: #fff; }
@@ -44,13 +51,13 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ambient backdrop: film grain + two slow coral/white glows. Pure CSS, cheap on phones. */
-.ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg); }
+.ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bg); }
 .ambient::before, .ambient::after {
-  content: ""; position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(90px); opacity: 0.5;
+  content: ""; position: absolute; width: 85vmax; height: 85vmax; border-radius: 50%; filter: blur(110px);
 }
-.ambient::before { background: radial-gradient(circle, rgba(255, 91, 91, 0.16), transparent 65%); top: -25vmax; right: -18vmax; animation: drift1 26s ease-in-out infinite alternate; }
-.ambient::after { background: radial-gradient(circle, rgba(255, 255, 255, 0.06), transparent 65%); bottom: -30vmax; left: -20vmax; animation: drift2 32s ease-in-out infinite alternate; }
-.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.045; mix-blend-mode: overlay;
+.ambient::before { background: radial-gradient(circle, rgba(255, 91, 91, 0.4), transparent 62%); top: -28vmax; right: -28vmax; animation: drift1 26s ease-in-out infinite alternate; }
+.ambient::after { background: radial-gradient(circle, rgba(122, 139, 255, 0.26), transparent 62%); bottom: -32vmax; left: -28vmax; animation: drift2 32s ease-in-out infinite alternate; }
+.grain { position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.055; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
 @keyframes drift1 { to { transform: translate(-12vmax, 14vmax) scale(1.1); } }
 @keyframes drift2 { to { transform: translate(14vmax, -10vmax) scale(1.15); } }

@@ -35,7 +35,7 @@ function Ribbons() {
     const canvas = ref.current, ctx = canvas.getContext("2d"), noise = makeSimplex();
     // one clear thread, one soft echo — not a tangle of lines (the point is noise resolving to one request)
     const lines = [
-      ["255,91,91", 0.65, 1.5], ["255,255,255", 0.22, 0.9],
+      ["255,91,91", 0.46, 1.25], ["255,255,255", 0.14, 0.8],
     ];
     // static: drawn once (and again on resize), never animated or moved by the pointer
     let w = 0, h = 0;
@@ -51,7 +51,7 @@ function Ribbons() {
       ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = "lighter";
       const mobile = w < 900;
-      const cy = h * (mobile ? 0.36 : 0.55), end = mobile ? 1 : 0.7, amp = Math.min(h * 0.2, 150);
+      const cy = h * (mobile ? 0.36 : 0.55), end = mobile ? 1 : 0.7, amp = Math.min(h * 0.15, 110);
       lines.forEach(([rgb, alpha, width], idx) => {
         ctx.beginPath();
         for (let x = 0; x <= w * end + 6; x += 5) {
@@ -410,7 +410,7 @@ export default function Landing() {
   }, []);
   return (
     <>
-      <div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /><Sakura count={14} />
+      <div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /><Sakura count={24} />
       <a className="skip" href="#main">Skip to content</a>
       <header className={`nav ${scrolled ? "scrolled" : ""}`}>
         <div className="wrap nav-inner">

@@ -94,11 +94,13 @@ export function Sheet({ content, big = false, onBackdrop }) {
   );
 }
 
-export function Reveal({ children, delay = 0, y = 26, className = "", as = "div", ...rest }) {
+export function Reveal({ children, delay = 0, y = 18, className = "", as = "div", ...rest }) {
   const M = motion[as];
+  // margin expands the viewport downward, so content starts fading in before it's scrolled
+  // to, instead of sitting blank while the page catches up to a fast scroll.
   return (
-    <M className={className} initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px -8% 0px" }}
-      transition={{ duration: 0.8, delay, ease }} {...rest}>
+    <M className={className} initial={{ opacity: 0, y }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "0px 0px 20% 0px" }}
+      transition={{ duration: 0.55, delay, ease }} {...rest}>
       {children}
     </M>
   );
