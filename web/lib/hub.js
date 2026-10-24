@@ -93,6 +93,62 @@ export class Recorder {
   }
 }
 
+// Hands-free Live Conversation input: listens continuously and segments utterances itself by a
+// simple energy threshold, so there is no push-to-talk during a conversation, only natural
+// pauses. (Whisper's own Silero VAD, in engine/asr.py, still gates what actually gets
+// transcribed; this is purely about *when* to stop listening and send what was heard.)
+export class VadRecorder {
+  constructor({ onUtterance, onLevel = null, onSpeaking = null, silenceMs = 900, minSpeechMs = 300, maxUtteranceS = 12, threshold = 0.035 } = {}) {
+    Object.assign(this, { onUtterance, onLevel, onSpeaking, silenceMs, minSpeechMs, maxUtteranceS, threshold });
+  }
+
+  async start() {
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = this.ctx.createMediaStreamSource(this.stream);
+    this.node = this.ctx.createScriptProcessor(4096, 1, 1);
+    this.chunks = [];
+    this.speaking = false;
+    this.active = true;
+    this.node.onaudioprocess = (e) => {
+      if (!this.active) return;
+      const d = new Float32Array(e.inputBuffer.getChannelData(0));
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += d[i] * d[i];
+      const level = Math.sqrt(sum / (d.length / 4));
+      this.onLevel?.(Math.min(1, level * 6));
+      const now = this.ctx.currentTime * 1000;
+      if (level > this.threshold) {
+        if (!this.speaking) { this.speaking = true; this.speechStart = now; this.chunks = []; this.onSpeaking?.(true); }
+        this.chunks.push(d.slice());
+        this.silenceStart = now;
+      } else if (this.speaking) {
+        this.chunks.push(d.slice());
+        const tooQuiet = now - this.silenceStart > this.silenceMs;
+        const tooLong = now - this.speechStart > this.maxUtteranceS * 1000;
+        if (tooQuiet || tooLong) {
+          this.speaking = false;
+          this.onSpeaking?.(false);
+          const spokeFor = this.silenceStart - this.speechStart;
+          const chunks = this.chunks; this.chunks = [];
+          if (spokeFor >= this.minSpeechMs) this.onUtterance(toPcm16(chunks, this.ctx.sampleRate));
+        }
+      }
+    };
+    source.connect(this.node);
+    this.node.connect(this.ctx.destination);
+  }
+
+  stop() {
+    this.active = false;
+    this.node?.disconnect();
+    this.stream?.getTracks().forEach((t) => t.stop());
+    this.ctx?.close();
+  }
+}
+
 function toPcm16(chunks, rate) {
   const total = chunks.reduce((n, c) => n + c.length, 0);
   const input = new Float32Array(total);

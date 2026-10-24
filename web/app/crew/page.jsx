@@ -6,8 +6,10 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { Recorder, connect, crewFetch, loadConfig, toBase64 } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { Picto } from "@/lib/pictograms";
-import { canSpeak, speak } from "@/lib/speech";
+import { canSpeak, speakNatural as speak, unlockAudio } from "@/lib/speech";
 import { Ambient, AppHeader, ease } from "@/components/ui";
+import { FreeTalkPanel } from "@/components/freetalk";
+import { ConvThread, MuteButton } from "@/components/liveconversation";
 
 const STATUS = {
   urgent_unconfirmed: ["至急・未確認", "Urgent, unconfirmed", "bad"],
@@ -31,15 +33,17 @@ export default function Crew() {
   const [online, setOnline] = useState(false);
   const [soundOn, setSoundOn] = useState(true);
   const [readAloud, setReadAloud] = useState(false);
+  const [convMuted, setConvMuted] = useState(false);
   const [jaVoice, setJaVoice] = useState(false);
   const [pb, setPb] = useState(null);           // {seat, lang}
+  const [conv, setConv] = useState({});         // seat -> { open, messages: [] }
   const [pa, setPa] = useState(null);           // match result | {busy} | {error} | {sent}
   const [paPick, setPaPick] = useState(null);
   const [paN, setPaN] = useState("");
   const [paRecOn, setPaRecOn] = useState(false);
   const socket = useRef(null), audio = useRef(null), paRec = useRef(null);
   const seenUrgent = useRef(new Set()), announced = useRef(null), announcedSymptom = useRef(new Set());
-  const opts = useRef({ soundOn: true, readAloud: false }); opts.current = { soundOn, readAloud };
+  const opts = useRef({ soundOn: true, readAloud: false, convMuted: false }); opts.current = { soundOn, readAloud, convMuted };
 
   function beep() {
     if (!opts.current.soundOn || !audio.current) return;
@@ -71,12 +75,39 @@ export default function Crew() {
   }
 
   useEffect(() => {
-    const unlock = () => { audio.current ??= new AudioContext(); };
+    const unlock = () => { audio.current ??= new AudioContext(); unlockAudio(); };
     addEventListener("pointerdown", unlock, { once: true });
     canSpeak("ja").then(setJaVoice);
     loadConfig().then((c) => {
       setCfg(c);
-      socket.current = connect("/ws/crew", (msg) => { if (msg.type === "state") { sideEffects(msg); setState(msg); } }, setOnline);
+      socket.current = connect("/ws/crew", (msg) => {
+        if (msg.type === "state") {
+          sideEffects(msg); setState(msg);
+          setConv((c) => {
+            const open = new Set(msg.conv_seats || []);
+            const next = { ...c };
+            for (const seat of open) next[seat] = { messages: [], ...next[seat], open: true };
+            for (const seat of Object.keys(next)) if (!open.has(seat)) next[seat] = { ...next[seat], open: false };
+            return next;
+          });
+        }
+        else if (msg.type === "conv_state") {
+          setConv((c) => ({ ...c, [msg.seat]: { open: msg.open, messages: c[msg.seat]?.messages || [] } }));
+        } else if (msg.type === "conv_message") {
+          setConv((c) => {
+            const prev = c[msg.seat] || { open: true, messages: [] };
+            const i = prev.messages.findIndex((m) => m.id === msg.id);
+            const messages = i >= 0
+              ? prev.messages.map((m, idx) => (idx === i ? msg : m))
+              : [...prev.messages, msg];
+            return { ...c, [msg.seat]: { ...prev, messages } };
+          });
+          // a live conversation is spoken, not just displayed: crew hears the passenger's
+          // message in Japanese as soon as it finishes streaming, same as the passenger hears
+          // crew's reply in their own language (app/passenger/page.jsx's onMessage)
+          if (msg.from === "passenger" && msg.done && msg.translated && !opts.current.convMuted) speak(msg.translated, "ja");
+        }
+      }, setOnline);
     });
     return () => { socket.current?.close(); removeEventListener("pointerdown", unlock); };
   }, []); // eslint-disable-line
@@ -204,6 +235,9 @@ export default function Crew() {
                 <span key={k}><Icon id={a.icon} /> {new Date(a.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} {a.title_ja} · {a.text_en}</span>))}</div> : null}
             </section>
 
+            {cfg.free_talk ? <CrewLiveConversation conv={conv} send={send} muted={convMuted} onToggleMute={() => setConvMuted((m) => !m)} /> : null}
+            {cfg.free_talk ? <CrewFreeTalk cfg={cfg} LANG_NAME={LANG_NAME} /> : null}
+
             <section className="panel">
               <h2>非常口座席の確認 Exit-row check</h2>
               <p className="muted" style={{ margin: 0 }}>Picture check at boarding. Supports your own briefing and confirmation; it does not replace it.</p>
@@ -232,9 +266,11 @@ function CardView({ c, cfg, send, onTalk }) {
       <div className="body">
         <div className="what">
           {c.intent ? (<><Icon id={c.intent} /><strong>{c.crew_ja}</strong><span className="muted">{c.label_en}</span></>)
+            : c.translated ? (<><Icon id="globe" /><strong>{c.translated}</strong><span className="pill dim">未確認翻訳 unreviewed translation</span></>)
             : (<><strong>推定 Best guesses:</strong>{c.guesses.map((g) => <span key={g.intent} className="guess"><Icon id={g.intent} />{g.label_ja} ({g.score.toFixed(2)})</span>)}</>)}
           <span className={`pill ${tone}`}>{ja} · {en}</span>
           {c.symptom_ja ? <span className="pill bad symptom"><Icon id={c.symptom_icon} />症状 {c.symptom_ja} · {c.symptom_en}</span> : null}
+          {c.voice_stress != null ? <span className="pill bad" title={`voice-stress heuristic, unvalidated: ${c.voice_stress}`}><Icon id="alert" />声が動揺 Voice sounded distressed</span> : null}
           {c.pictures ? <span className="pill violet" title="This passenger uses picture-only mode">絵のみ · Pictures only</span> : null}
         </div>
         {c.heard ? <span className="muted">“{c.heard}” · {c.lang}</span> : null}
@@ -246,6 +282,53 @@ function CardView({ c, cfg, send, onTalk }) {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+function CrewLiveConversation({ conv, send, muted, onToggleMute }) {
+  const openSeats = Object.keys(conv).filter((s) => conv[s]?.open);
+  const [picked, setPicked] = useState(null);
+  const active = picked && openSeats.includes(picked) ? picked : openSeats[0] || null;
+  const thread = active ? conv[active]?.messages || [] : [];
+
+  return (
+    <section className="panel">
+      <div className="row">
+        <span className="panel-title grow">自由会話 Live Conversation <span className="pill dim" style={{ fontWeight: 400, textTransform: "none" }}>unreviewed translation</span></span>
+        <MuteButton muted={muted} onClick={onToggleMute} label={muted ? "音声オフ Unmute" : "音声オン Mute"} />
+        {openSeats.length ? (
+          <select aria-label="Seat" value={active || ""} onChange={(e) => setPicked(e.target.value)}>
+            {openSeats.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        ) : null}
+      </div>
+      {!openSeats.length ? (
+        <p className="muted" style={{ margin: 0 }}>進行中のライブ会話はありません · No Live Conversation panel is open right now.</p>
+      ) : (<>
+        <ConvThread messages={thread} mineFrom="crew" />
+        <form className="row" onSubmit={(e) => {
+          e.preventDefault();
+          const input = e.currentTarget.elements.text; const text = input.value.trim();
+          if (!text) return;
+          send({ type: "conv_text", seat: active, text }); input.value = "";
+        }}>
+          <input className="grow" name="text" autoComplete="off" placeholder="日本語で入力…" />
+          <button className="primary" type="submit">送信 Send</button>
+        </form>
+      </>)}
+    </section>
+  );
+}
+
+function CrewFreeTalk({ cfg, LANG_NAME }) {
+  const [lang, setLang] = useState(cfg.languages[0]?.code || "hi");
+  return (
+    <FreeTalkPanel fromLang="ja" toLang={lang} fromLabel="日本語" toLabel={LANG_NAME[lang] || lang}
+      langPicker={
+        <select aria-label="Passenger language" value={lang} onChange={(e) => setLang(e.target.value)}>
+          {cfg.languages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+        </select>
+      } />
   );
 }
 

@@ -29,7 +29,7 @@
 .meter { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .meter-row { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; }
 .meter-bar { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
-.meter-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #fff, var(--accent)); }
+.meter-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
 .meter.over .meter-bar i { background: var(--bad); }
 .wave canvas { width: 100%; height: 96px; display: block; border-radius: 12px; background: var(--bg); }
 .wave-cap { display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: space-between; font: 12px var(--mono); color: var(--faint); margin-top: 6px; }
@@ -64,8 +64,8 @@
 .cand-name small { display: block; font: 400 12px var(--body); color: var(--faint); }
 .track { position: relative; height: 12px; border-radius: 6px; background: var(--bg); }
 .track i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: rgba(255, 255, 255, 0.28); }
-.jcand.top .track i { background: linear-gradient(90deg, #fff, var(--accent)); box-shadow: 0 0 20px -6px var(--accent-glow); }
-.jcand.urgent .track i { background: linear-gradient(90deg, #ff9f6b, var(--bad)); }
+.jcand.top .track i { background: var(--accent); }
+.jcand.urgent .track i { background: var(--bad); }
 .mark { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--warn); }
 .mark span { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font: 600 10px var(--mono); color: var(--warn); white-space: nowrap; }
 .mark.urg { background: var(--bad); } .mark.urg span { color: var(--bad); top: auto; bottom: -18px; }

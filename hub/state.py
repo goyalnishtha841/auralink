@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from engine import Candidate, Context, Hypothesis, Lexicon, Result, interpret
+from engine.prosody import STRESS_FLOOR
 
 CardStatus = Literal["awaiting_confirm", "urgent_unconfirmed", "confirmed", "needs_human", "acknowledged", "closed"]
 CREW_VISIBLE = {"urgent_unconfirmed", "confirmed", "needs_human", "acknowledged"}
@@ -30,6 +31,8 @@ class Card(BaseModel):
     reply_id: str | None = None
     source: Literal["voice", "text", "picture"] = "text"   # how the passenger asked
     symptom: str | None = None                              # medical requests: what the passenger tapped
+    voice_stress: float | None = None                      # engine/prosody.py: sounded distressed, words unclear
+    translated: str | None = None          # Free Talk: unreviewed machine translation of `heard`, for crew
     lang: str = "en"                                        # passenger's language when asking
     round_id: str | None = None                             # on a care round (hub/rounds.py)
     created_at: float = Field(default_factory=time.time)
@@ -46,6 +49,8 @@ class Seat(BaseModel):
     checked_in: bool = False # preferences set at the airport / gate before boarding
     connected: bool = False
     failed_attempts: int = 0
+    conv_mode: bool = False  # Live Conversation panel is open: audio goes to engine/translate.py,
+                              # not the intent matcher (hub/main.py handle_conv_audio)
 
 
 # understood: first time; understood_again: after the simpler step-by-step version;
@@ -109,8 +114,13 @@ class Cabin:
     # passenger side
 
     def handle_text(self, seat: str, text: str, nbest: list[Hypothesis] | None = None,
-                    source: str = "text") -> tuple[Result, list[Card], Card | None]:
-        """Interpret one utterance. Returns the result, new draft cards, and an escalation card if any."""
+                    source: str = "text", voice_stress: float = 0.0) -> tuple[Result, list[Card], Card | None]:
+        """Interpret one utterance. Returns the result, new draft cards, and an escalation card if any.
+
+        voice_stress (engine/prosody.py, 0..1): how distressed the voice sounded, independent of
+        whether the words were understood. Only acts when nothing matched at all — a calm,
+        successfully matched request is never second-guessed by how it sounded.
+        """
         self.lex.reload_if_changed()
         s = self.seats[seat]
         ctx = Context(seat=seat, lang=s.lang, phase=self.phase, senior_mode=s.senior)
@@ -127,16 +137,24 @@ class Cabin:
             s.failed_attempts = 0
         else:
             s.failed_attempts += 1
-            if s.failed_attempts >= MAX_ROUNDS:
+            distressed = voice_stress >= STRESS_FLOOR
+            if s.failed_attempts >= MAX_ROUNDS or distressed:
                 s.failed_attempts = 0
-                escalated = self._new_card(seat, "needs_human", candidates=result.best_guesses,
-                                           heard=text, rounds=MAX_ROUNDS, source=source)
+                escalated = self._new_card(seat, "needs_human", candidates=result.best_guesses, heard=text,
+                                           rounds=MAX_ROUNDS, source=source,
+                                           voice_stress=round(voice_stress, 3) if distressed else None)
         return result, cards, escalated
 
     def icon_request(self, seat: str, intent: str) -> Card:
         self._check_intent(intent)
         self.seats[seat].failed_attempts = 0
         return self._new_card(seat, "confirmed", intent=intent, urgent=self.lex.is_urgent(intent), source="picture")
+
+    def escalate_free_text(self, seat: str, heard: str, translated: str | None) -> Card:
+        """The passenger explicitly chose to send something outside the fixed list, after seeing
+        the Free Talk suggestion. Goes straight to crew, like any other request — never auto-sent."""
+        self.seats[seat].failed_attempts = 0
+        return self._new_card(seat, "needs_human", heard=heard, translated=translated, source="text")
 
     def confirm(self, card_id: str, intent: str) -> Card:
         self._check_intent(intent)

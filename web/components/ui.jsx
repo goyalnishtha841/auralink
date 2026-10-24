@@ -39,16 +39,24 @@ export function Ambient() {
   return (<><div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /></>);
 }
 
-// Dialog that slides up softly. `content` null = closed.
-export function Sheet({ content, big = false, onBackdrop }) {
+// Dialog that slides up softly. `content` null = closed. Always closable: a visible X, the
+// backdrop, and Escape all work, so the passenger is never stuck on a screen with no way back.
+export function Sheet({ content, big = false, onClose }) {
+  useEffect(() => {
+    if (!onClose) return;
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
     <AnimatePresence>
       {content ? (
         <motion.div className="overlay" key="ov" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }} onClick={(e) => { if (e.target === e.currentTarget && onBackdrop) onBackdrop(); }}>
+          transition={{ duration: 0.25 }} onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}>
           <motion.div className={`sheet ${big ? "big" : ""}`} role="dialog" aria-modal="true"
             key={content.key || "sheet"} initial={{ opacity: 0, y: 28, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.98 }} transition={{ duration: 0.38, ease }}>
+            {onClose ? <button className="sheet-close" aria-label="Close" onClick={onClose}><Icon id="close" /></button> : null}
             {content}
           </motion.div>
         </motion.div>

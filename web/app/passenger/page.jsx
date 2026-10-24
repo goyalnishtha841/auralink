@@ -2,11 +2,12 @@
 // Passenger seat screen. Same protocol and behaviour as the original apps/passenger.html.
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useReducer, useRef } from "react";
-import { Recorder, connect, loadConfig, params } from "@/lib/hub";
+import { Recorder, VadRecorder, connect, loadConfig, params } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { Picto } from "@/lib/pictograms";
-import { canSpeak, speak } from "@/lib/speech";
+import { canSpeak, speakNatural as speak, unlockAudio } from "@/lib/speech";
 import { Ambient, Sheet, ease, useFlash } from "@/components/ui";
+import { ConvThread, ConvToggle, MuteButton } from "@/components/liveconversation";
 
 export default function Passenger() {
   const [, bump] = useReducer((x) => x + 1, 0);
@@ -14,10 +15,12 @@ export default function Passenger() {
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
   if (!st.current) st.current = { ready: false, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, voiceOK: false,
-    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: "34K" };
+    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: "34K",
+    conv: { open: false, speaking: false, muted: false, messages: [] } };
   const s = st.current;
   const socket = useRef(null);
   const recorder = useRef(null);
+  const vad = useRef(null);
   const captionTimer = useRef(0);
   const flashRef = useRef(flash); flashRef.current = flash;
 
@@ -78,6 +81,59 @@ export default function Passenger() {
         socket.current.send(cardId ? { type: "icon", card_id: cardId, intent } : { type: "icon", intent });
         showNextConfirm();
       }} />
+    </div>);
+  }
+
+  function showSuggest(msg) {
+    const { heard, guess, translated } = msg;
+    say(t("suggestTitle"));
+    setSheet(<div key={`suggest-${heard}`} style={{ display: "contents" }}>
+      <h2>{t("suggestTitle")}</h2>
+      <p className="muted" style={{ margin: 0 }}>&ldquo;{heard}&rdquo;</p>
+      {guess ? (
+        <div className="item">
+          <Icon id={guess.intent} /><strong className="grow">{t("suggestDidYouMean")} {guess.label}?</strong>
+          <button className="primary" onClick={() => { socket.current.send({ type: "icon", intent: guess.intent }); showNextConfirm(); }}>{t("yes")}</button>
+        </div>
+      ) : null}
+      {translated ? (
+        <div className="item">
+          <Icon id="globe" /><span className="grow">{translated}</span>
+          <button className="primary" onClick={() => { socket.current.send({ type: "send_free_text", text: heard, translated }); closeSheet(); }}>{t("suggestSendBtn")}</button>
+        </div>
+      ) : null}
+      <button className="link" onClick={() => showGrid()}>{t("suggestOrPicture")}</button>
+    </div>);
+  }
+
+  function showSettings() {
+    setSheet(<div key="settings" style={{ display: "contents" }}>
+      <h2>{t("settingsTitle")}</h2>
+      <div className="settings-sheet">
+        <div className="settings-row">
+          <span>{t("language")}</span>
+          <select aria-label={t("language")} value={s.lang} onChange={(e) => setLanguage(e.target.value)}>
+            {s.cfg.languages.map((l) => <option key={l.code} value={l.code}>{l.english && l.english !== l.name ? `${l.name} · ${l.english}` : l.name}</option>)}
+          </select>
+        </div>
+        <div className="settings-row">
+          <span>{t("seniorLabel")}</span>
+          <button className="toggle" role="switch" aria-pressed={s.senior} aria-label={t("seniorLabel")}
+            onClick={() => { s.senior = !s.senior; bump(); hello(); }} />
+        </div>
+        <div className="settings-row">
+          <span>{t("picturesLabel")}</span>
+          <button className="toggle" role="switch" aria-pressed={s.pictures} aria-label={t("picturesLabel")}
+            onClick={() => { s.pictures = !s.pictures; bump(); hello(); }} />
+        </div>
+        {s.voiceOK ? (
+          <div className="settings-row">
+            <span>{t("readLabel")}</span>
+            <button className="toggle" role="switch" aria-pressed={s.readAloud} aria-label={t("readLabel")}
+              onClick={() => { s.readAloud = !s.readAloud; if (s.readAloud) speak(t("readLabel"), s.lang); bump(); hello(); }} />
+          </div>
+        ) : null}
+      </div>
     </div>);
   }
 
@@ -162,10 +218,11 @@ export default function Passenger() {
   }
 
   function onMessage(msg) {
-    if (["confirm", "grid", "status", "error"].includes(msg.type) && s.micState === "thinking") setMic("idle");
+    if (["confirm", "grid", "status", "error", "suggest"].includes(msg.type) && s.micState === "thinking") setMic("idle");
     if (msg.type === "thinking") setMic("thinking");
     else if (msg.type === "confirm") { s.pending = msg.cards; showNextConfirm(); }
     else if (msg.type === "grid") showGrid(msg.card_id);
+    else if (msg.type === "suggest") showSuggest(msg);
     else if (msg.type === "status") {
       const c = msg.card;
       const shown = c.intent || c.options?.[0] || { intent: "call_crew", label: "" };
@@ -191,7 +248,29 @@ export default function Passenger() {
     else if (msg.type === "exit_done") {
       say(msg.message);
       setSheet(<div key="exitdone" style={{ display: "contents" }}><h2>{t("thanks")}</h2><p>{msg.message}</p><button className="primary" onClick={closeSheet}>{t("ok")}</button></div>);
+    } else if (msg.type === "conv_message") {
+      const i = s.conv.messages.findIndex((m) => m.id === msg.id);
+      if (i >= 0) s.conv.messages[i] = msg; else s.conv.messages = [...s.conv.messages, msg];
+      if (msg.from === "crew" && msg.done && msg.translated && !s.conv.muted) speak(msg.translated, s.lang);
+      bump();
     }
+  }
+
+  async function startConv() {
+    if (vad.current) return;
+    s.conv.open = true; bump();
+    socket.current.send({ type: "conv_start" });
+    vad.current = new VadRecorder({
+      onUtterance: (buf) => socket.current.sendBinary(buf),
+      onSpeaking: (sp) => { s.conv.speaking = sp; bump(); },
+    });
+    try { await vad.current.start(); } catch { s.micNote = "micDenied"; bump(); }
+  }
+
+  function stopConv() {
+    vad.current?.stop(); vad.current = null;
+    s.conv.open = false; s.conv.speaking = false; bump();
+    socket.current.send({ type: "conv_end" });
   }
 
   async function toggleMic() {
@@ -232,6 +311,7 @@ export default function Passenger() {
   }
 
   useEffect(() => {
+    addEventListener("pointerdown", unlockAudio, { once: true });
     let alive = true, markReady;
     const ready = new Promise((r) => (markReady = r));
     const p = params();
@@ -268,7 +348,7 @@ export default function Passenger() {
       markReady();
       if (askLanguage) chooseLanguage();
     })();
-    return () => { alive = false; socket.current?.close(); };
+    return () => { alive = false; socket.current?.close(); vad.current?.stop(); removeEventListener("pointerdown", unlockAudio); };
   }, []); // eslint-disable-line
 
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
@@ -280,41 +360,53 @@ export default function Passenger() {
       <Ambient />
       {flashFrame}
       <header className="app-header">
-        <span className={`dot ${s.online ? "on" : ""}`} title="Connection" />
-        <h1><AnimatePresence mode="wait"><motion.span key={s.titleOverride || "t"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>{s.titleOverride || t("title")}</motion.span></AnimatePresence></h1>
-        <span className="pill dim">{t("seat")} {s.seat}</span>
-        <select aria-label="Language" value={s.lang} onChange={(e) => setLanguage(e.target.value)}>
-          {s.cfg.languages.map((l) => <option key={l.code} value={l.code}>{l.english && l.english !== l.name ? `${l.name} · ${l.english}` : l.name}</option>)}
-        </select>
-        <label className="row muted"><input type="checkbox" checked={s.senior} onChange={(e) => { s.senior = e.target.checked; bump(); hello(); }} /> {t("seniorLabel")}</label>
-        <label className="row muted"><input type="checkbox" checked={s.pictures} onChange={(e) => { s.pictures = e.target.checked; bump(); hello(); }} /> {t("picturesLabel")}</label>
-        {s.voiceOK && !s.pictures ? <label className="row muted"><input type="checkbox" checked={s.readAloud}
-          onChange={(e) => { s.readAloud = e.target.checked; if (s.readAloud) speak(t("readLabel"), s.lang); bump(); hello(); }} /> {t("readLabel")}</label> : null}
+        <span className="hdr-icon-btn" aria-hidden="true"><span className={`dot ${s.online ? "on" : ""}`} title="Connection" /></span>
+        <div className="grow">
+          <h1><AnimatePresence mode="wait"><motion.span key={s.titleOverride || "t"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>{s.titleOverride || t("title")}</motion.span></AnimatePresence></h1>
+          <p className="hdr-sub">{t("seat")} {s.seat} · {s.cfg.languages.find((l) => l.code === s.lang)?.name || s.lang}</p>
+        </div>
+        <button className="hdr-icon-btn" aria-label={t("settingsTitle")} title={t("settingsTitle")} onClick={showSettings}><Icon id="settings" /></button>
       </header>
 
       <main className="app" style={{ maxWidth: 980 }}>
         {!s.pictures ? (
-          <motion.section className="panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
-            <h2>{t("typeHint")}</h2>
-            <button type="button" className={`mic ${s.micState === "recording" ? "recording" : ""}`} onClick={toggleMic}
-              disabled={s.micState === "thinking" || s.micState === "off"}>
-              {s.micState === "recording" ? <motion.span className="icon" animate={{ scale: [1, 1.25, 1] }} transition={{ repeat: Infinity, duration: 1.1 }}><Icon id="mic" /></motion.span> : <Icon id="mic" />}
-              <span>{micLabel}</span>
-              {s.micState === "thinking" ? <motion.span style={{ display: "inline-flex", gap: 4 }}>{[0, 1, 2].map((k) => (
-                <motion.i key={k} style={{ width: 6, height: 6, borderRadius: 3, background: "var(--accent)", display: "block" }}
-                  animate={{ opacity: [0.2, 1, 0.2] }} transition={{ repeat: Infinity, duration: 1, delay: k * 0.18 }} />))}</motion.span> : null}
-              <span className="level" ref={level} style={{ width: 0 }} />
-            </button>
-            {s.micNote ? <p className="muted" style={{ margin: 0 }}>{t(s.micNote)}</p> : null}
-            <form className="row" onSubmit={(e) => {
-              e.preventDefault();
-              const input = e.currentTarget.elements.text; const text = input.value.trim();
-              if (!text) return;
-              socket.current.send({ type: "text", text }); input.value = "";
-            }}>
-              <input className="grow" name="text" autoComplete="off" placeholder="thoda wotter and kambal" />
-              <button className="primary" type="submit">{t("send")}</button>
-            </form>
+          <motion.section className="panel ask-hero" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
+            <div className="row" style={{ alignItems: "flex-start" }}>
+              <div className="grow">
+                <h2>{t("typeHint")}</h2>
+                {s.micState === "thinking" ? (
+                  <p className="sub"><span className="ask-thinking">{[0, 1, 2].map((k) => (
+                    <motion.i key={k} animate={{ opacity: [0.2, 1, 0.2] }} transition={{ repeat: Infinity, duration: 1, delay: k * 0.18 }} />))}</span> {t("thinking")}</p>
+                ) : s.micNote ? <p className="sub">{t(s.micNote)}</p> : null}
+              </div>
+              {s.cfg.free_talk ? <ConvToggle on={s.conv.open} onClick={s.conv.open ? stopConv : startConv} label={t("liveConv")} /> : null}
+            </div>
+            {s.conv.open ? (
+              <div className="conv-panel">
+                <div className="conv-status">
+                  <span className={`listen-dot ${s.conv.speaking ? "speaking" : ""}`} />
+                  <span className="grow">{t(s.conv.speaking ? "convSpeaking" : "convListening")}</span>
+                  <MuteButton muted={s.conv.muted} onClick={() => { s.conv.muted = !s.conv.muted; bump(); }} label={t(s.conv.muted ? "unmute" : "mute")} />
+                </div>
+                <ConvThread messages={s.conv.messages} mineFrom="passenger" />
+              </div>
+            ) : null}
+            {!s.conv.open ? (
+              <form className="ask-bar" onSubmit={(e) => {
+                e.preventDefault();
+                const input = e.currentTarget.elements.text; const text = input.value.trim();
+                if (!text) return;
+                socket.current.send({ type: "text", text }); input.value = "";
+              }}>
+                <button type="button" className={`ask-round mic-on ${s.micState === "recording" ? "recording" : ""}`} onClick={toggleMic}
+                  disabled={s.micState === "thinking" || s.micState === "off"} aria-label={micLabel} title={micLabel}>
+                  {s.micState === "recording" ? <motion.span className="icon" animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.1 }}><Icon id="mic" /></motion.span> : <Icon id="mic" />}
+                  <span className="level" ref={level} />
+                </button>
+                <input className="grow" name="text" autoComplete="off" placeholder="thoda wotter and kambal" aria-label={t("typeHint")} />
+                <button className="ask-round send" type="submit" aria-label={t("send")} title={t("send")}><Icon id="arrow" /></button>
+              </form>
+            ) : null}
           </motion.section>
         ) : null}
 
@@ -336,12 +428,18 @@ export default function Passenger() {
                   <Listen lines={[r.label, r.message]} />
                 </motion.div>))}
             </AnimatePresence>
-            {!reqs.length ? <p className="faint" style={{ margin: 0, fontSize: 14 }}>—</p> : null}
+            {!reqs.length ? (
+              <div className="empty-state">
+                <span className="icon"><Icon id="inbox" /></span>
+                <p className="empty-title">{t("noRequestsTitle")}</p>
+                <p className="empty-sub">{t("noRequestsSub")}</p>
+              </div>
+            ) : null}
           </div>
         </motion.section>
       </main>
 
-      <Sheet content={s.sheet} big={s.senior} />
+      <Sheet content={s.sheet} big={s.senior} onClose={closeSheet} />
 
       <AnimatePresence>
         {s.caption ? (

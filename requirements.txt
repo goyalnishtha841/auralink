@@ -4,3 +4,4 @@ pydantic>=2.6
 faster-whisper>=1.1
 phonemizer>=3.2   # needs eSpeak-NG: brew install espeak-ng / apt install espeak-ng
 segno>=1.6        # QR codes for seat cards
+fastembed>=0.9    # semantic matcher (AURALINK_MATCHER=trimodal); downloads a 90 MB model on first use

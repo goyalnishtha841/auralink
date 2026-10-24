@@ -47,5 +47,18 @@
   "savedSeat": "सेव हो गया। विमान में अपनी सीट पर लगा कोड स्कैन करें, Auralink इसी तरह खुलेगा।",
   "scanAtSeat": "आपकी सीट का लिंक",
   "nextPassenger": "अगला यात्री",
-  "announcement": "केबिन घोषणा"
+  "announcement": "केबिन घोषणा",
+  "suggestTitle": "पूरी तरह निश्चित नहीं, पर मैंने ऐसा समझा",
+  "suggestDidYouMean": "क्या आपका मतलब था",
+  "suggestOrSend": "या यह संदेश क्रू को भेजें (अनुवादित, जाँचा नहीं गया)",
+  "suggestSendBtn": "क्रू को भेजें",
+  "suggestOrPicture": "या इसके बजाय एक तस्वीर चुनें",
+  "settingsTitle": "सेटिंग्स",
+  "liveConv": "लाइव बातचीत",
+  "convListening": "सुन रहे हैं… बस बोलिए, टैप करने की ज़रूरत नहीं",
+  "convSpeaking": "आपकी बात सुन रहे हैं…",
+  "noRequestsTitle": "अभी कोई अनुरोध नहीं",
+  "noRequestsSub": "आपके अनुरोध यहाँ दिखेंगे।",
+  "mute": "आवाज़ बंद करें",
+  "unmute": "आवाज़ चालू करें"
 }

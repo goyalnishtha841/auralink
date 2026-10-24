@@ -5,6 +5,7 @@ Run:  scripts/run.sh   then open  http://<laptop-ip>:8000/
 from __future__ import annotations
 
 import asyncio
+import itertools
 import json
 import logging
 import os
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from engine import PHASES, Context, Hypothesis, Lexicon, interpret
 from engine.lexicon import ROOT
+from engine.matcher import tokenize
 from engine.types import Phase
 
 from . import auth, checkin, demo, languages, pa, persist, recordings, rounds
@@ -35,6 +37,18 @@ ASR_MODEL = os.environ.get("AURALINK_ASR_MODEL", "base")  # base: ~0.7 s on an M
 # in tests with spoken PAs, `small` heard them right in ~3-5 s. Passenger requests stay on the fast model.
 PA_ASR_MODEL = os.environ.get("AURALINK_PA_ASR_MODEL", "small")
 MAX_AUDIO_S = 10
+# Free Talk needs ctranslate2 + transformers + a ~2.4 GB model (downloaded once, then offline).
+# Heavy enough that it is opt-out rather than always-on: AURALINK_FREE_TALK=0 hides it even when
+# the dependencies are installed, for a laptop that would rather keep the RAM for Whisper.
+FREE_TALK_ENABLED = os.environ.get("AURALINK_FREE_TALK", "1") != "0"
+
+
+def free_talk_available() -> bool:
+    if not FREE_TALK_ENABLED:
+        return False
+    from engine.translate import available
+
+    return available()
 _models: dict[str, object] = {}
 _asr_lock = threading.Lock()
 
@@ -64,6 +78,51 @@ def warm_matcher() -> None:
     if hasattr(sim, "warm"):
         sim.warm([v for i in lexicon.intents for v in lexicon.variants(i.id)] + sorted(lexicon.stopwords))
     log.info("matcher ready: %s", getattr(sim, "name", "text"))
+
+
+# --- cascade when nothing in the fixed list matched: try understanding by meaning, then by
+# translating what was actually typed/said, before falling back to "pick a picture". Both are
+# best-effort and never auto-send; the passenger always confirms. ------------------------------
+
+_semantic_sim = None
+_semantic_lock = threading.Lock()
+SUGGEST_T1 = 0.45   # lower bar than the matcher's normal T1=0.70: this only offers a confirm
+
+
+def _get_semantic_sim():
+    global _semantic_sim
+    with _semantic_lock:
+        if _semantic_sim is None:
+            from engine.matcher import make_similarity
+
+            _semantic_sim = make_similarity("trimodal")
+        return _semantic_sim
+
+
+def _semantic_guess(text: str, phase: str, lang: str) -> dict | None:
+    try:
+        sim = _get_semantic_sim()
+        result = interpret([Hypothesis(text=text)], Context(seat="x", phase=phase), lexicon, t1=SUGGEST_T1, sim=sim)
+    except Exception as e:  # fastembed/model not installed or not downloaded
+        log.info("semantic suggestion unavailable (%s)", e)
+        return None
+    if not result.cards:
+        return None
+    top = result.cards[0].candidates[0]
+    i = lexicon.get(top.intent)
+    return {"intent": top.intent, "icon": i.icon, "label": lexicon.label(top.intent, lang), "score": top.score}
+
+
+def _free_text_translation(text: str, lang: str) -> str | None:
+    if not free_talk_available() or lang == "ja":
+        return None
+    try:
+        from engine.translate import translate
+
+        return translate(text, lang, "ja")
+    except Exception as e:
+        log.info("free talk suggestion unavailable (%s)", e)
+        return None
 
 
 @asynccontextmanager
@@ -166,6 +225,9 @@ def crew_state() -> dict:
         "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
         "seat_needs": [s.model_dump(include={"id", "lang", "senior", "pictures", "read", "checked_in", "connected"})
                        for s in cabin.seats.values() if s.lang != "en" or s.senior or s.pictures or s.read],
+        # Live Conversation panels open right now, so a crew tablet that reconnects mid-call still
+        # knows which seats to show (conv_message itself only reaches sockets already connected).
+        "conv_seats": [s.id for s in cabin.seats.values() if s.conv_mode],
     }
 
 
@@ -239,6 +301,52 @@ def explain_text(body: InterpretIn) -> dict:
     result = interpret([Hypothesis(text=body.text)], Context(seat="demo", phase=body.phase), lexicon)
     return {"source": "typed", "seat": None, "phase": body.phase,
             "explain": explain(result, lexicon, default_similarity(), body.phase)}
+
+
+# --- Free Talk: open-vocabulary translation for anything outside the fixed intent list -------------
+# Unreviewed, unlike everything above: never used for safety briefings, exit rows or PA captions.
+
+class FreeTalkIn(BaseModel):
+    text: str = Field(min_length=1, max_length=400)
+    src: str = Field(pattern=r"^[a-z]{2,3}$")
+    tgt: str = Field(pattern=r"^[a-z]{2,3}$")
+
+
+@app.post("/api/freetalk/translate")
+def freetalk_translate(body: FreeTalkIn) -> dict:
+    from engine.translate import translate
+
+    if body.src == body.tgt:
+        return {"translated": body.text, "src": body.src, "tgt": body.tgt}
+    try:
+        t0 = time.perf_counter()
+        translated = translate(body.text, body.src, body.tgt)
+        return {"translated": translated, "src": body.src, "tgt": body.tgt,
+                "latency_ms": round((time.perf_counter() - t0) * 1000, 1)}
+    except KeyError as e:
+        raise HTTPException(422, str(e)) from e
+    except Exception as e:  # model not downloaded yet, no network on first use, ctranslate2/transformers missing
+        log.warning("free talk translation unavailable (%s)", e)
+        raise HTTPException(503, "Free Talk is not ready on this hub yet (model still downloading or missing)") from e
+
+
+class FreeTalkSpeakIn(BaseModel):
+    text: str = Field(min_length=1, max_length=400)
+    lang: str = Field(pattern=r"^[a-z]{2,3}$")
+
+
+@app.post("/api/freetalk/speak")
+def freetalk_speak(body: FreeTalkSpeakIn) -> Response:
+    from engine.tts import synthesize
+
+    try:
+        wav = synthesize(body.text, body.lang)
+    except Exception as e:  # model files missing, kokoro-onnx not installed
+        log.warning("free talk TTS unavailable (%s)", e)
+        raise HTTPException(503, "Free Talk voice is not ready on this hub yet") from e
+    if wav is None:  # Kokoro has no voice for this language; caller falls back to the browser's own voice
+        raise HTTPException(422, f"no Free Talk voice for language {body.lang!r}")
+    return Response(content=wav, media_type="audio/wav")
 
 
 # --- presenter console (demo control): same code paths as the real screens -----------------------
@@ -428,6 +536,7 @@ def config() -> dict:
         "exit_seats": exit_seats(),
         "languages": [{"code": lang["code"], "name": lang["name"], "english": lang.get("english", lang["name"])}
                       for lang in languages.registry()],
+        "free_talk": free_talk_available(),
     }
 
 
@@ -449,7 +558,10 @@ async def passenger_ws(ws: WebSocket, seat: str) -> None:
                 raise WebSocketDisconnect(frame.get("code", 1000))
             try:
                 if frame.get("bytes") is not None:  # one utterance: 16 kHz mono int16 PCM
-                    await handle_audio(seat, frame["bytes"])
+                    if cabin.seats[seat].conv_mode:
+                        await handle_conv_audio(seat, frame["bytes"])
+                    else:
+                        await handle_audio(seat, frame["bytes"])
                 else:
                     await handle_passenger(seat, json.loads(frame["text"]))
             except (KeyError, ValueError) as e:  # bad card id or intent: report, keep the socket
@@ -465,7 +577,8 @@ async def passenger_ws(ws: WebSocket, seat: str) -> None:
 async def interpret_and_reply(seat: str, text: str, nbest: list[Hypothesis] | None = None,
                               asr: dict | None = None) -> None:
     s = cabin.seats[seat]
-    result, cards, escalated = cabin.handle_text(seat, text, nbest, source="voice" if asr else "text")
+    result, cards, escalated = cabin.handle_text(seat, text, nbest, source="voice" if asr else "text",
+                                                 voice_stress=(asr or {}).get("voice_stress", 0.0))
     if asr:
         result.latency_ms = {**asr["latency_ms"], **result.latency_ms}
     if judges:
@@ -474,12 +587,22 @@ async def interpret_and_reply(seat: str, text: str, nbest: list[Hypothesis] | No
         why = explain(result, lexicon, default_similarity(), cabin.phase, audio=asr and asr.get("audio"),
                       speech=asr and asr.get("speech"), rejected=asr and asr["rejected"])
         await _send(judges, {"type": "result", "seat": seat, "source": "voice" if asr else "text",
-                             "phase": cabin.phase, "result": result.model_dump(), "explain": why})
+                             "phase": cabin.phase, "result": result.model_dump(), "explain": why,
+                             "voice_stress": asr and asr.get("voice_stress")})
     if cards:
         await to_seat(seat, {"type": "confirm", "rule": result.rule,
                              "cards": [card_for_passenger(c, s.lang) for c in cards]})
     elif escalated:
         await send_status(escalated, "needs_human")
+    elif len(tokenize(text)) >= 2:   # a single word ("hi", "hmm") isn't enough to guess or translate
+        guess, translated = await asyncio.gather(
+            asyncio.to_thread(_semantic_guess, text, cabin.phase, s.lang),
+            asyncio.to_thread(_free_text_translation, text, s.lang),
+        )
+        if guess or translated:
+            await to_seat(seat, {"type": "suggest", "heard": text, "guess": guess, "translated": translated})
+        else:
+            await to_seat(seat, {"type": "grid", "reason": result.rule})
     else:
         await to_seat(seat, {"type": "grid", "reason": result.rule})
     if any(c.urgent for c in cards):
@@ -500,10 +623,87 @@ async def handle_audio(seat: str, pcm: bytes) -> None:
         await to_seat(seat, {"type": "grid", "reason": "voice_unavailable"})
         return
     top = tr.hypotheses[0].text if tr.hypotheses else ""
+    from engine.prosody import analyze as analyze_prosody
+
+    stress = await asyncio.to_thread(analyze_prosody, audio)
     await interpret_and_reply(seat, top, tr.hypotheses or [Hypothesis(text="")],
                               asr={"latency_ms": tr.latency_ms, "rejected": tr.rejected,
-                                   "audio": audio, "speech": tr.speech})
+                                   "audio": audio, "speech": tr.speech, "voice_stress": stress.score})
     await push_crew()
+
+
+# --- Live Conversation: a free-running, two-way, streaming-translated chat between one seat and
+# crew. Unreviewed, like Free Talk's suggest cascade — shown with that same label, never used for
+# safety content. Turned on per seat with {type: "conv_start"}; while on, that seat's audio frames
+# go here instead of the intent matcher (see passenger_ws's dispatch, above). -------------------
+
+_conv_ids = itertools.count(1)
+
+
+async def _stream_translate_to(text: str, src: str, tgt: str, send) -> str | None:
+    """Runs engine.translate.translate_stream (sync, callback-driven) in a background thread and
+    awaits send(partial) for each token as it arrives, bridging it onto the event loop."""
+    from engine.translate import translate_stream
+
+    loop = asyncio.get_running_loop()
+    q: asyncio.Queue = asyncio.Queue()
+
+    def worker() -> None:
+        try:
+            for partial in translate_stream(text, src, tgt):
+                loop.call_soon_threadsafe(q.put_nowait, partial)
+        except Exception as e:  # model unavailable, bad language code
+            loop.call_soon_threadsafe(q.put_nowait, e)
+        finally:
+            loop.call_soon_threadsafe(q.put_nowait, None)
+
+    threading.Thread(target=worker, daemon=True).start()
+    last: str | None = None
+    while (item := await q.get()) is not None:
+        if isinstance(item, Exception):
+            raise item
+        last = item
+        await send(last)
+    return last
+
+
+async def handle_conv_text(seat: str, sender: str, text: str) -> None:
+    """One Live Conversation turn (typed by crew, or transcribed from passenger audio), streamed
+    through translation to both sides as it decodes, token by token."""
+    if not text.strip():
+        return
+    s = cabin.seats[seat]
+    src, tgt = ("ja", s.lang) if sender == "crew" else (s.lang, "ja")
+    mid = f"m{next(_conv_ids)}"
+
+    async def send(partial: str, done: bool = False) -> None:
+        msg = {"type": "conv_message", "seat": seat, "id": mid, "from": sender,
+              "original": text, "translated": partial, "done": done}
+        await to_seat(seat, msg)
+        await _send(crew, msg)
+
+    try:
+        final = await _stream_translate_to(text, src, tgt, send)
+    except Exception as e:
+        log.warning("live conversation translation failed (%s)", e)
+        final = None
+    await send(final, done=True)
+
+
+async def handle_conv_audio(seat: str, pcm: bytes) -> None:
+    import numpy as np
+
+    if len(pcm) > MAX_AUDIO_S * 16_000 * 2:
+        raise ValueError(f"utterance longer than {MAX_AUDIO_S} s")
+    audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
+    try:
+        tr = await asyncio.to_thread(run_asr, audio, languages.asr_languages(cabin.seats[seat].lang))
+    except ImportError:
+        await to_seat(seat, {"type": "error", "detail": "voice unavailable: faster-whisper not installed"})
+        return
+    text = tr.hypotheses[0].text if tr.hypotheses else ""
+    if text:
+        await handle_conv_text(seat, "passenger", text)
 
 
 async def ask_symptom(card: Card) -> None:
@@ -539,6 +739,10 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         await send_status(card, "urgent" if card.urgent else "sent")
         await ask_symptom(card)
 
+    elif kind == "send_free_text":
+        card = cabin.escalate_free_text(seat, msg.get("text", ""), msg.get("translated"))
+        await send_status(card, "needs_human")
+
     elif kind == "symptom":
         card = cabin.set_symptom(msg["card_id"], msg.get("symptom"), templates.symptom_ids)
         await to_seat(seat, {"type": "triage_done", "message": templates.triage_view(s.lang)["done"]})
@@ -558,6 +762,14 @@ async def handle_passenger(seat: str, msg: dict) -> None:
         check = cabin.exit_answer(seat, msg.get("answers", {}), bool(msg.get("reseat")), templates.exit_question_ids)
         await to_seat(seat, {"type": "exit_done", "result": check.result,
                              "message": templates.exit_done(check.result, s.lang)})
+
+    elif kind == "conv_start":
+        s.conv_mode = True
+        await _send(crew, {"type": "conv_state", "seat": seat, "open": True})
+
+    elif kind == "conv_end":
+        s.conv_mode = False
+        await _send(crew, {"type": "conv_state", "seat": seat, "open": False})
 
     await push_crew()
 
@@ -618,6 +830,8 @@ async def handle_crew(msg: dict) -> None:
         for check in cabin.start_exit_check(exit_seats()):
             view = templates.exit_view(cabin.seats[check.seat].lang)
             await _send(passengers[check.seat], {"type": "exit_check", "check": view})
+    elif kind == "conv_text":
+        await handle_conv_text(msg["seat"], "crew", msg.get("text", ""))
     await push_crew()
 
 

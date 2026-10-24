@@ -62,12 +62,7 @@ function Ribbons() {
           const y = cy + n * amp * (chaos * 0.95 + 0.05) * pulse * stir + (idx - 2) * 12 * chaos;
           x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
-        const grad = ctx.createLinearGradient(0, 0, w * end, 0);
-        grad.addColorStop(0, `rgba(${rgb},0)`);
-        grad.addColorStop(0.3, `rgba(${rgb},${alpha * 0.5})`);
-        grad.addColorStop(0.75, `rgba(${rgb},${alpha})`);
-        grad.addColorStop(1, `rgba(${rgb},0)`);
-        ctx.strokeStyle = grad;
+        ctx.strokeStyle = `rgba(${rgb},${alpha})`;
         ctx.lineWidth = width * 6; ctx.globalAlpha = 0.12; ctx.stroke();
         ctx.lineWidth = width; ctx.globalAlpha = 1; ctx.stroke();
       });
