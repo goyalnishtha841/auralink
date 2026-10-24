@@ -536,7 +536,7 @@ export default function Passenger() {
       </AnimatePresence>
 
       {!s.sheet && !s.conv.open ? (
-        <OnboardingFab lang={s.lang} onReplay={() => { s.onboarding = true; bump(); }}
+        <OnboardingFab seat={s.seat} lang={s.lang} onReplay={() => { s.onboarding = true; bump(); }}
           onAskHelp={() => { attention(); closeSheet(); }} onChangeLanguage={chooseLanguage} onAccessibility={showSettings} />
       ) : null}
     </div>
