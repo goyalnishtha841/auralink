@@ -33,8 +33,9 @@ function Ribbons() {
   const ref = useRef(null);
   useEffect(() => {
     const canvas = ref.current, ctx = canvas.getContext("2d"), noise = makeSimplex();
+    // one clear thread, one soft echo — not a tangle of lines (the point is noise resolving to one request)
     const lines = [
-      ["255,91,91", 0.95, 1.6], ["255,255,255", 0.55, 1.1], ["255,138,122", 0.6, 1.2], ["255,255,255", 0.3, 0.9], ["255,91,91", 0.45, 1],
+      ["255,91,91", 0.65, 1.5], ["255,255,255", 0.22, 0.9],
     ];
     // static: drawn once (and again on resize), never animated or moved by the pointer
     let w = 0, h = 0;
@@ -59,7 +60,7 @@ function Ribbons() {
           const stir = 1;
           const n = noise(x * 0.0022 * stir, idx * 9.7 + t);
           const pulse = Math.sin(t * 0.6 + idx) * 0.12 + 0.88;
-          const y = cy + n * amp * (chaos * 0.95 + 0.05) * pulse * stir + (idx - 2) * 12 * chaos;
+          const y = cy + n * amp * (chaos * 0.95 + 0.05) * pulse * stir + (idx - (lines.length - 1) / 2) * 16 * chaos;
           x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         const grad = ctx.createLinearGradient(0, 0, w * end, 0);
@@ -68,7 +69,7 @@ function Ribbons() {
         grad.addColorStop(0.75, `rgba(${rgb},${alpha})`);
         grad.addColorStop(1, `rgba(${rgb},0)`);
         ctx.strokeStyle = grad;
-        ctx.lineWidth = width * 6; ctx.globalAlpha = 0.12; ctx.stroke();
+        ctx.lineWidth = width * 6; ctx.globalAlpha = 0.07; ctx.stroke();
         ctx.lineWidth = width; ctx.globalAlpha = 1; ctx.stroke();
       });
       ctx.globalCompositeOperation = "source-over";
@@ -409,7 +410,7 @@ export default function Landing() {
   }, []);
   return (
     <>
-      <div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /><Sakura count={6} />
+      <div className="ambient" aria-hidden="true" /><div className="grain" aria-hidden="true" /><Sakura count={14} />
       <a className="skip" href="#main">Skip to content</a>
       <header className={`nav ${scrolled ? "scrolled" : ""}`}>
         <div className="wrap nav-inner">

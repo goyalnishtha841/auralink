@@ -82,8 +82,13 @@
   .flight-strip { text-shadow: 0 1px 8px #000; }
 }
 
-/* sections */
-.section { position: relative; padding: clamp(80px, 11vw, 140px) 0; border-top: 1px solid var(--line); }
+/* sections: a faint warm glow carries the hero's colour down the page so it doesn't go flat,
+   alternating sides section to section; kept subtle enough to stay out of the text's way */
+.section { position: relative; padding: clamp(80px, 11vw, 140px) 0; border-top: 1px solid var(--line); overflow: hidden; }
+.section::before { content: ""; position: absolute; top: 2%; left: 50%; width: min(62vw, 720px); height: 75%; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255, 91, 91, 0.18), transparent 68%); }
+.section:nth-of-type(odd)::before { transform: translate(-82%, 0); }
+.section:nth-of-type(even)::before { transform: translate(-18%, 0); }
 .eyebrow { display: flex; align-items: center; gap: 12px; font: 500 12px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0 0 18px; }
 .eyebrow::before { content: ""; width: 30px; height: 1px; background: var(--accent); }
 .section h2 { font: 800 clamp(34px, 4.6vw, 58px)/1.04 var(--display); letter-spacing: -0.035em; margin: 0; max-width: 820px; }
