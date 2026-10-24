@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: auralink
+    runtime: docker
+    dockerfilePath: ./Dockerfile.render
+    plan: free
+    # AURALINK_CREW_PIN is left unset on purpose: the hub then makes its own 6-digit numeric
+    # PIN at boot and logs it once (see hub/auth.py), which is what the crew login's numeric
+    # keypad actually expects -- a Render-generated random secret would not be. Read it from
+    # this service's Logs tab after each deploy or restart, or set your own 6-digit value here.

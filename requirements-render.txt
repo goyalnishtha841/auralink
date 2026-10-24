@@ -1,0 +1,13 @@
+# Trimmed for Render's free web service (512 MB RAM, no GPU, no credit card).
+# Drops fastembed, transformers and kokoro-onnx: all three are optional at runtime (see
+# engine/matcher.py's "trimodal" mode, engine/translate.py and engine/tts.py), so Auralink runs
+# fine without them -- Free Talk (translation + its Kokoro voice) is simply unavailable and the
+# passenger app falls back to the browser's own offline speech synthesis, exactly as it already
+# does whenever Kokoro has no voice for a language. Everything else (ASR, phonetic matching,
+# seat QR codes) is unchanged from requirements-linux.txt.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+faster-whisper>=1.1
+phonemizer>=3.2
+segno>=1.6

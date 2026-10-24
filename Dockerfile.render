@@ -1,0 +1,31 @@
+# Trimmed build for Render's free web service tier (512 MB RAM, no credit card). Skips Free
+# Talk's translation and Kokoro voice entirely (see requirements-render.txt) so the image is
+# smaller and installs faster, and there is no multi-GB model to download on first boot --
+# everything the free tier can't comfortably hold. The full-featured Dockerfile (for a real VM
+# with more RAM) is unchanged at the repo root.
+FROM python:3.12-slim
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    espeak-ng curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-render.txt ./
+RUN pip install --no-cache-dir -r requirements-render.txt
+
+COPY engine/ engine/
+COPY hub/ hub/
+COPY apps/ apps/
+COPY data/ data/
+COPY web/out/ web/out/
+
+ENV HOST=0.0.0.0 \
+    AURALINK_FREE_TALK=0 \
+    AURALINK_LIVE_ASSIST=0 \
+    AURALINK_ASR_MODEL=tiny \
+    AURALINK_PA_ASR_MODEL=tiny \
+    AURALINK_PRELOAD_ASR=0
+
+EXPOSE 8000
+# Render sets $PORT at runtime; the shell form lets that env var expand (unlike exec-form CMD).
+CMD uvicorn hub.main:app --host 0.0.0.0 --port ${PORT:-8000}
