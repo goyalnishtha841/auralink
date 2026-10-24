@@ -246,9 +246,13 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 @keyframes seatPulse { 50% { box-shadow: 0 0 0 6px rgba(255, 61, 90, 0.25); } }
 
 /* seat gate: shared-scanner passengers pick their own seat on a plane-shaped map before anything connects */
-.seatgate-map { display: flex; flex-direction: column; gap: 8px; align-items: center; max-height: 50vh; overflow: auto; padding: 4px; }
-.seatgate-row { display: flex; align-items: center; gap: 6px; flex: none; }
-.seatgate-row-label { width: 16px; font: 700 11px var(--mono); color: var(--faint); text-align: right; flex: none; }
+/* align-items: flex-start (not center): a row wider than the viewport must only overflow to the
+   right (scrollable, revealing the far seats) -- centering it would clip equally off both edges,
+   hiding the row-number label on the left with no way to scroll back to it. */
+.seatgate-map { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; max-height: 50vh; overflow: auto; padding: 4px; }
+.seatgate-row { display: flex; align-items: center; gap: 6px; flex: none; min-width: 100%; }
+.seatgate-row-label { position: sticky; left: 4px; width: 16px; font: 700 11px var(--mono); color: var(--faint);
+  text-align: right; flex: none; background: var(--bg); z-index: 1; }
 .seatgate-seats { display: flex; gap: 4px; flex: none; }
 .seatgate-aisle, .seatgate-missing { width: 7px; flex: none; }
 .seatgate-seat { width: 29px; height: 29px; border-radius: 8px; font-weight: 700; font-size: 12px; padding: 0; min-height: 0; cursor: pointer; flex: none; }

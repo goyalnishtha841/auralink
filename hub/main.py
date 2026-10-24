@@ -26,7 +26,7 @@ from engine.lexicon import ROOT
 from engine.matcher import tokenize
 from engine.types import Phase
 
-from . import auth, checkin, demo, languages, pa, persist, recordings, rounds
+from . import auth, checkin, demo, languages, pa, persist, recordings, rounds, seat_speech
 from . import report as flight_report
 from .explain import explain
 from .state import SEAT_IDS, Cabin, Card
@@ -614,6 +614,36 @@ async def post_checkin(body: CheckinIn) -> dict:
             ("&mode=pictures" if body.pictures else "") + ("&read=1" if body.read else "") + \
             (f"&accessibility={body.accessibility}" if body.accessibility else "")
     return {"seat": body.seat, **prefs, "passenger_path": f"/passenger?{query}"}
+
+
+class SeatVoiceIn(BaseModel):
+    text: str | None = Field(None, max_length=200)   # typed (presenter backup, tests) ...
+    audio_b64: str | None = None                       # ... or the passenger's own voice, 16 kHz mono int16
+
+
+@app.post("/api/seat/by-voice")
+async def seat_by_voice(body: SeatVoiceIn) -> dict:
+    """The shared scanner's mic: say your seat ("three four kay") instead of only tapping it on
+    the map, using the same offline speech-to-text as every other request. No seat is known yet
+    at this point -- that's the question being answered -- so this is the one passenger-side
+    route with no seat in its path and no crew PIN."""
+    import base64
+
+    import numpy as np
+
+    if body.audio_b64:
+        pcm = base64.b64decode(body.audio_b64)
+        if len(pcm) > MAX_AUDIO_S * 16_000 * 2:
+            raise HTTPException(413, f"Longer than {MAX_AUDIO_S} s")
+        audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
+        try:
+            tr = await asyncio.to_thread(run_asr, audio, ("en", "hi"))
+        except ImportError:
+            raise HTTPException(503, "voice unavailable: faster-whisper not installed") from None
+        heard = tr.hypotheses[0].text if tr.hypotheses else ""
+    else:
+        heard = body.text or ""
+    return {"heard": heard, "seat": seat_speech.parse(heard, set(SEAT_IDS))}
 
 
 @app.get("/api/seat/{seat}")

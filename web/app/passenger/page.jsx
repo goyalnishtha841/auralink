@@ -2,7 +2,7 @@
 // Passenger seat screen. Same protocol and behaviour as the original apps/passenger.html.
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useReducer, useRef, useState } from "react";
-import { Recorder, VadRecorder, connect, loadConfig, params } from "@/lib/hub";
+import { Recorder, VadRecorder, connect, loadConfig, params, toBase64 } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { ACCESSIBILITY_META } from "@/lib/accessibility";
 import { Picto } from "@/lib/pictograms";
@@ -526,20 +526,73 @@ export default function Passenger() {
 
 // One scanner for the whole cabin (no screen on every seat to print a per-seat QR onto): the
 // passenger taps their own seat on a plane-shaped map before anything connects to the hub, the
-// same layout the crew tablet uses so it reads the same way on both sides.
+// same layout the crew tablet uses so it reads the same way on both sides. They can also just
+// say it ("three four kay") -- the same offline phonetic matcher used for every other request,
+// run on the seat number instead -- which only pre-picks the seat below; they still tap Continue.
 function SeatGate({ cfg, onConfirm }) {
   const [picked, setPicked] = useState(null);
+  const [mic, setMic] = useState("idle");   // idle | recording | thinking
+  const [heard, setHeard] = useState(null); // {text, seat} | {text, seat: null} | {error: true} | null
+  const micRef = useRef("idle");
+  const recorder = useRef(null);
+  const known = useRef(new Set());
+  known.current = new Set((cfg?.seats) || []);
+
+  async function speakSeat() {
+    if (micRef.current === "recording") {
+      micRef.current = "thinking"; setMic("thinking");
+      const pcm = await recorder.current.stop();
+      recorder.current = null;
+      try {
+        const res = await fetch("/api/seat/by-voice", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ audio_b64: await toBase64(pcm) }),
+        });
+        const r = await res.json();
+        setHeard({ text: r.heard, seat: r.seat });
+        if (r.seat && known.current.has(r.seat)) setPicked(r.seat);
+      } catch { setHeard({ error: true }); }
+      micRef.current = "idle"; setMic("idle");
+      return;
+    }
+    if (!Recorder.supported()) { setHeard({ error: true }); return; }
+    setHeard(null);
+    recorder.current = new Recorder();
+    try {
+      await recorder.current.start(6, () => micRef.current === "recording" && speakSeat());
+      micRef.current = "recording"; setMic("recording");
+    } catch { micRef.current = "idle"; setMic("idle"); }
+  }
+
   if (!cfg) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
   const rows = [...new Set(cfg.seats.map((x) => x.slice(0, -1)))];
-  const known = new Set(cfg.seats);
+  const known_ = known.current;
   return (
     <>
       <Ambient />
       <main className="app" style={{ maxWidth: 420, minHeight: "100dvh", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20, paddingBottom: 28 }}>
         <div style={{ textAlign: "center" }}>
           <h1 style={{ font: "800 24px/1.25 var(--display)", margin: "0 0 4px" }}>Which seat are you in?</h1>
-          <p className="muted" style={{ margin: 0 }}>Tap your seat, then continue.</p>
+          <p className="muted" style={{ margin: 0 }}>Tap your seat, or say it.</p>
         </div>
+        {Recorder.supported() ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+            <button type="button" className={`ask-round mic-on ${mic === "recording" ? "recording" : ""}`}
+              disabled={mic === "thinking"}
+              aria-label={mic === "recording" ? "Stop and check" : "Say your seat number"}
+              title={mic === "recording" ? "Stop and check" : "Say your seat number"} onClick={speakSeat}>
+              <Icon id="mic" />
+            </button>
+            <p className="muted" style={{ margin: 0, fontSize: 13, textAlign: "center" }}>
+              {mic === "recording" ? "Listening… say your seat, like “three four kay”"
+                : mic === "thinking" ? "Checking…"
+                : heard?.error ? "Couldn't use the microphone — tap your seat instead."
+                : heard && !heard.seat ? `Didn't catch a seat in “${heard.text}” — try again or tap below.`
+                : heard?.seat ? `Heard “${heard.text}” → seat ${heard.seat}. Tap Continue, or pick a different seat below.`
+                : "Tap to say your seat number"}
+            </p>
+          </div>
+        ) : null}
         <div className="seatgate-map">
           {rows.map((row) => (
             <div className="seatgate-row" key={row}>
@@ -548,7 +601,7 @@ function SeatGate({ cfg, onConfirm }) {
                 {["A", "B", "C", null, "D", "E", "G", null, "H", "J", "K"].map((letter, i) => {
                   if (!letter) return <span className="seatgate-aisle" key={`gap-${i}`} />;
                   const id = row + letter;
-                  if (!known.has(id)) return <span className="seatgate-missing" key={id} />;
+                  if (!known_.has(id)) return <span className="seatgate-missing" key={id} />;
                   return (
                     <button key={id} type="button" className={`seat seatgate-seat ${picked === id ? "picked pop" : ""}`}
                       aria-pressed={picked === id} aria-label={`Seat ${id}`} onClick={() => setPicked(id)}>{letter}</button>

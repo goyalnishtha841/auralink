@@ -192,6 +192,15 @@ def test_exit_row_check_resends_on_late_connect(crew_login):
             assert q["type"] == "exit_check" and len(q["check"]["questions"]) == 3
 
 
+def test_seat_by_voice(client):
+    r = client.post("/api/seat/by-voice", json={"text": "three four kay"})
+    assert r.status_code == 200
+    assert r.json() == {"heard": "three four kay", "seat": "34K"}
+
+    r = client.post("/api/seat/by-voice", json={"text": "um, not sure"})
+    assert r.json()["seat"] is None
+
+
 def test_demo_kit_endpoints(client):
     info = client.get("/api/hub-info").json()
     assert info["public_url"].startswith("http")
