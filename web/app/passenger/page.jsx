@@ -268,7 +268,11 @@ export default function Passenger() {
       s.conv.partial = "";
       const i = s.conv.messages.findIndex((m) => m.id === msg.id);
       if (i >= 0) s.conv.messages[i] = msg; else s.conv.messages = [...s.conv.messages, msg];
-      if (msg.from === "crew" && msg.done && msg.translated && !s.conv.muted) speak(msg.translated, s.lang);
+      // One device, two languages (like a translator held between two people): it speaks the
+      // crew's reply in the passenger's own language, AND speaks the passenger's own words back
+      // in Japanese -- the same translation crew would hear -- so Live Conversation works even
+      // when only one screen is open. The mic mutes itself while either plays (isSpeaking, above).
+      if (msg.done && msg.translated && !s.conv.muted) speak(msg.translated, msg.from === "crew" ? s.lang : "ja");
       bump();
     } else if (msg.type === "conv_partial") {
       s.conv.partial = msg.text; bump();
