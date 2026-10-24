@@ -86,6 +86,38 @@ def warm_matcher() -> None:
     log.info("matcher ready: %s", getattr(sim, "name", "text"))
 
 
+def warm_live_conversation() -> None:
+    """Translation (NLLB), voice (Kokoro) and the live assist LLM are lazy singletons: nothing
+    loads them into memory until first used. Without this, that load -- several seconds each,
+    for three separate models -- lands on the passenger's very first Live Conversation turn,
+    on top of the translate+speak work itself. Runs once here instead, in the background, behind
+    each model's own `available()` check, so it's a no-op (fast) when a model isn't installed."""
+    from engine import assist
+    from engine.translate import available as translate_available
+    from engine.tts import available as tts_available
+
+    if translate_available():
+        try:
+            from engine.translate import translate
+
+            translate("hello", "en", "ja")
+        except Exception as e:
+            log.warning("translation warm-up failed (%s)", e)
+    if tts_available():
+        try:
+            from engine.tts import synthesize
+
+            synthesize("こんにちは", "ja")
+        except Exception as e:
+            log.warning("voice warm-up failed (%s)", e)
+    if assist.available():
+        try:
+            assist.classify("hello", ["water"])
+        except Exception as e:
+            log.warning("live assist warm-up failed (%s)", e)
+    log.info("live conversation models warm")
+
+
 # --- cascade when nothing in the fixed list matched: try understanding by meaning, then by
 # translating what was actually typed/said, before falling back to "pick a picture". Both are
 # best-effort and never auto-send; the passenger always confirms. ------------------------------
@@ -137,6 +169,7 @@ async def lifespan(_: FastAPI):
     if os.environ.get("AURALINK_PRELOAD_ASR") == "1":
         threading.Thread(target=get_asr, daemon=True).start()
         threading.Thread(target=get_asr, args=(PA_ASR_MODEL,), daemon=True).start()   # first PA is not slow
+    threading.Thread(target=warm_live_conversation, daemon=True).start()
     yield
 
 

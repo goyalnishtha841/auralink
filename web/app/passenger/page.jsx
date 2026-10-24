@@ -17,7 +17,7 @@ export default function Passenger() {
   const [flashFrame, flash] = useFlash();
   if (!st.current) st.current = { ready: false, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, voiceOK: false,
     micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: "34K",
-    conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [] } };
+    conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [], spoken: new Set() } };
   const s = st.current;
   const socket = useRef(null);
   const recorder = useRef(null);
@@ -272,7 +272,11 @@ export default function Passenger() {
       // crew's reply in the passenger's own language, AND speaks the passenger's own words back
       // in Japanese -- the same translation crew would hear -- so Live Conversation works even
       // when only one screen is open. The mic mutes itself while either plays (isSpeaking, above).
-      if (msg.done && msg.translated && !s.conv.muted) speak(msg.translated, msg.from === "crew" ? s.lang : "ja");
+      // spoken: a message can be re-delivered (a "done" resend, a reconnect) -- speak it once.
+      if (msg.done && msg.translated && !s.conv.muted && !s.conv.spoken.has(msg.id)) {
+        s.conv.spoken.add(msg.id);
+        speak(msg.translated, msg.from === "crew" ? s.lang : "ja");
+      }
       bump();
     } else if (msg.type === "conv_partial") {
       s.conv.partial = msg.text; bump();
@@ -291,7 +295,7 @@ export default function Passenger() {
 
   async function startConv() {
     if (vad.current) return;
-    s.conv.open = true; s.conv.partial = ""; bump();
+    s.conv.open = true; s.conv.partial = ""; s.conv.spoken.clear(); bump();
     socket.current.send({ type: "conv_start" });
     convUnsub.current = onSpeakingChange((on) => { s.conv.replyPlaying = on; bump(); });
     vad.current = new VadRecorder({
