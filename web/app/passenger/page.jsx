@@ -10,13 +10,14 @@ import { Picto } from "@/lib/pictograms";
 import { canSpeak, isSpeaking, onSpeakingChange, speakNatural as speak, unlockAudio } from "@/lib/speech";
 import { Ambient, Carousel, Sheet, ease, useFlash } from "@/components/ui";
 import { ConvThread, MuteButton } from "@/components/liveconversation";
+import { Onboarding, OnboardingFab } from "@/components/onboarding";
 
 export default function Passenger() {
   const [, bump] = useReducer((x) => x + 1, 0);
   const st = useRef(null);
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
-  if (!st.current) st.current = { ready: false, awaitingSeat: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, name: null, voiceOK: false,
+  if (!st.current) st.current = { ready: false, awaitingSeat: false, onboarding: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, name: null, voiceOK: false,
     micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: null,
     conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [], spoken: new Set() } };
   const s = st.current;
@@ -385,7 +386,13 @@ export default function Passenger() {
       document.documentElement.lang = s.lang;
       s.ready = true; bump();
       markReady();
-      if (askLanguage) chooseLanguage();
+      // Same gate as the plain language prompt below: skip it for a checked-in seat (already
+      // configured at the kiosk) or a demo link with an explicit ?lang=, same as before.
+      if (askLanguage) {
+        let onboarded = false;
+        try { onboarded = localStorage.getItem(`auralink-onboarded-${s.seat}`) === "1"; } catch { /* blocked */ }
+        if (onboarded) chooseLanguage(); else { s.onboarding = true; bump(); }
+      }
     })();
   }
 
@@ -416,6 +423,12 @@ export default function Passenger() {
 
   if (s.awaitingSeat) return <SeatGate cfg={s.cfg} onConfirm={confirmSeat} />;
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
+  if (s.onboarding) return (
+    <Onboarding cfg={s.cfg} seat={s.seat} lang={s.lang} onSelectLanguage={setLanguage}
+      accessibility={{ senior: s.senior, pictures: s.pictures, readAloud: s.readAloud, accessibility: s.accessibility }}
+      onSetAccessibility={(patch) => { Object.assign(s, patch); bump(); hello(); }}
+      onComplete={() => { s.onboarding = false; bump(); }} />
+  );
 
   const reqs = [...s.requests.values()].reverse();
   const micLabel = t({ idle: "speak", recording: "stop", thinking: "thinking", off: "speak" }[s.micState]);
@@ -521,6 +534,11 @@ export default function Passenger() {
             <div className="pa-acts"><Listen lines={s.caption.text} /><button className="primary" onClick={() => { closeCaption(); bump(); }}>{t("ok")}</button></div>
           </motion.div>) : null}
       </AnimatePresence>
+
+      {!s.sheet && !s.conv.open ? (
+        <OnboardingFab lang={s.lang} onReplay={() => { s.onboarding = true; bump(); }}
+          onAskHelp={() => { attention(); closeSheet(); }} onChangeLanguage={chooseLanguage} onAccessibility={showSettings} />
+      ) : null}
     </div>
   );
 }
