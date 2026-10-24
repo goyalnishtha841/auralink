@@ -87,6 +87,13 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 .hdr-icon-btn:hover:not(:disabled) { border-color: var(--line-strong); background: #202024; }
 .hdr-icon-btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .hdr-icon-btn .icon .ic { width: 20px; height: 20px; }
+/* a labelled control (Phase/Zone) that sits in the same header row as the round icon buttons —
+   a small caption above a select, so it reads as one family of controls instead of a mismatched row. */
+.hdr-field { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.hdr-field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.hdr-field select { min-height: 40px; padding: 8px 12px; }
+.hdr-divider { width: 1px; align-self: stretch; min-height: 32px; background: var(--line); flex: none; }
+@media (max-width: 760px) { .hdr-divider { display: none; } }
 .settings-sheet { display: flex; flex-direction: column; gap: 16px; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .settings-row > span { font-weight: 500; }

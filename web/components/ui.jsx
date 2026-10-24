@@ -69,7 +69,7 @@ export function AppHeader({ online, title, sub, children, home = true }) {
       <span className={`dot ${online ? "on" : ""}`} title={online ? "Connected" : "Offline"} />
       <h1>{title}{sub ? <span className="muted">{sub}</span> : null}</h1>
       {children}
-      {home ? <a href="/" aria-label="Home"><button className="ghost"><Icon id="home" /></button></a> : null}
+      {home ? <a href="/" aria-label="Home"><button type="button" className="hdr-icon-btn"><Icon id="home" /></button></a> : null}
     </header>
   );
 }

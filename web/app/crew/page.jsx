@@ -55,7 +55,6 @@ export default function Crew() {
   const [paRecOn, setPaRecOn] = useState(false);
   const [myName, setMyName] = useState("");
   const [myZone, setMyZone] = useState("all");
-  const [showMineOnly, setShowMineOnly] = useState(false);
   const myInfo = useRef({ name: "", zone: "all" });
   const socket = useRef(null), audio = useRef(null), paRec = useRef(null);
   const seenUrgent = useRef(new Set()), announced = useRef(null), announcedSymptom = useRef(new Set());
@@ -101,9 +100,16 @@ export default function Crew() {
     canSpeak("ja").then(setJaVoice);
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem("auralink-crew-id") || "{}"); } catch { /* blocked */ }
-    if (saved.name) { setMyName(saved.name); setShowMineOnly(true); }
+    // crew no longer type a name — a short per-device tag is generated once and reused, so
+    // "claim"/"release" on a request still knows which tablet is on it without asking anyone to fill in a field.
+    let tag = saved.name;
+    if (!tag) {
+      const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+      tag = `Crew-${letters[Math.floor(Math.random() * letters.length)]}${Math.floor(Math.random() * 10)}`;
+    }
+    setMyName(tag);
     if (saved.zone) setMyZone(saved.zone);
-    myInfo.current = { name: saved.name || "", zone: saved.zone || "all" };
+    myInfo.current = { name: tag, zone: saved.zone || "all" };
     loadConfig().then((c) => {
       setCfg(c);
       socket.current = connect("/ws/crew", (msg) => {
@@ -140,10 +146,10 @@ export default function Crew() {
 
   const send = (m) => socket.current?.send(m);
 
-  function saveIdentity(name, zone) {
-    setMyName(name); setMyZone(zone); setShowMineOnly(true);
-    try { localStorage.setItem("auralink-crew-id", JSON.stringify({ name, zone })); } catch { /* blocked */ }
-    sendHello(name, zone);
+  function saveIdentity(zone) {
+    setMyZone(zone);
+    try { localStorage.setItem("auralink-crew-id", JSON.stringify({ name: myName, zone })); } catch { /* blocked */ }
+    sendHello(myName, zone);
   }
 
   async function refreshBriefing() {
@@ -192,38 +198,37 @@ export default function Crew() {
   const PA = Object.fromEntries((cfg.announcements || []).map((a) => [a.id, a]));
   const cards = state?.cards || [];
   const openUrgent = cards.filter((c) => c.urgent && c.status !== "acknowledged");
-  const visibleCards = showMineOnly && myZone !== "all" ? cards.filter((c) => c.urgent || c.zone === myZone) : cards;
+  const visibleCards = myZone !== "all" ? cards.filter((c) => c.urgent || c.zone === myZone) : cards;
 
   return (
     <>
       <Ambient />
       <AppHeader online={online} title="客室乗務員パネル" sub="Crew panel">
-        <label className="row muted" title="Tells the matcher what part of the flight this is, so it can favour phase-relevant words — e.g. 'meal' makes food items more likely than during cruise.">
-          飛行フェーズ Phase
+        <label className="hdr-field" title="Tells the matcher what part of the flight this is, so it can favour phase-relevant words — e.g. 'meal' makes food items more likely than during cruise.">
+          <span className="hdr-field-label">飛行フェーズ Phase</span>
           <select value={state?.phase || "cruise"} onChange={(e) => send({ type: "phase", phase: e.target.value })}>
             {cfg.phases.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
-        <button className="ghost" aria-pressed={soundOn} onClick={() => setSoundOn((x) => !x)}
-          title="Plays a chime on this tablet the moment a new urgent (possible medical) request comes in.">
-          <Icon id="bell" /> {soundOn ? "音 Sound on" : "消音 Muted"}</button>
-        <button className="ghost" onClick={() => setPb({ seat: null })}><Icon id="chat" /> 会話帳 Phrasebook</button>
+
+        <div className="hdr-divider" aria-hidden="true" />
+
+        <button type="button" className={`hdr-icon-btn ${soundOn ? "on" : ""}`} aria-pressed={soundOn} onClick={() => setSoundOn((x) => !x)}
+          title="Sound: plays a chime on this tablet the moment a new urgent (possible medical) request comes in. Click to mute.">
+          <Icon id="bell" /></button>
         {jaVoice ? (
-          <label className="row muted" title="When a passenger reports a medical symptom, speaks the seat and symptom aloud in Japanese — useful if you're not looking at the screen.">
-            <input type="checkbox" checked={readAloud} onChange={(e) => setReadAloud(e.target.checked)} /> 読み上げ Read aloud</label>
+          <button type="button" className={`hdr-icon-btn ${readAloud ? "on" : ""}`} aria-pressed={readAloud} onClick={() => setReadAloud((x) => !x)}
+            title="Read aloud: when a passenger reports a medical symptom, speaks the seat and symptom aloud in Japanese — useful if you're not looking at the screen. Off by default.">
+            <Icon id="speaker" /></button>
         ) : null}
-        <label className="row muted" title="Optional. Shown on a request you Claim, so other crew can see it's you handling it.">自分 Me
-          <input className="mono" style={{ width: 90 }} placeholder="optional" value={myName}
-            onChange={(e) => setMyName(e.target.value)}
-            onBlur={() => saveIdentity(myName.trim(), myZone)} /></label>
-        <label className="row muted" title="Filters the request list to your rows, and is what 'Everyone / my zone' below switches between.">担当 Zone
-          <select value={myZone} onChange={(e) => saveIdentity(myName.trim(), e.target.value)}>
+        <button className="ghost" onClick={() => setPb({ seat: null })}><Icon id="chat" /> 会話帳 Phrasebook</button>
+
+        <div className="hdr-divider" aria-hidden="true" />
+
+        <label className="hdr-field" title="Filters the request list to your cabin zone (urgent requests always still show). Pick 全体 All to see every request again.">
+          <span className="hdr-field-label">担当 Zone</span>
+          <select value={myZone} onChange={(e) => saveIdentity(e.target.value)}>
             <option value="all">全体 All</option>
             {(cfg.crew_zones || []).map((z) => <option key={z.id} value={z.id}>区画 {z.id} · rows {Math.min(...z.seats.map((s) => +s.slice(0, -1)))}-{Math.max(...z.seats.map((s) => +s.slice(0, -1)))}</option>)}
           </select></label>
-        {myZone !== "all" ? (
-          <button className="ghost" aria-pressed={showMineOnly} onClick={() => setShowMineOnly((x) => !x)}>
-            {showMineOnly ? `自分の区画 ${myZone}` : "全員 Everyone"}
-          </button>
-        ) : null}
       </AppHeader>
       {(state?.crew_roster?.length) ? (
         <p className="muted mono crew-shell" style={{ margin: "0 auto", padding: "0 20px" }}>
@@ -255,7 +260,7 @@ export default function Crew() {
         <div className="crew-layout">
           <div className="col">
             <section className="panel">
-              <h2>リクエスト Requests{showMineOnly && myZone !== "all" ? ` · 区画 ${myZone}` : ""}</h2>
+              <h2>リクエスト Requests{myZone !== "all" ? ` · 区画 ${myZone}` : ""}</h2>
               <div className="list">
                 <AnimatePresence initial={false}>
                   {visibleCards.map((c) => <CardView key={c.id} c={c} cfg={cfg} send={send} myName={myName} onTalk={() => setPb({ seat: c.seat })} />)}
