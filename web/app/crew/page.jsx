@@ -220,12 +220,12 @@ export default function Crew() {
         ) : null}
       </AppHeader>
       {(state?.crew_roster?.length) ? (
-        <p className="muted mono" style={{ maxWidth: 1320, margin: "0 auto", padding: "0 20px" }}>
+        <p className="muted mono crew-shell" style={{ margin: "0 auto", padding: "0 20px" }}>
           乗務員 Crew online: {state.crew_roster.map((m) => `${m.name}${m.zone !== "all" ? ` (${m.zone})` : ""}`).join(" · ")}
         </p>
       ) : null}
 
-      <main className="app" style={{ maxWidth: 1320 }}>
+      <main className="app crew-shell">
         <AnimatePresence>
           {openUrgent.map((c) => (
             <motion.div key={c.id} className="alarm" role="alert" initial={{ opacity: 0, y: -16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, height: 0 }} transition={{ ease }}>

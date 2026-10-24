@@ -474,7 +474,8 @@ export default function Passenger() {
         <button className="hdr-icon-btn" aria-label={t("settingsTitle")} title={t("settingsTitle")} onClick={showSettings}><Icon id="settings" /></button>
       </header>
 
-      <main className="app" style={{ maxWidth: 980 }}>
+      <main className="app pax-shell">
+        <div className="pax-col pax-col-main">
         {!pictureMode() ? (
           <motion.section className="panel ask-hero" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
             {!s.conv.open ? (
@@ -522,7 +523,9 @@ export default function Passenger() {
           <IntentGrid intents={s.cfg.intents} lang={s.lang} big={pictureMode()} onPick={(intent) => socket.current.send({ type: "icon", intent })} />
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>{t("shakeHint")}</p>
         </motion.section>
+        </div>
 
+        <div className="pax-col pax-col-side">
         <motion.section className="panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.16, ease }}>
           <h2>{t("requestsLabel")}</h2>
           <div className="list">
@@ -545,6 +548,7 @@ export default function Passenger() {
             ) : null}
           </div>
         </motion.section>
+        </div>
       </main>
 
       <Sheet content={s.sheet} big={bigMode()} onClose={closeSheet} />
