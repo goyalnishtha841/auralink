@@ -604,8 +604,6 @@ export default function Landing() {
                 <Reveal as="a" className="launch-card" href={href} key={href} delay={k * 0.07}><Icon id={ic} /><h3>{h}</h3><p>{p}</p><span className="go">Open<Icon id="arrow" /></span></Reveal>
               ))}
             </div>
-            <p className="note">Tip: open Passenger and Crew side by side, or Passenger on your phone. Airport: <a href="/checkin">check-in preferences</a>.
-              Demo tools: <a href="/presenter">presenter console</a> · <a href="/report">flight report</a> · <a href="/phone-setup">phone setup</a> · <a href="/seats">printable seat QR cards</a> · <a href="/noise">cabin-noise player</a>.</p>
           </div>
         </section>
       </main>

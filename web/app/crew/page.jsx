@@ -43,7 +43,7 @@ export default function Crew() {
   const [readAloud, setReadAloud] = useState(false);
   const [convMuted, setConvMuted] = useState(false);
   const [jaVoice, setJaVoice] = useState(false);
-  const [pb, setPb] = useState(null);           // {seat, lang}
+  const [pb, setPb] = useState(null);           // {seat} or null
   const [pickedSeat, setPickedSeat] = useState(null);
   const [rightTab, setRightTab] = useState("map");
   const [briefing, setBriefing] = useState(null);
@@ -198,17 +198,23 @@ export default function Crew() {
     <>
       <Ambient />
       <AppHeader online={online} title="客室乗務員パネル" sub="Crew panel">
-        <label className="row muted">飛行フェーズ Phase
+        <label className="row muted" title="Tells the matcher what part of the flight this is, so it can favour phase-relevant words — e.g. 'meal' makes food items more likely than during cruise.">
+          飛行フェーズ Phase
           <select value={state?.phase || "cruise"} onChange={(e) => send({ type: "phase", phase: e.target.value })}>
             {cfg.phases.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
-        <button className="ghost" aria-pressed={soundOn} onClick={() => setSoundOn((x) => !x)}><Icon id="bell" /> {soundOn ? "音 Sound on" : "消音 Muted"}</button>
-        <button className="ghost" onClick={() => setPb({ seat: null, lang: "hi" })}><Icon id="chat" /> 会話帳 Phrasebook</button>
-        {jaVoice ? <label className="row muted"><input type="checkbox" checked={readAloud} onChange={(e) => setReadAloud(e.target.checked)} /> 読み上げ Read aloud</label> : null}
-        <label className="row muted">自分 Me
-          <input className="mono" style={{ width: 90 }} placeholder="name" value={myName}
+        <button className="ghost" aria-pressed={soundOn} onClick={() => setSoundOn((x) => !x)}
+          title="Plays a chime on this tablet the moment a new urgent (possible medical) request comes in.">
+          <Icon id="bell" /> {soundOn ? "音 Sound on" : "消音 Muted"}</button>
+        <button className="ghost" onClick={() => setPb({ seat: null })}><Icon id="chat" /> 会話帳 Phrasebook</button>
+        {jaVoice ? (
+          <label className="row muted" title="When a passenger reports a medical symptom, speaks the seat and symptom aloud in Japanese — useful if you're not looking at the screen.">
+            <input type="checkbox" checked={readAloud} onChange={(e) => setReadAloud(e.target.checked)} /> 読み上げ Read aloud</label>
+        ) : null}
+        <label className="row muted" title="Optional. Shown on a request you Claim, so other crew can see it's you handling it.">自分 Me
+          <input className="mono" style={{ width: 90 }} placeholder="optional" value={myName}
             onChange={(e) => setMyName(e.target.value)}
             onBlur={() => saveIdentity(myName.trim(), myZone)} /></label>
-        <label className="row muted">担当 Zone
+        <label className="row muted" title="Filters the request list to your rows, and is what 'Everyone / my zone' below switches between.">担当 Zone
           <select value={myZone} onChange={(e) => saveIdentity(myName.trim(), e.target.value)}>
             <option value="all">全体 All</option>
             {(cfg.crew_zones || []).map((z) => <option key={z.id} value={z.id}>区画 {z.id} · rows {Math.min(...z.seats.map((s) => +s.slice(0, -1)))}-{Math.max(...z.seats.map((s) => +s.slice(0, -1)))}</option>)}
@@ -252,7 +258,7 @@ export default function Crew() {
               <h2>リクエスト Requests{showMineOnly && myZone !== "all" ? ` · 区画 ${myZone}` : ""}</h2>
               <div className="list">
                 <AnimatePresence initial={false}>
-                  {visibleCards.map((c) => <CardView key={c.id} c={c} cfg={cfg} send={send} myName={myName} onTalk={() => setPb({ seat: c.seat, lang: c.lang })} />)}
+                  {visibleCards.map((c) => <CardView key={c.id} c={c} cfg={cfg} send={send} myName={myName} onTalk={() => setPb({ seat: c.seat })} />)}
                 </AnimatePresence>
                 {!visibleCards.length ? <p className="muted" style={{ margin: 0 }}>リクエストなし · No open requests</p> : null}
               </div>
@@ -261,7 +267,7 @@ export default function Crew() {
             <section className="panel">
               <h2>乗客のニーズ Passenger needs</h2>
               <p className="muted" style={{ margin: 0 }}>From check-in and the passengers' own settings. Plan who may need help before take-off.</p>
-              <Needs needs={state?.seat_needs || []} LANG_NAME={LANG_NAME} onTalk={(n) => setPb({ seat: n.id, lang: n.lang })} />
+              <Needs needs={state?.seat_needs || []} LANG_NAME={LANG_NAME} onTalk={(n) => setPb({ seat: n.id })} />
             </section>
           </div>
 
@@ -288,7 +294,7 @@ export default function Crew() {
             ) : null}
             <Sheet content={pickedSeat ? (
               <SeatDetail seat={pickedSeat} state={state} cfg={cfg} send={send} myName={myName} LANG_NAME={LANG_NAME}
-                onTalk={(lang) => setPb({ seat: pickedSeat, lang })} onChat={() => { setRightTab("chat"); setPickedSeat(null); }} />
+                onTalk={() => setPb({ seat: pickedSeat })} onChat={() => { setRightTab("chat"); setPickedSeat(null); }} />
             ) : null} onClose={() => setPickedSeat(null)} />
 
             {rightTab === "safety" ? (
@@ -360,7 +366,7 @@ export default function Crew() {
         </div>
       </main>
 
-      <AnimatePresence>{pb ? <Phrasebook key="pb" cfg={cfg} seat={pb.seat} lang={pb.lang} onLang={(l) => setPb({ ...pb, lang: l })} onClose={() => setPb(null)} /> : null}</AnimatePresence>
+      <AnimatePresence>{pb ? <Phrasebook key="pb" cfg={cfg} seat={pb.seat} onClose={() => setPb(null)} /> : null}</AnimatePresence>
     </>
   );
 }
@@ -616,30 +622,29 @@ function Round({ state, LABEL, send }) {
   </>);
 }
 
-function Phrasebook({ cfg, seat, lang, onLang, onClose }) {
+function Phrasebook({ cfg, seat, onClose }) {
   const PB = cfg.phrasebook;
+  const lang = "en";   // kept simple on purpose: crew's own Japanese plus a universal English fallback
   const [ui, setUi] = useState({});
-  const [voice, setVoice] = useState(false);
   const [phrase, setPhrase] = useState(null);
   const [answer, setAnswer] = useState("");
   const log = useRef([]);
   useEffect(() => {
     fetch(`/api/i18n/${lang}`).then((r) => r.json()).then(setUi).catch(() => setUi({}));
-    canSpeak(lang).then(setVoice);
-    setPhrase(null);
-  }, [lang]);
+  }, []); // eslint-disable-line
   const text = phrase ? phrase.text[lang] || phrase.text.en : "";
-  useEffect(() => { if (phrase && voice) speak(text, lang); setAnswer(""); }, [phrase]); // eslint-disable-line
+  // Always attempt it, rather than hiding the button behind an async voice pre-check that can be
+  // wrong or slow: speak() already no-ops harmlessly if the browser truly has no voice for this.
+  useEffect(() => { if (phrase) speak(text, lang); setAnswer(""); }, [phrase]); // eslint-disable-line
   const answerWith = (ja, en) => {
     setAnswer(`回答: ${ja} · ${en}`);
     log.current.push(`${seat || ""} ${phrase.text.ja} → ${ja} (${en})`);
-    if (voice) speak(ui.thanks || "", lang);
+    speak(ui.thanks || "", lang);
   };
   return (
     <motion.div className="pb" role="dialog" aria-label="Phrasebook" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 30 }} transition={{ duration: 0.35, ease }}>
       <div className="pb-top">
         <h2>{seat ? `${seat} · ` : ""}会話帳 Phrasebook</h2>
-        <select aria-label="Passenger language" value={lang} onChange={(e) => onLang(e.target.value)}>{cfg.languages.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}</select>
         <button onClick={onClose}><Icon id="close" /> 閉じる Close</button>
       </div>
       <AnimatePresence mode="wait">
@@ -657,7 +662,7 @@ function Phrasebook({ cfg, seat, lang, onLang, onClose }) {
             <p className="hint">タブレットをお客様に向けてください · Turn the tablet to the passenger</p>
             <p className="bigtext" lang={lang}>{text}</p>
             <p className="muted" style={{ fontSize: 16, margin: 0 }}>{phrase.text.ja} · {phrase.text.en}</p>
-            {voice ? <div><button onClick={() => speak(text, lang)}><Icon id="speaker" /> もう一度 Again</button></div> : null}
+            <div><button onClick={() => speak(text, lang)}><Icon id="speaker" /> もう一度 Again</button></div>
             {phrase.yes_no ? <div className="answers">
               <button className="yes" onClick={() => answerWith("はい", "Yes")}>{ui.yes || "Yes"}</button>
               <button className="no" onClick={() => answerWith("いいえ", "No")}>{ui.no || "No"}</button>

@@ -124,18 +124,18 @@ export default function Passenger() {
         <div className="settings-row">
           <span>{t("seniorLabel")}</span>
           <button className="toggle" role="switch" aria-pressed={s.senior} aria-label={t("seniorLabel")}
-            onClick={() => { s.senior = !s.senior; bump(); hello(); }} />
+            onClick={() => { s.senior = !s.senior; showSettings(); hello(); }} />
         </div>
         <div className="settings-row">
           <span>{t("picturesLabel")}</span>
           <button className="toggle" role="switch" aria-pressed={s.pictures} aria-label={t("picturesLabel")}
-            onClick={() => { s.pictures = !s.pictures; bump(); hello(); }} />
+            onClick={() => { s.pictures = !s.pictures; showSettings(); hello(); }} />
         </div>
         {s.voiceOK ? (
           <div className="settings-row">
             <span>{t("readLabel")}</span>
             <button className="toggle" role="switch" aria-pressed={s.readAloud} aria-label={t("readLabel")}
-              onClick={() => { s.readAloud = !s.readAloud; if (s.readAloud) speak(t("readLabel"), s.lang); bump(); hello(); }} />
+              onClick={() => { s.readAloud = !s.readAloud; if (s.readAloud) speak(t("readLabel"), s.lang); showSettings(); hello(); }} />
           </div>
         ) : null}
         <div className="settings-row" style={{ flexDirection: "column", alignItems: "stretch", gap: 8 }}>
@@ -144,7 +144,7 @@ export default function Passenger() {
             {Object.entries(ACCESSIBILITY_META).map(([id, m]) => (
               <button key={id} className={`tile ${s.accessibility === id ? "active" : ""}`}
                 aria-pressed={s.accessibility === id}
-                onClick={() => { s.accessibility = s.accessibility === id ? null : id; bump(); hello(); }}>
+                onClick={() => { s.accessibility = s.accessibility === id ? null : id; showSettings(); hello(); }}>
                 <Icon id={m.icon} />{s.lang === "ja" ? m.ja : m.en}
               </button>
             ))}
@@ -567,18 +567,20 @@ export default function Passenger() {
 }
 
 function IntentGrid({ intents, lang, onPick, big = false }) {
+  // A plain wrapping grid, not a carousel: 8 intents fit on screen at once without needing to
+  // swipe through pages, on a phone or a tablet/laptop alike.
   return (
-    <Carousel big={big} stacked>
+    <div className={`grid ${big ? "big" : ""}`}>
       {intents.map((i, k) => {
         const label = i.label[lang] || i.label.en;
         return (
-          <motion.button key={i.id} className="tile compact" onClick={() => onPick(i.id)}
+          <motion.button key={i.id} className="tile" onClick={() => onPick(i.id)}
             title={label} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.03 * k, duration: 0.45, ease }} whileTap={{ scale: 0.95 }}>
             <Icon id={i.id} />{label}
           </motion.button>
         );
       })}
-    </Carousel>
+    </div>
   );
 }
