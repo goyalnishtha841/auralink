@@ -72,9 +72,9 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.02em; }
 /* header as a floating rounded card, not an edge-to-edge bar: a circular icon button each side,
    a short title block in the middle. Matches the softer "card" app shells elsewhere, in dark. */
 .app-header {
-  position: sticky; top: 12px; z-index: 20; display: flex; align-items: center; gap: 14px;
-  margin: 12px clamp(14px, 3vw, 28px) 0; padding: 14px 14px 14px 20px; border-radius: 28px;
-  background: var(--surface-card); border: 1px solid var(--line-strong); box-shadow: 0 10px 34px -16px rgba(0, 0, 0, 0.6);
+  position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 14px;
+  margin: 0; padding: 14px clamp(14px, 3vw, 28px); border-radius: 0;
+  background: var(--surface-card); border-bottom: 1px solid var(--line-strong); box-shadow: 0 10px 34px -16px rgba(0, 0, 0, 0.6);
 }
 .app-header h1 { font: 600 21px/1.25 var(--display); margin: 0; flex: 1 1 auto; min-width: 130px; }
 .app-header .hdr-sub { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: var(--muted); font-size: 13px; }
