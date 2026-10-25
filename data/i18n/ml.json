@@ -63,5 +63,7 @@
   "accessibilityLabel": "പ്രവേശനക്ഷമത",
   "convReplyPlaying": "മൈക്രോസോഫ്റ്റ് നിർത്തി",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "കണക്ഷൻ ഇല്ല",
+  "offlineBody": "ഈ സ്ക്രീൻ ഒരു ക്രൂ അംഗത്തെ കാണിക്കുക. താഴെയുള്ള ഒരു ചിത്രത്തിൽ ടാപ്പുചെയ്യുക — കണക്ഷൻ തിരിച്ചെത്തിയാലുടൻ ഇത് അയയ്ക്കും."
 }

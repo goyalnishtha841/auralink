@@ -1,3 +1,17 @@
+/* offline backup roster: invisible here, the only thing left once the browser is told to print
+   (window.print(), from the "Print offline backup" button) -- same idea as app/seats' QR cards. */
+.offline-roster { display: none; }
+@media print {
+  body * { visibility: hidden; }
+  .offline-roster, .offline-roster * { visibility: visible; }
+  .offline-roster { display: block; position: absolute; inset: 0; color: #0c0c0c; background: #fff; padding: 16mm; }
+  .offline-roster h1 { font: 800 22px var(--display); margin: 0 0 8px; }
+  .offline-roster p { font-size: 13px; line-height: 1.5; margin: 0 0 14px; }
+  .offline-roster table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .offline-roster th, .offline-roster td { border: 1px solid #999; padding: 5px 8px; text-align: left; }
+  .offline-roster th { background: #eee; }
+}
+
 .crew-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 960px) { .crew-layout { grid-template-columns: 1fr; } }
 .col { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
@@ -12,6 +26,8 @@
 @keyframes alarmPulse { 50% { background: rgba(255, 61, 90, 0.32); } }
 .alarm.turbulence { background: rgba(246, 184, 92, 0.12); border-color: var(--warn); box-shadow: 0 0 60px -20px var(--warn); animation: turbulencePulse 1s ease-in-out 4; }
 @keyframes turbulencePulse { 50% { background: rgba(246, 184, 92, 0.32); } }
+.alarm.hub-down { background: rgba(246, 184, 92, 0.12); border-color: var(--warn); box-shadow: 0 0 60px -20px var(--warn); }
+.alarm.hub-down .icon .ic { width: 22px; height: 22px; color: var(--warn); }
 .citem { align-items: flex-start; }
 .citem .who { font: 800 22px var(--display); min-width: 56px; letter-spacing: -0.02em; }
 .citem .body { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
