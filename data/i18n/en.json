@@ -64,5 +64,7 @@
   "mute": "Mute voice",
   "unmute": "Unmute voice",
   "accessibilityLabel": "Accessibility",
-  "convReplyPlaying": "Reply playing — mic paused"
+  "convReplyPlaying": "Reply playing — mic paused",
+  "offlineTitle": "No connection",
+  "offlineBody": "Show this screen to a flight attendant. Tap a picture below — it will send as soon as the connection returns."
 }

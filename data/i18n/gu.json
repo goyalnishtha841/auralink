@@ -63,5 +63,7 @@
   "accessibilityLabel": "સુલભતા",
   "convReplyPlaying": "જવાબ રમી રહ્યા છે  માઇક્રો પાઉઝ",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "કનેક્શન નથી",
+  "offlineBody": "આ સ્ક્રીન ક્રૂ મેમ્બરને બતાવો. નીચે આપેલા ચિત્ર પર ટેપ કરો — કનેક્શન પાછું આવતાં જ તે મોકલાશે."
 }

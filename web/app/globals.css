@@ -220,6 +220,12 @@ input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px;
 .ask-hero { display: flex; flex-direction: column; gap: 16px; }
 .ask-hero h2 { margin: 0; font: 700 clamp(24px, 6vw, 32px)/1.2 var(--display); letter-spacing: -0.02em; }
 .ask-hero .sub { margin: 0; color: var(--muted); font-size: 14px; }
+/* fails safe: shown instead of the (hub-dependent) type/speak bar once the socket has been down
+   for a while -- the picture grid below it keeps working with nothing already loaded in the page. */
+.offline-card { border-color: var(--warn); box-shadow: 0 0 60px -28px var(--warn); }
+.offline-card h2 { display: flex; align-items: center; gap: 10px; color: var(--warn); }
+.offline-card h2 .icon .ic { width: 28px; height: 28px; color: var(--warn); }
+.offline-body { margin: 0; font-size: 15px; line-height: 1.5; }
 .ask-bar { display: flex; align-items: center; gap: 8px; background: var(--bg-2); border: 1px solid var(--line-strong);
   border-radius: 999px; padding: 8px 8px 8px 24px; min-height: 68px; transition: border-color 0.2s var(--ease); }
 .ask-bar:focus-within { border-color: var(--accent); }
