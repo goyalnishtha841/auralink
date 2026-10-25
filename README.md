@@ -27,6 +27,9 @@ pinned: false
     <img src="https://img.shields.io/badge/JAL--PS--02-Thapar%20Japan%20Hackathon%202026-a87cff.svg" alt="JAL-PS-02, Thapar Japan Hackathon 2026" />
   </p>
 
+  <p><a href="https://auralink-o11a.onrender.com/start"><strong>▶ Live demo</strong></a> -- open <code>/start</code> for the three-step walkthrough, passenger and crew PIN<br />
+  <sub>Render's free tier sleeps after inactivity, so the first open can take up to a minute, and Free Talk's translation/voice is dropped (see <a href="#deploying-a-live-demo">deploying a live demo</a>).</sub></p>
+
   <br />
   <img src="docs/images/landing.jpg" width="900" alt="The Auralink landing page: 'Every passenger, understood.' next to a crew tablet showing two Japanese request cards for seat 34K" />
 </div>
@@ -279,7 +282,7 @@ certificate on each demo phone.
 | Option | Use when | How |
 |---|---|---|
 | Docker (full) | A persistent server with a few GB RAM, e.g. an Oracle Cloud Always Free Ampere VM | `docker compose up -d` (`Dockerfile`, `docker-compose.yml`, `Caddyfile` — automatic HTTPS) |
-| Render free web service | A free, no-card, always-on-ish link, trading away Free Talk's translation/voice | Connect the repo on Render as a **Blueprint** (`render.yaml` → `Dockerfile.render`, a trimmed build) |
+| Render free web service | A free, no-card, always-on-ish link, trading away Free Talk's translation/voice | Connect the repo on Render as a **Blueprint** (`render.yaml` → `Dockerfile.render`, a trimmed build) -- live at [auralink-o11a.onrender.com](https://auralink-o11a.onrender.com/start) |
 | Hugging Face Spaces | A free, no-card, full-featured link with more RAM than Render's free tier | Push to a Space's git remote (SDK: Docker — this README's front matter already has it) |
 | Cloudflare Quick Tunnel | Fastest: a public HTTPS link to a hub already running on your own laptop | `cloudflared tunnel --url http://localhost:8000` |
 
