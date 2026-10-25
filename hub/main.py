@@ -516,12 +516,19 @@ PA_MAX_S = 30
 class PaHeardIn(BaseModel):
     text: str | None = Field(None, max_length=600)   # typed (presenter backup, tests) ...
     audio_b64: str | None = None                       # ... or the crew's announcement, 16 kHz mono int16
+    fast: bool = False   # still recording: use the quick passenger model for a live-forming caption,
+                          # not the slower, more accurate one `/api/pa/send` will actually broadcast
 
 
 @app.post("/api/pa/match", dependencies=CREW)
 async def pa_match(body: PaHeardIn) -> dict:
     """What did the crew announce? Speech is decoded as Japanese and English; every reading is matched
-    against the library and the best one wins. Nothing is sent to passengers until the crew tap Send."""
+    against the library and the best one wins. Nothing is sent to passengers until the crew tap Send.
+
+    `fast=True` (the tablet keeps calling this every second or so while still recording, on a
+    growing snapshot of the same announcement) re-uses the quick model already loaded for passenger
+    requests, so crew see the caption take shape live; it is never what gets sent. The crew's own
+    "Match" tap after they stop recording always uses the accurate model, same as before."""
     import base64
 
     import numpy as np
@@ -532,7 +539,7 @@ async def pa_match(body: PaHeardIn) -> dict:
             raise HTTPException(413, f"Announcement longer than {PA_MAX_S} s: send it in parts")
         audio = np.frombuffer(pcm[: len(pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768
         try:
-            tr = await asyncio.to_thread(run_asr, audio, ("ja", "en"), PA_ASR_MODEL)
+            tr = await asyncio.to_thread(run_asr, audio, ("ja", "en"), ASR_MODEL if body.fast else PA_ASR_MODEL)
         except ImportError:
             raise HTTPException(503, "voice unavailable: faster-whisper not installed") from None
         readings = [h.text for h in tr.hypotheses] or [""]
