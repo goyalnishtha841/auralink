@@ -599,8 +599,7 @@ export default function Landing() {
             <div className="launch-grid">
               {[["/passenger", "mic", "Passenger", "Pick your seat, then speak, tap or type a request."],
                 ["/crew", "tablet", "Crew tablet", "Request cards, replies and the safety heat map."],
-                ["/judge", "wave", "Under the hood", "Every guess, score and decision, live."],
-                ["/record", "check", "Record voices", "Help us test with your own accent."]].map(([href, ic, h, p], k) => (
+                ["/judge", "wave", "Under the hood", "Every guess, score and decision, live."]].map(([href, ic, h, p], k) => (
                 <Reveal as="a" className="launch-card" href={href} key={href} delay={k * 0.07}><Icon id={ic} /><h3>{h}</h3><p>{p}</p><span className="go">Open<Icon id="arrow" /></span></Reveal>
               ))}
             </div>

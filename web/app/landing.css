@@ -272,7 +272,7 @@
 .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .status.on i { background: var(--ok); box-shadow: 0 0 0 4px rgba(95, 211, 155, 0.15); }
 .status.off i { background: var(--bad); }
-.launch-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 36px; }
+.launch-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 36px; }
 @media (max-width: 980px) { .launch-grid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .launch-grid { grid-template-columns: 1fr; } }
 .launch-card { display: flex; flex-direction: column; gap: 10px; padding: 26px; border-radius: 22px; border: 1px solid var(--line); background: linear-gradient(165deg, rgba(255, 255, 255, 0.05), transparent 40%), var(--surface); text-decoration: none; transition: border-color 0.35s, transform 0.35s var(--ease), box-shadow 0.35s; }
