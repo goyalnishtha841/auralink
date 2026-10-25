@@ -34,11 +34,13 @@ const RIGHT_TABS = [
   { id: "chat", ja: "会話", en: "Live chat" },
   { id: "exit", ja: "非常口", en: "Exit check" },
 ];
+const HUB_DOWN_AFTER_MS = 6000;   // hub.js retries every 1s; a handful of failed tries, not one blip
 
 export default function Crew() {
   const [cfg, setCfg] = useState(null);
   const [state, setState] = useState(null);
   const [online, setOnline] = useState(false);
+  const [hubDown, setHubDown] = useState(false);   // sustained (not a 1s retry blip): show the fail-safe banner
   const [soundOn, setSoundOn] = useState(true);
   const [readAloud, setReadAloud] = useState(false);
   const [convMuted, setConvMuted] = useState(false);
@@ -53,10 +55,11 @@ export default function Crew() {
   const [paPick, setPaPick] = useState(null);
   const [paN, setPaN] = useState("");
   const [paRecOn, setPaRecOn] = useState(false);
+  const [paLive, setPaLive] = useState(null);   // caption taking shape while still recording, or null
   const [myName, setMyName] = useState("");
   const [myZone, setMyZone] = useState("all");
   const myInfo = useRef({ name: "", zone: "all" });
-  const socket = useRef(null), audio = useRef(null), paRec = useRef(null);
+  const socket = useRef(null), audio = useRef(null), paRec = useRef(null), paLiveBusy = useRef(false), hubDownTimer = useRef(0);
   const seenUrgent = useRef(new Set()), announced = useRef(null), announcedSymptom = useRef(new Set());
   const opts = useRef({ soundOn: true, readAloud: false, convMuted: false }); opts.current = { soundOn, readAloud, convMuted };
 
@@ -139,9 +142,19 @@ export default function Crew() {
           // crew's reply in their own language (app/passenger/page.jsx's onMessage)
           if (msg.from === "passenger" && msg.done && msg.translated && !opts.current.convMuted) speak(msg.translated, "ja");
         }
-      }, (on) => { setOnline(on); if (on && myInfo.current.name) sendHello(myInfo.current.name, myInfo.current.zone); });
+      }, (on) => {
+        setOnline(on);
+        if (on) {
+          clearTimeout(hubDownTimer.current); hubDownTimer.current = 0; setHubDown(false);
+          if (myInfo.current.name) sendHello(myInfo.current.name, myInfo.current.zone);
+        } else if (!hubDownTimer.current) {
+          // same fails-safe idea as the passenger phone (app/passenger/page.jsx): only arm on the
+          // first failed retry, since hub.js keeps retrying every 1s and each one calls this again
+          hubDownTimer.current = setTimeout(() => { hubDownTimer.current = 0; setHubDown(true); }, HUB_DOWN_AFTER_MS);
+        }
+      });
     });
-    return () => { socket.current?.close(); removeEventListener("pointerdown", unlock); };
+    return () => { socket.current?.close(); clearTimeout(hubDownTimer.current); removeEventListener("pointerdown", unlock); };
   }, []); // eslint-disable-line
 
   const send = (m) => socket.current?.send(m);
@@ -173,6 +186,19 @@ export default function Crew() {
       setPa(r); setPaPick(pick); setPaN(pick?.n || "");
     } catch (err) { setPa({ error: err.message }); }
   }
+  // While the crew keeps recording, show the caption taking shape -- a quick re-match on a growing
+  // snapshot of the same audio, with the fast model (never what gets sent; `paMic`'s final match
+  // after Stop always re-runs on the accurate model, same as before this existed). Never overlaps
+  // itself: a snapshot that arrives while the last one is still matching is simply dropped.
+  async function paMatchLive(buf) {
+    if (paLiveBusy.current) return;
+    paLiveBusy.current = true;
+    try {
+      const res = await crewFetch("/api/pa/match", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio_b64: await toBase64(buf), fast: true }) });
+      if (res.ok) setPaLive(await res.json());
+    } catch { /* a dropped live preview is not worth surfacing; the final match still runs on Stop */ }
+    paLiveBusy.current = false;
+  }
   async function paSend() {
     const n = paN.trim().toUpperCase() || null;
     const res = await crewFetch("/api/pa/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: paPick.id, n }) });
@@ -183,10 +209,11 @@ export default function Crew() {
     if (!paRec.current) {
       if (!Recorder.supported()) { setPa({ error: "マイク不可 Microphone needs https or localhost" }); return; }
       paRec.current = new Recorder();
-      try { await paRec.current.start(28, () => paRec.current && paMic()); } catch { paRec.current = null; return; }
+      setPaLive(null);
+      try { await paRec.current.start(28, () => paRec.current && paMic(), null, (buf) => paMatchLive(buf)); } catch { paRec.current = null; return; }
       setPaRecOn(true);
     } else {
-      const pcm = await paRec.current.stop(); paRec.current = null; setPaRecOn(false);
+      const pcm = await paRec.current.stop(); paRec.current = null; setPaRecOn(false); setPaLive(null);
       paMatch({ audio_b64: await toBase64(pcm) });
     }
   }
@@ -247,6 +274,15 @@ export default function Crew() {
         </AnimatePresence>
 
         <AnimatePresence>
+          {hubDown ? (
+            <motion.div className="alarm hub-down" role="alert" initial={{ opacity: 0, y: -16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, height: 0 }} transition={{ ease }}>
+              <Icon id="wifi_off" /><b>ハブ接続なし Hub connection lost</b>
+              <span>This tablet can't reach the cabin hub. New requests may not be showing. Print your offline backup (乗客のニーズ Passenger needs panel) if you haven't, and walk the cabin.</span>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <AnimatePresence>
           {state?.turbulence ? (
             <motion.div className="alarm turbulence" role="alert" initial={{ opacity: 0, y: -16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, height: 0 }} transition={{ ease }}>
               <b>揺れ? Turbulence?</b>
@@ -272,6 +308,10 @@ export default function Crew() {
             <section className="panel">
               <h2>乗客のニーズ Passenger needs</h2>
               <p className="muted" style={{ margin: 0 }}>From check-in and the passengers' own settings. Plan who may need help before take-off.</p>
+              <div className="row">
+                <button className="ghost" title="Print a paper backup of this list -- seat, language, accessibility -- for if the tablet or hub goes down mid-flight and you have to walk the cabin without it." onClick={() => window.print()}>
+                  <Icon id="print" /> バックアップ印刷 Print offline backup</button>
+              </div>
               <Needs needs={state?.seat_needs || []} LANG_NAME={LANG_NAME} onTalk={(n) => setPb({ seat: n.id })} />
             </section>
           </div>
@@ -321,6 +361,16 @@ export default function Crew() {
                   <input className="grow" name="pa" autoComplete="off" placeholder="…or type it: We have started our descent, 20 minutes" aria-label="Typed announcement" />
                   <button type="submit">照合 Match</button></form>
               </div>
+              <AnimatePresence>
+                {paRecOn && paLive?.heard ? (
+                  <motion.div className="pa-live" aria-live="polite" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <Icon id="mic" /><span className="muted">認識中 Hearing…</span> “{paLive.heard}”
+                    {paLive.verdict !== "none" && paLive.matches?.[0] ? (
+                      <span className="pill dim">→ {paLive.matches[0].title_ja} · {paLive.matches[0].title_en}</span>
+                    ) : null}
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
               <div className="pa-result" aria-live="polite">
                 {pa?.busy ? <span className="muted">照合中… Matching…</span> : null}
                 {pa?.error ? <span className="pill bad">エラー Error: {pa.error}</span> : null}
@@ -373,6 +423,7 @@ export default function Crew() {
       </main>
 
       <AnimatePresence>{pb ? <Phrasebook key="pb" cfg={cfg} seat={pb.seat} onClose={() => setPb(null)} /> : null}</AnimatePresence>
+      <OfflineRoster needs={state?.seat_needs || []} LANG_NAME={LANG_NAME} exitSeats={exitSeats} />
     </>
   );
 }
@@ -598,6 +649,35 @@ function Safety({ state, cfg, exitSeats, send }) {
           <div className="grow"><strong>手順 {a.step + 1}: {x.ja || ""}</strong><br /><span className="muted">Step {a.step + 1}: {x.en || ""}</span></div>
         </motion.div>); })}</div> : null}
   </>);
+}
+
+// Fails safe: printed in advance (Passenger needs -> "Print offline backup"), this is the one
+// thing that still works once the tablet can't reach the hub -- walk the cabin with paper instead
+// of a live screen. Invisible on screen; CSS (crew.css) shows only this and hides everything else
+// when the browser is told to print, same trick as the boarding-time seat QR cards (app/seats).
+function OfflineRoster({ needs, LANG_NAME, exitSeats }) {
+  return (
+    <div className="offline-roster">
+      <h1>Auralink — オフライン控え Offline backup</h1>
+      <p>Printed {new Date().toLocaleString()}. If the tablet or hub stops working, walk the cabin
+        and check these seats first -- their language, accessibility and any other noted needs.
+        Exit rows: {[...exitSeats].sort().join(", ") || "none set"}.</p>
+      {needs.length ? (
+        <table>
+          <thead><tr><th>Seat 座席</th><th>Language 言語</th><th>Accessibility 配慮事項</th><th>Notes</th></tr></thead>
+          <tbody>
+            {[...needs].sort((a, b) => a.id.localeCompare(b.id)).map((n) => (
+              <tr key={n.id}>
+                <td>{n.id}</td>
+                <td>{LANG_NAME[n.lang] || n.lang}</td>
+                <td>{n.accessibility ? `${ACCESSIBILITY_META[n.accessibility]?.en} · ${ACCESSIBILITY_META[n.accessibility]?.ja}` : ""}</td>
+                <td>{[n.pictures && "Pictures only", n.senior && "Large text", n.read && "Read aloud"].filter(Boolean).join(", ")}</td>
+              </tr>))}
+          </tbody>
+        </table>
+      ) : <p>No special needs recorded -- everyone is using English with default settings.</p>}
+    </div>
+  );
 }
 
 function Needs({ needs, LANG_NAME, onTalk }) {

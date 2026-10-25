@@ -63,5 +63,7 @@
   "accessibilityLabel": "ప్రాప్యత",
   "convReplyPlaying": "ప్రత్యుత్తరం ప్లే  మైక్రోస్టేషన్ నిలిపివేయబడింది",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "కనెక్షన్ లేదు",
+  "offlineBody": "ఈ స్క్రీన్‌ను ఒక సిబ్బంది సభ్యునికి చూపించండి. కింద ఉన్న చిత్రాన్ని నొక్కండి — కనెక్షన్ తిరిగి వచ్చిన వెంటనే ఇది పంపబడుతుంది."
 }
