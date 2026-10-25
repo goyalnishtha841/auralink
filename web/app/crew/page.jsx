@@ -472,9 +472,13 @@ function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
   for (const c of state.cards || []) (cardsBySeat[c.seat] ||= []).push(c);
   const rows = [...new Set(cfg.seats.map((x) => x.slice(0, -1)))];
 
+  // Colour a seat with an open request by what it most needs: urgent (possible medical) always
+  // wins; an accessibility passenger's request gets its own colour so crew know to bring the
+  // right kind of help, not just that something was asked; everything else is a plain open request.
   function statusFor(id) {
     const cards = cardsBySeat[id];
     if (cards?.some((c) => c.urgent && c.status !== "acknowledged")) return "urgent";
+    if (cards?.length && needBySeat[id]?.accessibility) return "accessible";
     if (cards?.length) return "open";
     return heat[id] === "offline" ? "offline" : "idle";
   }
@@ -483,6 +487,13 @@ function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
   // read front-to-back left-to-right; the 3 seats on each side of the aisle stack top-to-bottom
   // within it, with a gap for the aisle itself -- not a spreadsheet of rows and letters.
   return (
+    <div className="cabinmap-wrap">
+    <div className="cm-legend" aria-label="Seat colour legend">
+      <span><i className="sw" style={{ background: "var(--bad)" }} />至急・可能性のある医療 Urgent / possible medical</span>
+      <span><i className="sw" style={{ background: "var(--violet)" }} />要配慮のお客様の依頼 Accessibility passenger's request</span>
+      <span><i className="sw" style={{ background: "var(--warn)" }} />通常の依頼 Open request</span>
+      <span><i className="sw plain" />依頼なし No open request</span>
+    </div>
     <div className="cabinmap">
       {rows.map((row) => (
         <div className="cm-row" key={row}>
@@ -507,6 +518,7 @@ function CabinMap({ state, cfg, exitSeats, selected, onSelect }) {
             })}
           </div>
         </div>))}
+    </div>
     </div>
   );
 }

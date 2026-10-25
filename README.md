@@ -130,6 +130,8 @@ matching, and **1.0–1.2 s** from the end of speech to the confirm screen (targ
   [learned costs](#learned-accent-costs))
 - **Safety briefing that checks understanding**: a live seat heat map of who understood, who wants it
   explained again, and an exit-row check
+- **Colour-coded cabin map**: every seat with an open request is coloured by what it needs, at a
+  glance, across the whole cabin ([cabin map colours](#cabin-map-colours))
 - **Check-in at the gate** for language and accessibility needs ([check-in](#check-in-the-airport-stage))
 - **Read aloud** with the phone's offline voice ([read aloud](#read-aloud))
 - **Live PA captions** from pre-approved announcements, never machine translation ([PA captions](#live-pa-captions))
@@ -259,6 +261,24 @@ passenger's language, and a speaker button replays any of them. The crew tablet 
 requests in Japanese. Only the fixed, pre-approved sentences are spoken (`apps/speech.js`); online
 voice services are never used, and it stays off in picture-only mode. If a device has no voice for a
 language, the option is hidden.
+
+### Cabin map colours
+
+The crew tablet's **Cabin map** (always visible, left of the request list) colours every seat by
+what it most needs, with a legend printed right above it so any crew member — not just whoever set
+the system up — knows what each colour means at a glance:
+
+| Colour | Meaning |
+|---|---|
+| 🔴 Red, pulsing | Urgent / possible medical, not yet acknowledged — the same seats shown in the alarm banner |
+| 🟣 Violet | An accessibility passenger (deaf/hard of hearing, low vision, reduced mobility or cognitive — set at [check-in](#check-in-the-airport-stage) or on the passenger's own phone) has an open request |
+| 🟡 Amber | Any other open request |
+| ⚪ Plain | No open request |
+
+Urgent always wins the colour even for an accessibility passenger, since that needs the fastest
+response; the violet accessibility badge (a small icon in the seat's corner) still shows regardless
+of status, so crew can see who may need a different kind of help even with nothing currently open.
+Logic: `statusFor()` in [web/app/crew/page.jsx](web/app/crew/page.jsx).
 
 ### Live PA captions
 
