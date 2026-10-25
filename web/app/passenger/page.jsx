@@ -17,7 +17,7 @@ export default function Passenger() {
   const st = useRef(null);
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
-  if (!st.current) st.current = { ready: false, awaitingSeat: false, onboarding: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, name: null, voiceOK: false,
+  if (!st.current) st.current = { ready: false, awaitingSeat: false, seatInvalid: false, onboarding: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, name: null, voiceOK: false,
     micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: null,
     conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [], spoken: new Set() } };
   const s = st.current;
@@ -376,7 +376,7 @@ export default function Passenger() {
     socket.current = connect(`/ws/passenger/${s.seat}`, (msg) => ready.then(() => aliveRef.current && onMessage(msg)), (on) => {
       s.online = on; bump();
       if (on) ready.then(() => hello());
-    });
+    }, () => { s.seatInvalid = true; bump(); });
     (async () => {
       let checkedIn = false;
       if (!["lang", "senior", "mode", "read", "accessibility"].some((k) => p.has(k))) {
@@ -478,6 +478,18 @@ export default function Passenger() {
   }, []); // eslint-disable-line
 
   if (s.awaitingSeat) return <SeatGate cfg={s.cfg} onConfirm={confirmSeat} />;
+
+  if (s.seatInvalid) return (
+    <><Ambient />
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
+        <div className="panel" style={{ maxWidth: 360, textAlign: "center", display: "flex", flexDirection: "column", gap: 12 }}>
+          <h2 style={{ margin: 0 }}>Seat not found</h2>
+          <p className="muted" style={{ margin: 0 }}>“{s.seat}” isn’t a seat on this flight. Pick your seat below instead.</p>
+          <button className="primary" onClick={() => { location.href = "/passenger"; }}>Pick my seat</button>
+        </div>
+      </div>
+    </>
+  );
 
   if (!s.ready) return (<><Ambient /><div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><span className="mono faint">Auralink · connecting to the cabin…</span></div></>);
   if (s.onboarding) return (

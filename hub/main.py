@@ -717,6 +717,11 @@ def config() -> dict:
 @app.websocket("/ws/passenger/{seat}")
 async def passenger_ws(ws: WebSocket, seat: str) -> None:
     if seat not in cabin.seats:
+        # Closing before accept() rejects the handshake as a bare HTTP 403 -- the browser's
+        # WebSocket API never sees a close code for that, just an abnormal closure, so the
+        # passenger app has no way to tell "unknown seat" apart from "hub unreachable, keep
+        # retrying". Accept first so the 4404 close frame actually reaches it.
+        await ws.accept()
         await ws.close(code=4404)
         return
     await ws.accept()

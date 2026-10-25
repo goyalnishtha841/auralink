@@ -12,7 +12,9 @@ export function askCrewPin() {
 }
 
 // WebSocket that reconnects on its own; onStatus gets true/false for the connection dot.
-export function connect(path, onMessage, onStatus = () => {}) {
+// onFatal(code) fires for a close the socket should never retry (right now just 4404, an
+// unknown seat id -- retrying that forever just hangs the screen with no explanation).
+export function connect(path, onMessage, onStatus = () => {}, onFatal = () => {}) {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   let ws;
   let queue = [];
@@ -24,7 +26,9 @@ export function connect(path, onMessage, onStatus = () => {}) {
     ws.onclose = (e) => {
       onStatus(false);
       if (closed) return;
-      if (e.code === 4401) askCrewPin(); else setTimeout(open, 1000);
+      if (e.code === 4401) askCrewPin();
+      else if (e.code === 4404) onFatal(e.code);
+      else setTimeout(open, 1000);
     };
   };
   open();
