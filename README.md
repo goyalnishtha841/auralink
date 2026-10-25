@@ -15,7 +15,9 @@ pinned: false
 
   <p><strong>Every passenger, understood.</strong></p>
   <p>Repair-first communication between airline passengers and cabin crew, across accents, languages and a loud cabin.<br />
-  When speech is unclear, Auralink <strong>asks the passenger one simple question</strong> instead of guessing.</p>
+  When speech is unclear, Auralink <strong>asks the passenger one simple question</strong> instead of guessing.<br />
+  A guided onboarding assistant welcomes every passenger in their own language, and one shared scanner replaces a
+  QR code per seat.</p>
 
   <p>
     <a href="https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml"><img src="https://github.com/goyalnishtha841/auralink/actions/workflows/tests.yml/badge.svg" alt="tests" /></a>
@@ -48,11 +50,17 @@ Every sentence a passenger or crew member reads comes from a reviewed template.
 
 <table>
   <tr>
-    <td width="32%" valign="top"><img src="docs/images/passenger.jpg" alt="Passenger phone in Hindi asking 'Did you mean: water?' with a yes/no button and an icon grid" /><br /><sub><b>Passenger phone.</b> No app to install: scan the seat QR. Asks instead of guessing, in the passenger's language, with pictures.</sub></td>
-    <td width="68%" valign="top"><img src="docs/images/crew.png" alt="Crew tablet in Japanese with an urgent possible-medical card for seat 31C, safety briefing seat map and live PA captions" /><br /><sub><b>Crew tablet, in Japanese.</b> Urgent requests jump the queue before the passenger has even confirmed. Also on this screen: the safety-briefing heat map, care rounds, passenger needs and live PA captions.</sub></td>
+    <td width="32%" valign="top"><img src="docs/images/onboarding.jpg" alt="A guided onboarding screen: 'Welcome aboard!' with an illustrated crew-avatar assistant in front of a cabin window, and a 'Let's get started' button" /><br /><sub><b>Onboarding assistant.</b> Every first-time passenger gets a short, skippable tour from an illustrated crew avatar, before anything else.</sub></td>
+    <td width="32%" valign="top"><img src="docs/images/languages.jpg" alt="Onboarding language picker listing English, Hindi, Tamil, Thai, Chinese, Spanish, French, Italian and more" /><br /><sub><b>16 languages.</b> Every onboarding screen, request and crew reply is fully translated, not just the ones Auralink can speak aloud.</sub></td>
+    <td width="32%" valign="top"><img src="docs/images/seat-picker.jpg" alt="A tap-your-seat cabin map, a 'Tap to say your seat number' microphone button, and a 'Scan boarding pass' option" /><br /><sub><b>One shared scanner.</b> No screen at every seat? One QR code for the whole cabin: tap a seat, say it, or scan a boarding pass.</sub></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/images/judge.png" alt="Under-the-hood view: the sentence, the words that matter, the split rule, and a scored bar for each candidate intent with the t1 threshold" /><br /><sub><b>Under the hood (the jury screen).</b> Every decision in the open: which words mattered, which rule fired, and how each request was scored against the thresholds.</sub></td>
+    <td width="32%" valign="top"><img src="docs/images/passenger.jpg" alt="Passenger phone in Hindi asking 'Did you mean: water?' with a yes/no button and an icon grid" /><br /><sub><b>Passenger phone.</b> Asks instead of guessing, in the passenger's language, with pictures.</sub></td>
+    <td width="32%" valign="top"><img src="docs/images/crew.jpg" alt="Crew tablet in Japanese with an urgent possible-medical card for seat 34K, water and blanket request cards, safety briefing seat map and live PA captions" /><br /><sub><b>Crew tablet, in Japanese.</b> Urgent requests jump the queue before the passenger has even confirmed.</sub></td>
+    <td width="32%" valign="top"><img src="docs/images/cabin-map.jpg" alt="Crew cabin map with a colour key: red for urgent, violet for accessibility, amber for an open request, grey for no request" /><br /><sub><b>Cabin map, at a glance.</b> A seat with an accessibility profile on file is shown in violet, distinct from a plain open request.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="3"><img src="docs/images/judge.png" alt="Under-the-hood view: the sentence, the words that matter, the split rule, and a scored bar for each candidate intent with the t1 threshold" /><br /><sub><b>Under the hood (the jury screen).</b> Every decision in the open: which words mattered, which rule fired, and how each request was scored against the thresholds.</sub></td>
   </tr>
 </table>
 
@@ -60,7 +68,8 @@ Every sentence a passenger or crew member reads comes from a reviewed template.
 
 - [How it works](#how-it-works) · [Results](#results) · [Features](#features)
 - [Run it](#run-it) · [On phones](#on-phones) · [Testing and CI](#testing-and-ci)
-- [Feature guide](#feature-guide) · [For developers](#for-developers) · [Evaluation](#evaluation)
+- [Feature guide](#feature-guide) · [Deploying a live demo](#deploying-a-live-demo)
+- [For developers](#for-developers) · [Evaluation](#evaluation)
 
 ## How it works
 
@@ -134,10 +143,18 @@ matching, and **1.0–1.2 s** from the end of speech to the confirm screen (targ
 
 ## Features
 
+- **A guided onboarding assistant**: a short, skippable tour from an illustrated crew avatar on a
+  passenger's first visit, fully translated into 16 languages, not just the ones Auralink can speak aloud
+  ([onboarding assistant](#onboarding-assistant))
+- **One shared scanner for the whole cabin**: tap a seat on a map, say it out loud, or scan a boarding
+  pass — no screen (and no printed QR code) needed at every seat ([shared scanner](#shared-cabin-scanner))
 - **Voice, text or icons, in the passenger's language**: Whisper n-best plus a phonetic matcher, with a
   confirm step instead of guessing ([what is real](#what-is-real-and-what-is-a-placeholder))
 - **Accent-aware matching** with hand-set and learned accent costs ([evaluation](#evaluation),
   [learned costs](#learned-accent-costs))
+- **Accessibility as a first-class signal**: a passenger's accessibility profile follows them from
+  check-in onto the crew's cabin map, shown in its own colour, distinct from a plain open request
+  ([cabin-map colours](#cabin-map-accessibility-colours))
 - **Safety briefing that checks understanding**: a live seat heat map of who understood, who wants it
   explained again, and an exit-row check
 - **Check-in at the gate** for language and accessibility needs ([check-in](#check-in-the-airport-stage))
@@ -147,7 +164,10 @@ matching, and **1.0–1.2 s** from the end of speech to the confirm screen (targ
 - **Crash recovery**: cabin state survives a hub restart ([crash recovery](#crash-recovery))
 - **Crew PIN**: crew, presenter, report and jury screens are locked on the shared cabin Wi-Fi ([crew PIN](#crew-pin))
 - **New languages without code or retraining** ([adding a language](#adding-a-language-no-code-no-retraining)):
-  Hindi, Tamil, Thai, English and Hinglish today
+  16 languages of onboarding and request text today, with speech recognition and offline voice in
+  English, Hindi, Tamil and Thai
+- **Deployable as a live demo in minutes**: Docker, a free Render web service, a free Hugging Face
+  Space, or a one-command tunnel from a laptop ([deploying a live demo](#deploying-a-live-demo))
 - **Voice collection** for the held-out evaluation set ([collecting voices](#collecting-voices))
 
 ## Run it
@@ -159,16 +179,21 @@ brew install espeak-ng          # phoneme matcher; apt install espeak-ng on Linu
 scripts/run.sh
 ```
 
-**Then open the Start page address the script prints (usually <http://localhost:8000/start.html>) on the same laptop.** The Start page explains everything in
-plain words: how phones reach the laptop with no internet, the seat QR code to scan, the crew PIN (shown
+**Then open the Start page address the script prints (usually <http://localhost:8000/start>) on the same laptop.** The Start page explains everything in
+plain words: how phones reach the laptop with no internet, how a passenger finds their seat, the crew PIN (shown
 only on this laptop), and what every page is for. To try it alone, open **Passenger** and **Crew** side by
 side, choose a language on the passenger screen, and type "thoda wotter and kambal".
 
 | Who | Opens | How |
 |---|---|---|
-| Passenger | `/passenger.html?seat=34K` | Scans the QR code on the seat (print them from `/seats.html`); picks a language the first time |
-| Cabin crew | `/crew.html` | Tablet on the same Wi-Fi; enters the crew PIN once |
-| Jury | `/judge.html` | Under the hood: how each request was understood (crew PIN) |
+| Passenger | `/passenger` | One shared scanner for the whole cabin: tap a seat on the map, say it, or scan a boarding pass. A first-time seat also gets the onboarding assistant |
+| Passenger (direct) | `/passenger?seat=34K` | A printable per-seat QR still works too (print them from `/seats`); picks a language the first time |
+| Cabin crew | `/crew` | Tablet on the same Wi-Fi; enters the crew PIN once |
+| Jury | `/judge` | Under the hood: how each request was understood (crew PIN) |
+
+The current screens are a Next.js app (`web/`), built to `web/out/` and served by the hub at these same
+paths (a `.html` suffix, e.g. `/passenger.html`, still works too). An older, plain HTML/JS set of screens
+ships alongside it as a fallback: `AURALINK_UI=classic scripts/run.sh`.
 
 Port 8000 busy (another app, for example another project's server)? `scripts/run.sh` and
 `scripts/demo.sh` then pick the next free port by themselves (8001, 8002 ...) and print the exact address,
@@ -230,10 +255,23 @@ certificate on each demo phone.
 
 </details>
 
+## Deploying a live demo
+
+| Option | Use when | How |
+|---|---|---|
+| Docker (full) | A persistent server with a few GB RAM, e.g. an Oracle Cloud Always Free Ampere VM | `docker compose up -d` (`Dockerfile`, `docker-compose.yml`, `Caddyfile` — automatic HTTPS) |
+| Render free web service | A free, no-card, always-on-ish link, trading away Free Talk's translation/voice | Connect the repo on Render as a **Blueprint** (`render.yaml` → `Dockerfile.render`, a trimmed build) |
+| Hugging Face Spaces | A free, no-card, full-featured link with more RAM than Render's free tier | Push to a Space's git remote (SDK: Docker — this README's front matter already has it) |
+| Cloudflare Quick Tunnel | Fastest: a public HTTPS link to a hub already running on your own laptop | `cloudflared tunnel --url http://localhost:8000` |
+
+Render's free 512 MB tier can't hold Free Talk's translation/voice models, so `Dockerfile.render` drops
+them (`requirements-render.txt`); everything else — onboarding, the shared scanner, requests, the crew
+tablet — is unaffected, since `engine/translate.py` and `engine/tts.py` degrade gracefully without them.
+
 ### Testing and CI
 
 ```bash
-.venv/bin/python -m pytest -q    # 99 tests
+.venv/bin/python -m pytest -q    # 166 tests (3 skip without Whisper: AURALINK_SKIP_WHISPER=1)
 .venv/bin/ruff check .
 ```
 
@@ -251,6 +289,30 @@ need the Whisper model are skipped there (`AURALINK_SKIP_WHISPER=1`), so CI neve
 | `apps/` | D | Original plain HTML/JS screens, kept as a fallback (`AURALINK_UI=classic scripts/run.sh`) |
 
 ## Feature guide
+
+### Onboarding assistant
+
+`/passenger` with no seat (or a first-ever visit to a seat) opens a short, skippable tour hosted by an
+illustrated crew avatar: welcome, language, what Auralink can do, a demo request, a picture-only mode,
+announcements, accessibility and a wrap-up. Text is fully translated into 16 languages
+(`web/components/onboarding.jsx`); spoken narration uses the hub's offline voice where available and
+falls back to the browser's own, with a note when it can't speak a language yet. Completion is
+remembered per seat in `localStorage`, and a floating button replays it, asks for help, or changes
+language/accessibility settings at any time.
+
+### Shared cabin scanner
+
+Not every seat has a screen, so `/passenger` with no `?seat=` shows one tap-your-seat cabin map instead
+of needing a QR code at every seat. Three ways in: tap a seat, say its number (offline speech, same
+matcher as every other request), or **Scan boarding pass** — every real boarding pass carries an
+IATA BCBP barcode (`hub/bcbp.py`) with the seat on it, decoded entirely client-side. Per-seat QR codes
+(`/seats`) still work as a direct alternative. `/boarding-pass` issues a test boarding pass for demos.
+
+### Cabin-map accessibility colours
+
+On the crew tablet's cabin map, a seat with an accessibility profile on file (from check-in or the
+passenger's own settings) is shown in violet, distinct from a plain open request (amber) — urgent
+(red) still wins if both apply. The colour key is shown above the map and on the Start page FAQ.
 
 ### Check-in (the airport stage)
 
