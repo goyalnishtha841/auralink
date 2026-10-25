@@ -87,10 +87,15 @@ def login(body: LoginIn, request: Request, response: Response) -> dict:
 LOCAL = {"127.0.0.1", "::1", "localhost"}
 
 
+PIN_PUBLIC = os.environ.get("AURALINK_PUBLIC_PIN") == "1"
+
+
 @router.get("/pin-hint")
 def pin_hint(request: Request) -> dict:
-    """The PIN, but only for a browser on the hub laptop itself (the Start page shows it to the presenter).
-    Anyone else on the cabin Wi-Fi gets 403, so a passenger can never read it."""
-    if (request.client.host if request.client else "") not in LOCAL:
+    """The PIN, normally only for a browser on the hub laptop itself (the Start page shows it to the
+    presenter) -- anyone else on the cabin Wi-Fi gets 403, so a passenger can never read it. Set
+    AURALINK_PUBLIC_PIN=1 to show it to anyone on the Start page instead, e.g. for a judged demo where
+    the whole point is letting a visitor open the crew tablet themselves."""
+    if not PIN_PUBLIC and (request.client.host if request.client else "") not in LOCAL:
         raise HTTPException(403, "The crew PIN is only shown on the laptop that runs Auralink")
     return {"pin": PIN}

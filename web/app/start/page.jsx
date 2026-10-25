@@ -68,7 +68,11 @@ export default function Start() {
             {info ? <img className="qr" src={`/api/qr?data=${encodeURIComponent(`${base}/crew`)}`} alt="QR code for the crew tablet" /> : null}
             <p>Open on a tablet (or a second window). It asks once for the <b>crew PIN</b>, so passengers on the same Wi-Fi cannot open it:</p>
             <div className="t-pin" aria-label="Crew PIN">{pin || "······"}</div>
-            <p>{pin ? "Shown only on this laptop. Set your own with AURALINK_CREW_PIN when starting Auralink." : "For safety the PIN is only shown on the laptop that runs Auralink, or in its terminal."}</p>
+            <p>{pin
+              ? (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname)
+                  ? "Shown here for this demo. Set AURALINK_PUBLIC_PIN=0 (the default) to hide it from anyone but this laptop."
+                  : "Shown only on this laptop. Set your own with AURALINK_CREW_PIN when starting Auralink.")
+              : "For safety the PIN is only shown on the laptop that runs Auralink, or in its terminal."}</p>
             <div className="t-links"><a href="/crew" target="_blank" rel="noopener"><button className="primary">Open crew tablet</button></a></div>
           </Reveal>
           <Reveal className="panel t-step" delay={0.19}>
