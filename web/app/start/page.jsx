@@ -1,7 +1,7 @@
 "use client";
 import "../tools.css";
 import { useEffect, useState } from "react";
-import { Ambient, AppHeader, BrandMark, Reveal } from "@/components/ui";
+import { Ambient, BrandMark, Reveal } from "@/components/ui";
 import { Icon } from "@/lib/icons";
 
 const PAGES = [
@@ -29,8 +29,7 @@ export default function Start() {
   return (
     <>
       <Ambient />
-      <AppHeader online={!!info} title="Auralink" sub="Start here" />
-      <main className="app">
+      <main className="app" style={{ paddingTop: 28 }}>
         <Reveal className="panel t-hero">
           <div className="t-hero-mark"><BrandMark size={30} /></div>
           <span className="t-eyebrow">Demo guide</span>
