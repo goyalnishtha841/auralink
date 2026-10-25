@@ -63,5 +63,7 @@
   "accessibilityLabel": "获取性",
   "convReplyPlaying": "回复播放 麦克风暂停",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "连接已断开",
+  "offlineBody": "请将此屏幕出示给乘务员。点击下方图片——连接恢复后会自动发送。"
 }

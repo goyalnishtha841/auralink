@@ -63,5 +63,7 @@
   "accessibilityLabel": "उपलब्धता",
   "convReplyPlaying": "प्रतिसाद प्ले  मायक्रो विराम",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "कनेक्शन नाही",
+  "offlineBody": "ही स्क्रीन क्रू सदस्याला दाखवा. खालील चित्रावर टॅप करा — कनेक्शन परत येताच ते पाठवले जाईल."
 }

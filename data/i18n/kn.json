@@ -63,5 +63,7 @@
   "accessibilityLabel": "ಲಭ್ಯತೆ",
   "convReplyPlaying": "ಸ್ಪಂದಿಸುವ  ಮೈಕ್ರೋಫೋನ್ ವಿರಾಮ",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "ಸಂಪರ್ಕ ಇಲ್ಲ",
+  "offlineBody": "ಈ ಸ್ಕ್ರೀನ್ ಅನ್ನು ಸಿಬ್ಬಂದಿಗೆ ತೋರಿಸಿ. ಕೆಳಗಿನ ಚಿತ್ರವನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ — ಸಂಪರ್ಕ ಮರಳಿದ ತಕ್ಷಣ ಅದು ಕಳುಹಿಸಲಾಗುತ್ತದೆ."
 }

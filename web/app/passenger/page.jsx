@@ -12,13 +12,15 @@ import { Ambient, Carousel, Sheet, ease, useFlash } from "@/components/ui";
 import { ConvThread, MuteButton } from "@/components/liveconversation";
 import { Onboarding, OnboardingFab } from "@/components/onboarding";
 
+const OFFLINE_AFTER_MS = 6000;   // hub.js retries every 1s; a handful of failed tries, not one blip
+
 export default function Passenger() {
   const [, bump] = useReducer((x) => x + 1, 0);
   const st = useRef(null);
   const level = useRef(null);
   const [flashFrame, flash] = useFlash();
   if (!st.current) st.current = { ready: false, awaitingSeat: false, seatInvalid: false, onboarding: false, cfg: null, strings: {}, fallback: {}, lang: "en", senior: false, pictures: false, readAloud: false, accessibility: null, name: null, voiceOK: false,
-    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, titleOverride: null, seat: null,
+    micState: "idle", micNote: "", requests: new Map(), pending: [], waitingTriage: null, sheet: null, caption: null, online: false, offline: false, titleOverride: null, seat: null,
     conv: { open: false, speaking: false, replyPlaying: false, muted: false, partial: "", messages: [], spoken: new Set() } };
   const s = st.current;
   const socket = useRef(null);
@@ -26,6 +28,7 @@ export default function Passenger() {
   const vad = useRef(null);
   const convUnsub = useRef(null);
   const captionTimer = useRef(0);
+  const offlineTimer = useRef(0);   // a short drop is normal (hub.js retries every 1s); only call it "offline" if it lasts
   const flashRef = useRef(flash); flashRef.current = flash;
   const shake = useRef({ x: null, y: null, z: null, hits: 0, lastHitAt: 0, cooldownUntil: 0, listening: false });
 
@@ -375,7 +378,20 @@ export default function Passenger() {
     const ready = new Promise((r) => (markReady = r));
     socket.current = connect(`/ws/passenger/${s.seat}`, (msg) => ready.then(() => aliveRef.current && onMessage(msg)), (on) => {
       s.online = on; bump();
-      if (on) ready.then(() => hello());
+      if (on) {
+        clearTimeout(offlineTimer.current); offlineTimer.current = 0;
+        s.offline = false; bump();
+        ready.then(() => hello());
+      } else if (!offlineTimer.current) {
+        // fails safe: typing and voice need the hub, so after a few failed 1s reconnect tries
+        // (not just one dropped frame) switch to a no-server fallback -- the picture grid already
+        // renders from what's already loaded (local icons, strings in memory) and keeps working;
+        // tapping one still queues over the socket and is delivered the moment it reconnects.
+        // hub.js retries every 1s while down, calling this "disconnected" branch again on every
+        // failed retry: only arm the timer on the *first* one (while none is already pending), or
+        // it would keep getting reset before ever getting 6 uninterrupted seconds to fire.
+        offlineTimer.current = setTimeout(() => { offlineTimer.current = 0; s.offline = true; bump(); }, OFFLINE_AFTER_MS);
+      }
     }, () => { s.seatInvalid = true; bump(); });
     (async () => {
       let checkedIn = false;
@@ -430,7 +446,7 @@ export default function Passenger() {
       if (seatParam) boot(seatParam, p);
       else { s.awaitingSeat = true; bump(); }
     })();
-    return () => { aliveRef.current = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); removeEventListener("pointerdown", unlockAudio); };
+    return () => { aliveRef.current = false; socket.current?.close(); vad.current?.stop(); convUnsub.current?.(); clearTimeout(offlineTimer.current); removeEventListener("pointerdown", unlockAudio); };
   }, []); // eslint-disable-line
 
   // Shake to call the crew: 3 strong jolts within ~2s, same request as tapping "Call crew".
@@ -522,7 +538,13 @@ export default function Passenger() {
 
       <main className="app pax-shell">
         <div className="pax-col pax-col-main">
-        {!pictureMode() ? (
+        {s.offline ? (
+          <motion.section className="panel ask-hero offline-card" role="alert" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
+            <h2><Icon id="alert" />{t("offlineTitle")}</h2>
+            <p className="offline-body">{t("offlineBody")}</p>
+          </motion.section>
+        ) : null}
+        {!pictureMode() && !s.offline ? (
           <motion.section className="panel ask-hero" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease }}>
             {!s.conv.open ? (
               <div className="row" style={{ alignItems: "flex-start" }}>

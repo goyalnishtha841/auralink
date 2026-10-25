@@ -63,5 +63,7 @@
   "accessibilityLabel": "L'accessibilité",
   "convReplyPlaying": "Répondre en jouant  microphone arrêté",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "Pas de connexion",
+  "offlineBody": "Montrez cet écran à un membre d'équipage. Touchez une image ci-dessous — elle sera envoyée dès le retour de la connexion."
 }

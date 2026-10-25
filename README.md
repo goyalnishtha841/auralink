@@ -162,6 +162,8 @@ matching, and **1.0–1.2 s** from the end of speech to the confirm screen (targ
 - **Live PA captions** from pre-approved announcements, never machine translation ([PA captions](#live-pa-captions))
 - **Care rounds**: one trolley loop for open requests and check-ins for quiet passengers ([care rounds](#care-rounds))
 - **Crash recovery**: cabin state survives a hub restart ([crash recovery](#crash-recovery))
+- **Fails safe**: no hub, no network -- passenger phones fall back to a no-server pictogram card
+  and crew can print an offline backup seat list ([fails safe](#fails-safe-no-hub-no-network))
 - **Crew PIN**: crew, presenter, report and jury screens are locked on the shared cabin Wi-Fi ([crew PIN](#crew-pin))
 - **New languages without code or retraining** ([adding a language](#adding-a-language-no-code-no-retraining)):
   16 languages of onboarding and request text today, with speech recognition and offline voice in
@@ -365,6 +367,28 @@ The hub saves the cabin state after every change (`data/flight/cabin_state.json`
 written atomically) and restores it on start: requests, briefing answers, exit-row checks and the
 flight report survive a restart, and screens reconnect by themselves. The presenter console shows
 when state was restored. Start clean with `AURALINK_FRESH=1 scripts/run.sh` or use Reset cabin.
+
+### Fails safe: no hub, no network
+
+Crash recovery above covers the hub coming back; this is for while it is down. Phones retry the
+hub's socket every second (`web/lib/hub.js`), so a one-off drop never shows anything -- but once a
+passenger's phone has failed to reconnect for about six seconds straight, it switches its own
+screen into a no-server fallback: the type/speak bar (which needs the hub) is replaced by a plain
+"No connection -- show this screen to a flight attendant" banner in the passenger's own language,
+and the picture grid underneath keeps working exactly as before, since it was always rendered from
+what had already loaded (local icons, strings already in memory) rather than fetched live. A tap
+still queues over the socket and is delivered the moment it reconnects; the banner exists
+for the case where it never does in time, so the passenger has something to hold up to a crew
+member walking past. It clears itself the instant the phone reconnects.
+
+The crew tablet gets the mirror image: the same six-second rule shows a "Hub connection lost"
+banner telling crew to fall back to paper and walk the cabin, and the **Passenger needs** panel
+has a **Print offline backup** button at any time (not just during an outage) that prints a plain
+seat / language / accessibility table from whatever the tablet last knew -- crew who print it once
+before departure always have a paper copy, even if the hub dies for the rest of the flight. Logic:
+`OFFLINE_AFTER_MS`/`HUB_DOWN_AFTER_MS` in [web/app/passenger/page.jsx](web/app/passenger/page.jsx)
+and [web/app/crew/page.jsx](web/app/crew/page.jsx); the print view is `OfflineRoster`, styled by
+the `@media print` rule in [web/app/crew/crew.css](web/app/crew/crew.css).
 
 ### Crew PIN
 
