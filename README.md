@@ -158,9 +158,25 @@ matching, and **1.0–1.2 s** from the end of speech to the confirm screen (targ
 - **Safety briefing that checks understanding**: a live seat heat map of who understood, who wants it
   explained again, and an exit-row check
 - **Check-in at the gate** for language and accessibility needs ([check-in](#check-in-the-airport-stage))
+- **Medical triage**: an urgent medical request asks one follow-up question -- which symptom -- before
+  it reaches the crew ([medical triage](#medical-triage))
+- **Free Talk and Live Conversation**: open-vocabulary offline translation for anything outside the
+  fixed, reviewed request list -- a one-shot suggestion, or a free-running two-way chat
+  ([Free Talk and Live Conversation](#free-talk-and-live-conversation))
+- **Crew phrasebook**: common phrases already translated into a passenger's language, one tap away
+  on the crew tablet ([crew phrasebook](#crew-phrasebook))
+- **Shake to call** and **turbulence detection**: shake the phone instead of finding a button; crew
+  see several seats shaking at once as turbulence, not a flood of calls
+  ([shake to call and turbulence detection](#shake-to-call-and-turbulence-detection))
 - **Read aloud** with the phone's offline voice ([read aloud](#read-aloud))
 - **Live PA captions** from pre-approved announcements, never machine translation ([PA captions](#live-pa-captions))
 - **Care rounds**: one trolley loop for open requests and check-ins for quiet passengers ([care rounds](#care-rounds))
+- **After landing**: gate, baggage and connecting-flight info, a seat-tied lost-item report that
+  reaches the crew tablet live, and post-flight feedback, all in the passenger's own language
+  ([after landing](#after-landing))
+- **Flight report**: requests by outcome, type and language, recovery rate, safety comprehension,
+  care rounds and post-flight feedback, since the last cabin reset, with a CSV download
+  ([demo day](#demo-day))
 - **Crash recovery**: cabin state survives a hub restart ([crash recovery](#crash-recovery))
 - **Fails safe**: no hub, no network -- passenger phones fall back to a no-server pictogram card
   and crew can print an offline backup seat list ([fails safe](#fails-safe-no-hub-no-network))
@@ -190,6 +206,7 @@ side, choose a language on the passenger screen, and type "thoda wotter and kamb
 |---|---|---|
 | Passenger | `/passenger` | One shared scanner for the whole cabin: tap a seat on the map, say it, or scan a boarding pass. A first-time seat also gets the onboarding assistant |
 | Passenger (direct) | `/passenger?seat=34K` | A printable per-seat QR still works too (print them from `/seats`); picks a language the first time |
+| Passenger, after landing | `/arrival?seat=34K` | Gate, baggage and connections; a lost-item report; post-flight feedback -- reachable from the passenger screen's header icon |
 | Cabin crew | `/crew` | Tablet on the same Wi-Fi; enters the crew PIN once |
 | Jury | `/judge` | Under the hood: how each request was understood (crew PIN) |
 
@@ -273,7 +290,7 @@ tablet — is unaffected, since `engine/translate.py` and `engine/tts.py` degrad
 ### Testing and CI
 
 ```bash
-.venv/bin/python -m pytest -q    # 166 tests (3 skip without Whisper: AURALINK_SKIP_WHISPER=1)
+.venv/bin/python -m pytest -q    # 172 tests (3 skip without Whisper: AURALINK_SKIP_WHISPER=1)
 .venv/bin/ruff check .
 ```
 
@@ -315,6 +332,56 @@ IATA BCBP barcode (`hub/bcbp.py`) with the seat on it, decoded entirely client-s
 On the crew tablet's cabin map, a seat with an accessibility profile on file (from check-in or the
 passenger's own settings) is shown in violet, distinct from a plain open request (amber) — urgent
 (red) still wins if both apply. The colour key is shown above the map and on the Start page FAQ.
+
+### Medical triage
+
+When a request matches the `medical` intent, before it reaches the crew the passenger's phone asks
+one follow-up question -- "What's wrong? Tap one." -- from a small picture list (chest pain,
+breathing, fainting, allergic reaction, bleeding, other). Whatever they tap travels with the request
+card, so the crew tablet shows not just "medical" but the symptom itself, in Japanese and English,
+before anyone has walked to the seat. Medical and other urgent requests always skip the confirm step
+and the care-round queue. Logic: `set_symptom`/`ask_symptom` in [hub/state.py](hub/state.py) and
+[hub/main.py](hub/main.py); the question and symptom list are in `data/templates/messages.json`'s
+`triage` section.
+
+### Free Talk and Live Conversation
+
+Two tiers of open-vocabulary translation sit alongside the fixed, reviewed request list -- both
+explicitly tagged "machine-translated, not reviewed" and never used for safety briefings, exit-row
+checks or PA captions:
+
+- **Free Talk**: when nothing in the fixed list matches what a passenger said, the "I'm not fully
+  sure" sheet offers a one-shot translation of what was heard, which the passenger can choose to
+  send to crew as-is (`POST /api/freetalk/translate`).
+- **Live Conversation**: the chat icon on both the passenger and crew screens opens a free-running,
+  two-way, streaming-translated conversation for anything a request card doesn't cover -- each turn
+  is transcribed, translated and spoken aloud in the other person's language in near real time
+  (`hub/main.py` `handle_conv_audio`/`handle_conv_text`; UI in
+  [web/components/liveconversation.jsx](web/components/liveconversation.jsx)).
+
+Both run on an offline NLLB-200 (distilled, 600M parameters) through CTranslate2 at `int8`
+([engine/translate.py](engine/translate.py)), the same pattern `engine/asr.py` uses for Whisper --
+downloaded once (~2.4 GB), then fully offline. Needs `pip install transformers`; set
+`AURALINK_FREE_TALK=0` to turn it off on a laptop that would rather keep the RAM for Whisper (Free
+Talk is dropped entirely from the trimmed Render build, see
+[deploying a live demo](#deploying-a-live-demo)).
+
+### Crew phrasebook
+
+A quick-reference panel on the crew tablet (open **Talk** on any seat) with everyday phrases --
+greetings, directions, reassurance -- already translated into that passenger's language: for
+anything a one-tap reply template doesn't cover and a full Live Conversation turn would be slower
+for. Source: `data/templates/messages.json`'s `phrasebook` section, served at `/api/config` and
+reloaded with the rest of the templates whenever the file changes.
+
+### Shake to call and turbulence detection
+
+A passenger can shake their phone instead of finding the **Call crew** button: three jolts within
+about two seconds sends the same request as a tap, with a vibration and screen flash to confirm it
+went through. If five or more *distinct seats* shake within a 12-second window
+(`SHAKE_WINDOW_S`/`SHAKE_SEATS` in [hub/state.py](hub/state.py)), the crew tablet treats it as
+**turbulence, not passengers calling** -- a banner offers to send the seatbelt safety briefing
+straight away instead of letting five urgent-looking calls flood the request queue at once.
 
 ### Check-in (the airport stage)
 
@@ -367,6 +434,25 @@ trip per request. Passengers who use large text or pictures only and have not as
 because older and deaf passengers often do not ask. **Start round** tells each waiting passenger,
 in their language, which stop they are ("stop 3 of 7"); **Done** at each seat closes its requests.
 Urgent and medical requests never wait for a round. Logic: [hub/rounds.py](hub/rounds.py).
+
+### After landing
+
+`/arrival?seat=34K` -- one tap from the passenger screen's header icon once the seatbelt sign is
+off -- gives every passenger three things in their own language:
+
+- **Deplaning info**: gate, terminal and baggage-belt number, plus any connecting flight and its
+  gate and boarding window (`GET /api/arrival`).
+- **Lost & found**: a short description tied to the seat reaches the crew tablet's **Lost & found**
+  tab live, where crew mark it Found or Returned (`POST /api/lost-item`, crew-only
+  `GET /api/lost-items` and status updates).
+- **Post-flight feedback**: an inconvenience / suggestion / compliment category, an optional
+  1–5 star rating and a free-text message -- never tied to a name (`POST /api/feedback`).
+
+Both lost items and feedback show up on the crew tablet the moment they are sent (no refresh needed)
+and are rolled into the flight report's totals. State is cleared on a cabin reset and survives a hub
+restart, the same as every other request. Logic: `LostItem`/`Feedback` in
+[hub/state.py](hub/state.py); screen in
+[web/app/arrival/page.jsx](web/app/arrival/page.jsx).
 
 ### Crash recovery
 
