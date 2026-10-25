@@ -291,6 +291,13 @@ passengers who cannot hear the PA. An announcement that is not in the library is
 the crew are told so: Auralink never machine-translates. Typed text works too (`POST /api/pa/match`
 with `{"text": ...}`, then `POST /api/pa/send` with `{"id": "descent", "n": "20"}`).
 
+While the crew are still recording, a caption preview takes shape live underneath the mic button
+("Hearing: ... → Starting descent"), re-matching a growing snapshot of the same audio every second
+or so on the quick passenger model (`POST /api/pa/match` with `{"fast": true}`). This is only a
+preview, shown on the tablet, and is never what gets sent: the crew's own **Stop** always re-runs
+the match on the accurate model, and nothing reaches a seat until they tap **Send to all seats**,
+exactly as before.
+
 Announcements use the larger Whisper `small` model (`AURALINK_PA_ASR_MODEL`, about 3–5 s), passenger
 requests the fast `base` one. With `base`, spoken Japanese PAs came back with sound-alike spellings
 (効果 for 降下, 伝統 for 点灯, 10分 for 二十分); `small` fixed the numbers, and those sound-alike spellings are
