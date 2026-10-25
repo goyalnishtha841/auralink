@@ -53,10 +53,11 @@ export default function Crew() {
   const [paPick, setPaPick] = useState(null);
   const [paN, setPaN] = useState("");
   const [paRecOn, setPaRecOn] = useState(false);
+  const [paLive, setPaLive] = useState(null);   // caption taking shape while still recording, or null
   const [myName, setMyName] = useState("");
   const [myZone, setMyZone] = useState("all");
   const myInfo = useRef({ name: "", zone: "all" });
-  const socket = useRef(null), audio = useRef(null), paRec = useRef(null);
+  const socket = useRef(null), audio = useRef(null), paRec = useRef(null), paLiveBusy = useRef(false);
   const seenUrgent = useRef(new Set()), announced = useRef(null), announcedSymptom = useRef(new Set());
   const opts = useRef({ soundOn: true, readAloud: false, convMuted: false }); opts.current = { soundOn, readAloud, convMuted };
 
@@ -173,6 +174,19 @@ export default function Crew() {
       setPa(r); setPaPick(pick); setPaN(pick?.n || "");
     } catch (err) { setPa({ error: err.message }); }
   }
+  // While the crew keeps recording, show the caption taking shape -- a quick re-match on a growing
+  // snapshot of the same audio, with the fast model (never what gets sent; `paMic`'s final match
+  // after Stop always re-runs on the accurate model, same as before this existed). Never overlaps
+  // itself: a snapshot that arrives while the last one is still matching is simply dropped.
+  async function paMatchLive(buf) {
+    if (paLiveBusy.current) return;
+    paLiveBusy.current = true;
+    try {
+      const res = await crewFetch("/api/pa/match", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio_b64: await toBase64(buf), fast: true }) });
+      if (res.ok) setPaLive(await res.json());
+    } catch { /* a dropped live preview is not worth surfacing; the final match still runs on Stop */ }
+    paLiveBusy.current = false;
+  }
   async function paSend() {
     const n = paN.trim().toUpperCase() || null;
     const res = await crewFetch("/api/pa/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: paPick.id, n }) });
@@ -183,10 +197,11 @@ export default function Crew() {
     if (!paRec.current) {
       if (!Recorder.supported()) { setPa({ error: "マイク不可 Microphone needs https or localhost" }); return; }
       paRec.current = new Recorder();
-      try { await paRec.current.start(28, () => paRec.current && paMic()); } catch { paRec.current = null; return; }
+      setPaLive(null);
+      try { await paRec.current.start(28, () => paRec.current && paMic(), null, (buf) => paMatchLive(buf)); } catch { paRec.current = null; return; }
       setPaRecOn(true);
     } else {
-      const pcm = await paRec.current.stop(); paRec.current = null; setPaRecOn(false);
+      const pcm = await paRec.current.stop(); paRec.current = null; setPaRecOn(false); setPaLive(null);
       paMatch({ audio_b64: await toBase64(pcm) });
     }
   }
@@ -321,6 +336,16 @@ export default function Crew() {
                   <input className="grow" name="pa" autoComplete="off" placeholder="…or type it: We have started our descent, 20 minutes" aria-label="Typed announcement" />
                   <button type="submit">照合 Match</button></form>
               </div>
+              <AnimatePresence>
+                {paRecOn && paLive?.heard ? (
+                  <motion.div className="pa-live" aria-live="polite" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <Icon id="mic" /><span className="muted">認識中 Hearing…</span> “{paLive.heard}”
+                    {paLive.verdict !== "none" && paLive.matches?.[0] ? (
+                      <span className="pill dim">→ {paLive.matches[0].title_ja} · {paLive.matches[0].title_en}</span>
+                    ) : null}
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
               <div className="pa-result" aria-live="polite">
                 {pa?.busy ? <span className="muted">照合中… Matching…</span> : null}
                 {pa?.error ? <span className="pill bad">エラー Error: {pa.error}</span> : null}

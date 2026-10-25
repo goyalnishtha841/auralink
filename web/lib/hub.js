@@ -65,7 +65,10 @@ export class Recorder {
     return typeof window !== "undefined" && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.isSecureContext);
   }
 
-  async start(maxSeconds = 8, onAutoStop = () => {}, onLevel = null) {
+  // onPartial(buf, seconds), if given, fires every partialEveryMs with a snapshot of everything
+  // recorded so far (without stopping), so a caller can show a caption taking shape live while
+  // the person keeps talking -- same idea as VadRecorder's onPartial for Live Conversation.
+  async start(maxSeconds = 8, onAutoStop = () => {}, onLevel = null, onPartial = null, partialEveryMs = 1500) {
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     });
@@ -73,6 +76,7 @@ export class Recorder {
     const source = this.ctx.createMediaStreamSource(this.stream);
     this.node = this.ctx.createScriptProcessor(4096, 1, 1);
     this.chunks = [];
+    let lastPartialAt = 0;
     this.node.onaudioprocess = (e) => {
       const d = new Float32Array(e.inputBuffer.getChannelData(0));
       this.chunks.push(d);
@@ -80,6 +84,11 @@ export class Recorder {
         let s = 0;
         for (let i = 0; i < d.length; i += 8) s += d[i] * d[i];
         onLevel(Math.min(1, Math.sqrt(s / (d.length / 8)) * 6));
+      }
+      const now = this.ctx.currentTime * 1000;
+      if (onPartial && now - lastPartialAt >= partialEveryMs) {
+        lastPartialAt = now;
+        onPartial(toPcm16(this.chunks, this.ctx.sampleRate), now / 1000);
       }
     };
     source.connect(this.node);

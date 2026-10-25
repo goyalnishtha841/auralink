@@ -77,6 +77,11 @@
 .saving { color: var(--ok); font-weight: 600; margin: 0; }
 .pa-mic.recording { background: var(--bad); border-color: var(--bad); color: #fff; animation: seatPulse 1.4s ease-in-out infinite; }
 .pa-mic .icon .ic { width: 18px; height: 18px; }
+/* caption taking shape while the crew is still recording -- a quick, lower-confidence preview;
+   the authoritative match (and the crew's own Send tap) only happen after they stop. */
+.pa-live { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-radius: 10px;
+  border: 1px dashed var(--line-strong); background: var(--surface-2); font-size: 14px; }
+.pa-live .icon .ic { width: 16px; height: 16px; color: var(--accent); animation: breathe 1.4s ease-in-out infinite; }
 .pa-result { display: flex; flex-direction: column; gap: 8px; }
 .pa-opt { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; text-align: left; padding: 10px 12px; }
 .pa-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
