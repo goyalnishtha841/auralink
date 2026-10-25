@@ -63,5 +63,7 @@
   "accessibilityLabel": "অ্যাক্সেসযোগ্যতা",
   "convReplyPlaying": "সাড়া বাজানো  মাইক বিরতি",
   "shakeHint": "Tip: shake your phone to call the crew",
-  "shakeSent": "Calling the crew…"
+  "shakeSent": "Calling the crew…",
+  "offlineTitle": "সংযোগ নেই",
+  "offlineBody": "এই স্ক্রিনটি একজন ক্রুকে দেখান। নিচের একটি ছবিতে ট্যাপ করুন — সংযোগ ফিরে এলেই এটি পাঠানো হবে।"
 }
