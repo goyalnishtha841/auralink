@@ -15,12 +15,16 @@ def test_round_trip_and_ids_continue(monkeypatch, tmp_path):
     before.start_broadcast("turbulence")
     before.safety_response("34K", "stuck", step=1)
     before.start_exit_check(["30A"])
+    lost = before.report_lost_item("34K", "a grey water bottle")
+    before.add_feedback("34K", "compliment", 5, "great flight")
     persist.save(before)
 
     after = Cabin(Lexicon())                       # a fresh hub after a crash
     assert persist.restore(after) is not None
     assert after.cards[card.id].status == "confirmed" and after.cards[card.id].intent == "water"
     assert after.broadcast.responses["34K"].step == 1 and "30A" in after.exit_checks
+    assert after.lost_items[lost.id].description == "a grey water bottle"
+    assert [f.message for f in after.feedback.values()] == ["great flight"]
     assert after.seats["34K"].lang == "hi" and after.seats["34K"].connected is False
     _, (fresh,), _ = after.handle_text("34K", "blanket")
     assert fresh.id != card.id                     # new ids do not clash with restored ones

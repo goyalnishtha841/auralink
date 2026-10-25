@@ -13,7 +13,7 @@ import re
 import time
 from pathlib import Path
 
-from .state import Broadcast, Cabin, Card, ExitCheck
+from .state import Broadcast, Cabin, Card, ExitCheck, Feedback, LostItem
 
 SEAT_FIELDS = {"lang", "senior", "pictures", "read", "checked_in"}
 
@@ -33,6 +33,8 @@ def snapshot(cabin: Cabin) -> dict:
         "broadcast": cabin.broadcast.model_dump() if cabin.broadcast else None,
         "past_broadcasts": [b.model_dump() for b in cabin.past_broadcasts],
         "exit_checks": [e.model_dump() for e in cabin.exit_checks.values()],
+        "lost_items": [i.model_dump() for i in cabin.lost_items.values()],
+        "feedback": [f.model_dump() for f in cabin.feedback.values()],
         "pa_log": cabin.pa_log,
         "round": cabin.round,
         "past_rounds": cabin.past_rounds,
@@ -63,6 +65,8 @@ def restore(cabin: Cabin) -> float | None:
     cabin.broadcast = Broadcast(**data["broadcast"]) if data.get("broadcast") else None
     cabin.past_broadcasts = [Broadcast(**b) for b in data.get("past_broadcasts", [])]
     cabin.exit_checks = {e["seat"]: ExitCheck(**e) for e in data.get("exit_checks", [])}
+    cabin.lost_items = {i["id"]: LostItem(**i) for i in data.get("lost_items", [])}
+    cabin.feedback = {f["id"]: Feedback(**f) for f in data.get("feedback", [])}
     cabin.pa_log = data.get("pa_log", [])
     cabin.round = data.get("round")
     cabin.past_rounds = data.get("past_rounds", [])
@@ -71,6 +75,7 @@ def restore(cabin: Cabin) -> float | None:
     # new ids must continue after the restored ones (c12 -> next card is c13)
     used = [int(m.group()) for key in list(cabin.cards) + [b.id for b in cabin.all_broadcasts()]
             + [a["pa_id"] for a in cabin.pa_log] + [r["id"] for r in cabin.past_rounds + [cabin.round] if r]
+            + list(cabin.lost_items) + list(cabin.feedback)
             if (m := re.search(r"\d+", key))]
     cabin._ids = itertools.count(max(used, default=0) + 1)
     return data.get("saved_at")

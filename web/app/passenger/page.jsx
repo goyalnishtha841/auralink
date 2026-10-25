@@ -533,6 +533,7 @@ export default function Passenger() {
             <Icon id={s.conv.open ? "stop" : "chat"} />
           </button>
         ) : null}
+        <a className="hdr-icon-btn" aria-label={t("afterLanding")} title={t("afterLanding")} href={`/arrival?seat=${s.seat}&lang=${s.lang}`}><Icon id="arrived" /></a>
         <button className="hdr-icon-btn" aria-label={t("settingsTitle")} title={t("settingsTitle")} onClick={showSettings}><Icon id="settings" /></button>
       </header>
 

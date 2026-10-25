@@ -78,6 +78,26 @@ def rounds_report(cabin: Cabin) -> dict:
     }
 
 
+def feedback_report(cabin: Cabin) -> dict:
+    """Post-flight feedback: how many, what kind, and the average star rating where given."""
+    items = list(cabin.feedback.values())
+    rated = [f.rating for f in items if f.rating is not None]
+    return {
+        "total": len(items),
+        "by_category": {k: sum(1 for f in items if f.category == k)
+                        for k in ("inconvenience", "improvement", "compliment")},
+        "average_rating": round(sum(rated) / len(rated), 2) if rated else None,
+    }
+
+
+def lost_items_report(cabin: Cabin) -> dict:
+    items = list(cabin.lost_items.values())
+    return {
+        "total": len(items),
+        "by_status": {k: sum(1 for i in items if i.status == k) for k in ("reported", "found", "returned")},
+    }
+
+
 def build(cabin: Cabin, templates, pa_library=None) -> dict:
     cards = list(cabin.cards.values())
     outcomes = {c.id: outcome(c) for c in cards}
@@ -130,6 +150,8 @@ def build(cabin: Cabin, templates, pa_library=None) -> dict:
         "briefings": briefings,
         "announcements": pa_report(cabin, pa_library),
         "care_rounds": rounds_report(cabin),
+        "feedback": feedback_report(cabin),
+        "lost_items": lost_items_report(cabin),
         "exit_row": {"checked": len(exits), "pass": sum(e.result == "pass" for e in exits),
                      "talk": sum(e.result == "talk" for e in exits), "pending": sum(e.result == "pending" for e in exits),
                      "talk_seats": [{"seat": e.seat, "reseat": e.reseat,

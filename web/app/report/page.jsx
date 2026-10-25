@@ -44,7 +44,8 @@ export default function Report() {
   const SRC = { voice: "Spoke", text: "Typed", picture: "Tapped a picture" };
   const types = Object.entries(q.by_intent).sort((a, b) => b[1] - a[1]);
   const most = Math.max(1, ...types.map(([, v]) => v));
-  const e = r.exit_row, p = r.announcements, c = r.care_rounds;
+  const e = r.exit_row, p = r.announcements, c = r.care_rounds, fb = r.feedback, li = r.lost_items;
+  const CATEGORY_LABEL = { inconvenience: "Inconvenience", improvement: "Improvement", compliment: "Compliment" };
   return (
     <>
       <Ambient />
@@ -95,6 +96,20 @@ export default function Report() {
               <span className="chip2">Check-in visits: {c.check_ins_done} of {c.check_ins}</span><span className="chip2">Median round: {c.minutes.n ? `${c.minutes.median} min` : "–"}</span></div>
               <p style={{ margin: 0 }}>{c.walk_rows.saved == null ? "No deliveries yet." : `About ${Math.round(c.walk_rows.saved * 100)}% less walking than one trip per request (${c.walk_rows.rounds} rows walked instead of ${c.walk_rows.separate}; an estimate from seat rows).`}</p></>)
               : <p className="muted" style={{ margin: 0 }}>No care round started yet.</p>}
+          </section>
+        </div>
+        <div className="rp-grid2">
+          <section className="panel"><h2>遺失物 · Lost &amp; found</h2>
+            {li.total ? (<div className="chips"><span className="chip2">Reported: {li.by_status.reported}</span><span className="chip2">Found: {li.by_status.found}</span><span className="chip2">Returned: {li.by_status.returned}</span></div>)
+              : <p className="muted" style={{ margin: 0 }}>Nothing reported yet.</p>}
+          </section>
+          <section className="panel"><h2>ご意見 · Feedback</h2>
+            {fb.total ? (<div className="chips">
+                <span className="chip2">Total: {fb.total}</span>
+                {fb.average_rating != null ? <span className="chip2">Average rating: {fb.average_rating} / 5</span> : null}
+                {Object.entries(fb.by_category).map(([k, v]) => v ? <span key={k} className="chip2">{CATEGORY_LABEL[k]}: {v}</span> : null)}
+              </div>)
+              : <p className="muted" style={{ margin: 0 }}>No feedback yet.</p>}
           </section>
         </div>
       </main>

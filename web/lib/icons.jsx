@@ -71,4 +71,6 @@ Object.assign(PATHS, {
   wheelchair: '<circle cx="8" cy="4" r="2"/><path d="M8 8v6l-4 6M8 14h6l3 6M8 11h6"/><circle cx="16" cy="20" r="2.5"/>',
   brain: '<path d="M9.5 3a3 3 0 0 0-3 3v1a2.5 2.5 0 0 0-1 4.7A3 3 0 0 0 7 17a2.5 2.5 0 0 0 2.5 2.5V20a2 2 0 0 0 4 0v-.5A2.5 2.5 0 0 0 16 17a3 3 0 0 0 1.5-5.3A2.5 2.5 0 0 0 16.5 7V6a3 3 0 0 0-3-3h-4Z"/><path d="M9.5 3v16.5M14.5 3v16.5"/>',
   print: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  star: '<path d="M12 2.5 15 9l7 1-5.2 5 1.3 7-6.1-3.4L5.9 22l1.3-7L2 10l7-1Z"/>',
+  search: '<circle cx="10.5" cy="10.5" r="7"/><path d="m21 21-5.5-5.5"/>',
 });

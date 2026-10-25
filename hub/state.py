@@ -76,6 +76,33 @@ class Broadcast(BaseModel):
     responses: dict[str, SafetyAnswer] = Field(default_factory=dict)
 
 
+LostItemStatus = Literal["reported", "found", "returned"]
+
+
+class LostItem(BaseModel):
+    """Reported after landing, from the passenger's seat -- tied to the seat so crew know where
+    to start looking before the cabin is cleaned."""
+    id: str
+    seat: str
+    description: str
+    status: LostItemStatus = "reported"
+    created_at: float = Field(default_factory=time.time)
+    updated_at: float = Field(default_factory=time.time)
+
+
+FeedbackCategory = Literal["inconvenience", "improvement", "compliment"]
+
+
+class Feedback(BaseModel):
+    """Post-flight feedback, free-text plus an optional star rating. Never tied to a name."""
+    id: str
+    seat: str
+    category: FeedbackCategory
+    rating: int | None = None   # 1-5
+    message: str
+    created_at: float = Field(default_factory=time.time)
+
+
 class ExitCheck(BaseModel):
     """Exit-row picture check at boarding (supports the crew's own confirmation; it does not replace it)."""
     seat: str
@@ -94,6 +121,8 @@ class Cabin:
         self.broadcast: Broadcast | None = None
         self.past_broadcasts: list[Broadcast] = []
         self.exit_checks: dict[str, ExitCheck] = {}
+        self.lost_items: dict[str, LostItem] = {}
+        self.feedback: dict[str, Feedback] = {}
         self.pa_log: list[dict] = []          # captioned announcements: {pa_id, id, n, at}
         self.round: dict | None = None        # care round in progress (hub/rounds.py)
         self.past_rounds: list[dict] = []
@@ -109,6 +138,8 @@ class Cabin:
         self.broadcast = None
         self.past_broadcasts.clear()
         self.exit_checks.clear()
+        self.lost_items.clear()
+        self.feedback.clear()
         self.pa_log.clear()
         self.round = None
         self.past_rounds.clear()
@@ -209,6 +240,24 @@ class Cabin:
         check.result = "pass" if not reseat and all(check.answers.values()) else "talk"
         check.at = time.time()
         return check
+
+    # after landing
+
+    def report_lost_item(self, seat: str, description: str) -> LostItem:
+        item = LostItem(id=f"l{next(self._ids)}", seat=seat, description=description)
+        self.lost_items[item.id] = item
+        return item
+
+    def set_lost_item_status(self, item_id: str, status: LostItemStatus) -> LostItem:
+        item = self.lost_items[item_id]
+        item.status = status
+        item.updated_at = time.time()
+        return item
+
+    def add_feedback(self, seat: str, category: FeedbackCategory, rating: int | None, message: str) -> Feedback:
+        fb = Feedback(id=f"f{next(self._ids)}", seat=seat, category=category, rating=rating, message=message)
+        self.feedback[fb.id] = fb
+        return fb
 
     # crew side
 

@@ -148,6 +148,13 @@ table.rp td.n { font-variant-numeric: tabular-nums; text-align: right; width: 56
 .rp-brief { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .rp-brief:last-child { border-bottom: 0; }
 
+/* after landing */
+.af-choice { display: flex; align-items: center; gap: 8px; }
+.af-stars { display: flex; gap: 2px; }
+.af-star { background: none; border: 1px solid transparent; min-height: auto; padding: 6px; border-radius: 10px; }
+.af-star:hover:not(:disabled) { background: var(--surface-2); border-color: transparent; }
+.af-star .icon .ic { width: 26px; height: 26px; }
+
 /* phone setup */
 .ps-status { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
 .ps-st { padding: 14px; border-radius: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 4px; }

@@ -3,7 +3,7 @@
 import "./crew.css";
 import { AnimatePresence, motion } from "framer-motion";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { Recorder, connect, crewFetch, loadConfig, toBase64 } from "@/lib/hub";
+import { Recorder, connect, crewFetch, loadConfig, postJson, toBase64 } from "@/lib/hub";
 import { Icon } from "@/lib/icons";
 import { Picto } from "@/lib/pictograms";
 import { ACCESSIBILITY_META } from "@/lib/accessibility";
@@ -33,7 +33,10 @@ const RIGHT_TABS = [
   { id: "pa", ja: "アナウンス", en: "Announcements" },
   { id: "chat", ja: "会話", en: "Live chat" },
   { id: "exit", ja: "非常口", en: "Exit check" },
+  { id: "arrival", ja: "遺失物・意見", en: "Lost & found" },
 ];
+const LOST_STATUS = { reported: ["報告済み", "Reported", "amber"], found: ["発見", "Found", "ok"], returned: ["返却済み", "Returned", "dim"] };
+const FEEDBACK_CATEGORY = { inconvenience: ["不便", "Inconvenience", "bad"], improvement: ["提案", "Suggestion", "amber"], compliment: ["お褒めの言葉", "Compliment", "ok"] };
 const HUB_DOWN_AFTER_MS = 6000;   // hub.js retries every 1s; a handful of failed tries, not one blip
 
 export default function Crew() {
@@ -416,6 +419,35 @@ export default function Crew() {
                 const why = c.reseat ? "別席希望 Wants another seat" : Object.entries(c.answers).filter(([, v]) => !v).map(([k]) => k.replace("_", " ")).join(", ");
                 return <motion.div layout key={c.seat} className="exit-item" title={why}><b>{c.seat}</b><span className={`pill ${tone}`}>{label}</span></motion.div>;
               })}</div>
+            </section>
+            ) : null}
+
+            {rightTab === "arrival" ? (
+            <section className="panel">
+              <h2>遺失物 Lost &amp; found</h2>
+              <div className="exit-list">
+                {(state?.lost_items || []).map((it) => (
+                  <motion.div layout key={it.id} className="item">
+                    <b>{it.seat}</b><span className="grow muted">{it.description}</span>
+                    <span className={`pill ${LOST_STATUS[it.status][2]}`}>{LOST_STATUS[it.status][0]} · {LOST_STATUS[it.status][1]}</span>
+                    {it.status !== "found" ? <button onClick={() => postJson(`/api/lost-item/${it.id}/status`, { status: "found" }, { crew: true }).catch(() => {})}>発見 Found</button> : null}
+                    {it.status !== "returned" ? <button onClick={() => postJson(`/api/lost-item/${it.id}/status`, { status: "returned" }, { crew: true }).catch(() => {})}>返却 Returned</button> : null}
+                  </motion.div>
+                ))}
+                {!state?.lost_items?.length ? <p className="muted" style={{ margin: 0 }}>報告なし · Nothing reported</p> : null}
+              </div>
+              <h2>ご意見 Feedback</h2>
+              <div className="exit-list">
+                {(state?.feedback || []).map((f) => (
+                  <motion.div layout key={f.id} className="item">
+                    <b>{f.seat}</b>
+                    <span className={`pill ${FEEDBACK_CATEGORY[f.category][2]}`}>{FEEDBACK_CATEGORY[f.category][0]} · {FEEDBACK_CATEGORY[f.category][1]}</span>
+                    {f.rating ? <span className="pill dim">{"★".repeat(f.rating)}{"☆".repeat(5 - f.rating)}</span> : null}
+                    <span className="grow muted">{f.message}</span>
+                  </motion.div>
+                ))}
+                {!state?.feedback?.length ? <p className="muted" style={{ margin: 0 }}>フィードバックなし · No feedback yet</p> : null}
+              </div>
             </section>
             ) : null}
           </div>

@@ -14,6 +14,7 @@ import threading
 import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from typing import Literal
 
 import anyio
 from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -292,6 +293,8 @@ def crew_state() -> dict:
         "round_plan": rounds.plan(cabin),
         "round": cabin.round,
         "pa_log": [{**a, **pa_library.caption(a["id"], "en", a.get("n"))} for a in cabin.pa_log[-5:]][::-1],
+        "lost_items": [i.model_dump() for i in sorted(cabin.lost_items.values(), key=lambda i: i.created_at, reverse=True)],
+        "feedback": [f.model_dump() for f in sorted(cabin.feedback.values(), key=lambda f: f.created_at, reverse=True)[:20]],
         "seat_needs": [s.model_dump(include={"id", "name", "lang", "senior", "pictures", "read", "accessibility",
                                              "checked_in", "connected"})
                        for s in cabin.seats.values()
@@ -673,6 +676,20 @@ def seat_by_boarding_pass(body: SeatBoardingPassIn) -> dict:
 
 DEMO_FLIGHT = {"carrier": "JL", "flight": "6", "origin": "DEL", "destination": "HND"}
 
+# After-landing info for this demo flight: gate, baggage belt and one example connection. A real
+# deployment would fill this from the airline's own operational feed; here it is just enough for
+# the deplaning assistant to show something real. Not seat-specific -- every passenger on this
+# aircraft lands at the same gate and baggage belt.
+DEMO_ARRIVAL = {
+    **DEMO_FLIGHT,
+    "gate": "34",
+    "terminal": "2",
+    "baggage_belt": "7",
+    "connections": [
+        {"flight": "JL105", "destination": "Osaka (ITM)", "gate": "22", "minutes_to_boarding": 55},
+    ],
+}
+
 
 @app.get("/api/boarding-pass/demo")
 def boarding_pass_demo(name: str = Query(..., max_length=60), seat: str = Query(...)) -> dict:
@@ -695,6 +712,68 @@ def get_seat(seat: str) -> dict:
     if seat not in cabin.seats:
         raise HTTPException(404, f"No seat {seat}")
     return cabin.seats[seat].model_dump(include={"lang", "senior", "pictures", "read", "checked_in", "accessibility"})
+
+
+@app.get("/api/arrival")
+def arrival() -> dict:
+    """Gate, baggage belt and connections after landing (web/app/arrival). Same for every seat."""
+    return DEMO_ARRIVAL
+
+
+class LostItemIn(BaseModel):
+    seat: str
+    description: str = Field(..., min_length=1, max_length=300)
+
+
+@app.post("/api/lost-item")
+async def post_lost_item(body: LostItemIn) -> dict:
+    """A passenger reports something left behind, tied to their seat so crew know where to look
+    before the cabin is cleaned (web/app/arrival)."""
+    if body.seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {body.seat}")
+    item = cabin.report_lost_item(body.seat, body.description.strip())
+    await push_crew()
+    return item.model_dump()
+
+
+@app.get("/api/lost-items", dependencies=CREW)
+def get_lost_items() -> dict:
+    return {"items": [i.model_dump() for i in sorted(cabin.lost_items.values(), key=lambda i: i.created_at, reverse=True)]}
+
+
+class LostItemStatusIn(BaseModel):
+    status: Literal["reported", "found", "returned"]
+
+
+@app.post("/api/lost-item/{item_id}/status", dependencies=CREW)
+async def post_lost_item_status(item_id: str, body: LostItemStatusIn) -> dict:
+    if item_id not in cabin.lost_items:
+        raise HTTPException(404, f"No lost item {item_id}")
+    item = cabin.set_lost_item_status(item_id, body.status)
+    await push_crew()
+    return item.model_dump()
+
+
+class FeedbackIn(BaseModel):
+    seat: str
+    category: Literal["inconvenience", "improvement", "compliment"] = "improvement"
+    rating: int | None = Field(None, ge=1, le=5)
+    message: str = Field(..., min_length=1, max_length=800)
+
+
+@app.post("/api/feedback")
+async def post_feedback(body: FeedbackIn) -> dict:
+    """Post-flight feedback, free-text plus an optional star rating (web/app/arrival). Never a name."""
+    if body.seat not in cabin.seats:
+        raise HTTPException(404, f"No seat {body.seat}")
+    fb = cabin.add_feedback(body.seat, body.category, body.rating, body.message.strip())
+    await push_crew()
+    return fb.model_dump()
+
+
+@app.get("/api/feedback", dependencies=CREW)
+def get_feedback() -> dict:
+    return {"items": [f.model_dump() for f in sorted(cabin.feedback.values(), key=lambda f: f.created_at, reverse=True)]}
 
 
 @app.get("/api/config")
