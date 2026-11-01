@@ -248,6 +248,19 @@ def test_demo_kit_endpoints(client):
     assert client.get("/api/qr", params={"data": "x" * 301}).status_code == 422
 
 
+def test_hub_info_uses_the_public_site_when_hosted(client, monkeypatch):
+    monkeypatch.delenv("AURALINK_PUBLIC_URL", raising=False)
+    monkeypatch.delenv("RENDER_EXTERNAL_URL", raising=False)
+    hosted = TestClient(main.app, base_url="https://auralink-o11a.onrender.com")
+    assert hosted.get("/api/hub-info").json()["public_url"] == "https://auralink-o11a.onrender.com"
+    from hub import demo
+    monkeypatch.setattr(demo, "lan_ip", lambda: "10.0.0.7")  # on the laptop: its own address on the cabin Wi-Fi
+    laptop = TestClient(main.app, base_url="http://localhost:8000")
+    assert laptop.get("/api/hub-info").json()["public_url"] == "http://10.0.0.7:8000"
+    monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://example.onrender.com")
+    assert client.get("/api/hub-info").json()["public_url"] == "https://example.onrender.com"
+
+
 def test_picture_mode_reaches_crew_card(crew_login):
     with crew_login(TestClient(main.app)) as shared, shared.websocket_connect("/ws/crew") as crew, \
             shared.websocket_connect("/ws/passenger/32D") as pax:

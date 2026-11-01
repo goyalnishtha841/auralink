@@ -54,7 +54,7 @@ Every sentence a passenger or crew member reads comes from a reviewed template.
   </tr>
 </table>
 
-<p align="center"><a href="https://auralink-o11a.onrender.com/start"><strong>▶ Live demo</strong></a> -- open <code>/start</code> for the three-step walkthrough, passenger and crew PIN<br />
+<p align="center"><a href="https://auralink-o11a.onrender.com/"><strong>▶ Live demo</strong></a> · <a href="https://auralink-o11a.onrender.com/start">Demo guide</a> (the three-step walkthrough: passenger, crew PIN, jury screen)<br />
 <sub>Render's free tier sleeps after inactivity, so the first open can take up to a minute, and Free Talk's translation/voice is dropped (see <a href="#deploying-a-live-demo">deploying a live demo</a>).</sub></p>
 
 ## Contents
@@ -283,7 +283,7 @@ tablet — is unaffected, since `engine/translate.py` and `engine/tts.py` degrad
 ### Testing and CI
 
 ```bash
-.venv/bin/python -m pytest -q    # 172 tests (3 skip without Whisper: AURALINK_SKIP_WHISPER=1)
+.venv/bin/python -m pytest -q    # 173 tests (3 skip without Whisper: AURALINK_SKIP_WHISPER=1)
 .venv/bin/ruff check .
 ```
 

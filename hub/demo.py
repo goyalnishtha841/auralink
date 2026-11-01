@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import ipaddress
 import os
 import shutil
 import socket
@@ -40,10 +41,28 @@ def ca_certificate() -> Path | None:
     return cert if cert.is_file() else None
 
 
+def _public_hostname(host: str) -> bool:
+    """True for a real internet name (auralink-o11a.onrender.com, a Cloudflare tunnel), False for this laptop or the
+    cabin Wi-Fi (localhost, an IP address, a name.local)."""
+    host = (host or "").strip("[]").lower()
+    if not host or "." not in host or host.endswith(".local") or host == "localhost":
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return False
+    except ValueError:
+        return True
+
+
 @router.get("/hub-info")
 def hub_info(request: Request) -> dict:
-    """Base URL that phones on the same Wi-Fi should open. AURALINK_PUBLIC_URL overrides it."""
-    public = os.environ.get("AURALINK_PUBLIC_URL")
+    """Base URL that phones should open. AURALINK_PUBLIC_URL overrides it; on a hosted demo (Render sets
+    RENDER_EXTERNAL_URL, or the page was opened on a public domain) it's that site; on the laptop it's the
+    laptop's address on the cabin Wi-Fi."""
+    public = os.environ.get("AURALINK_PUBLIC_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+    if not public and _public_hostname(request.url.hostname):
+        scheme = request.headers.get("x-forwarded-proto", request.url.scheme).split(",")[0].strip()
+        public = f"{scheme}://{request.headers.get('host', request.url.netloc)}"
     if not public:
         port = request.url.port or (443 if request.url.scheme == "https" else 80)
         public = f"{request.url.scheme}://{lan_ip()}:{port}"
