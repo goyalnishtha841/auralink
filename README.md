@@ -18,7 +18,32 @@
   </p>
 
   <br />
-  <img src="docs/images/landing.jpg" width="900" alt="The Auralink landing page: 'Every passenger, understood.' next to a crew tablet showing two Japanese request cards for seat 34K" />
+  <img src="docs/images/landing.jpg" width="900" alt="The Auralink landing page: 'Every passenger, 伝わる。' beside an aircraft window looking out at Mount Fuji at dusk, with cherry blossoms" />
+
+  <br /><br />
+
+  <a id="team-shinobi-systems"></a>
+  <h3>Team Shinobi Systems</h3>
+
+  <table>
+    <tr>
+      <td align="center" valign="top" width="33%">
+        <b>Asmita Roy</b><br />
+        <sub><a href="https://github.com/techAsmita">@techAsmita</a></sub><br /><br />
+        <sub>Landing page and visual design, responsive passenger and crew screens, Start page, favicon, crew navbar, fail-safe mode (offline pictograms, printable crew backup), live PA caption feedback, shake-to-call and turbulence detection, phone layout fixes</sub>
+      </td>
+      <td align="center" valign="top" width="33%">
+        <b>Nishtha Goyal</b><br />
+        <sub><a href="https://github.com/goyalnishtha841">@goyalnishtha841</a></sub><br /><br />
+        <sub>Speech engine and accent-aware matcher, the hub, crew tablet and PIN, live PA captions, care rounds, medical triage, check-in, crew phrasebook, flight report, presenter console, crash recovery, 16 languages, evaluation and CI</sub>
+      </td>
+      <td align="center" valign="top" width="33%">
+        <b>Vikas Verma</b><br />
+        <sub><a href="https://github.com/Vikasverma9515">@Vikasverma9515</a></sub><br /><br />
+        <sub>Next.js UI, the onboarding assistant, the shared seat scanner (tap, say or scan a boarding pass), Live Conversation with translated speech, and the Render deploy</sub>
+      </td>
+    </tr>
+  </table>
 </div>
 
 ## The 30-second version
@@ -40,17 +65,20 @@ Every sentence a passenger or crew member reads comes from a reviewed template.
 
 <table>
   <tr>
-    <td width="32%" valign="top"><img src="docs/images/onboarding.jpg" alt="A guided onboarding screen: 'Welcome aboard!' with an illustrated crew-avatar assistant in front of a cabin window, and a 'Let's get started' button" /><br /><sub><b>Onboarding assistant.</b> Every first-time passenger gets a short, skippable tour from an illustrated crew avatar, before anything else.</sub></td>
-    <td width="32%" valign="top"><img src="docs/images/languages.jpg" alt="Onboarding language picker listing English, Hindi, Tamil, Thai, Chinese, Spanish, French, Italian and more" /><br /><sub><b>16 languages.</b> Every onboarding screen, request and crew reply is fully translated, not just the ones Auralink can speak aloud.</sub></td>
-    <td width="32%" valign="top"><img src="docs/images/seat-picker.jpg" alt="A tap-your-seat cabin map, a 'Tap to say your seat number' microphone button, and a 'Scan boarding pass' option" /><br /><sub><b>One shared scanner.</b> No screen at every seat? One QR code for the whole cabin: tap a seat, say it, or scan a boarding pass.</sub></td>
+    <td width="25%" valign="top"><img src="docs/images/onboarding.jpg" alt="A guided onboarding screen: 'Welcome aboard!' with an illustrated crew-avatar assistant in front of a cabin window, and a 'Let's get started' button" /><br /><sub><b>Onboarding assistant.</b> Every first-time passenger gets a short, skippable tour from an illustrated crew avatar, before anything else.</sub></td>
+    <td width="25%" valign="top"><img src="docs/images/languages.jpg" alt="Onboarding language picker listing English, Hindi, Tamil, Thai, Chinese, Spanish, French, Italian and more" /><br /><sub><b>16 languages.</b> Every onboarding screen, request and crew reply is fully translated, not just the ones Auralink can speak aloud.</sub></td>
+    <td width="25%" valign="top"><img src="docs/images/seat-picker.jpg" alt="A tap-your-seat cabin map, a 'Tap to say your seat number' microphone button, and a 'Scan boarding pass' option" /><br /><sub><b>One shared scanner.</b> No screen at every seat? One QR code for the whole cabin: tap a seat, say it, or scan a boarding pass.</sub></td>
+    <td width="25%" valign="top"><img src="docs/images/passenger.jpg" alt="Passenger phone in Hindi asking 'Did you mean: water?' with a yes/no button and an icon grid" /><br /><sub><b>Passenger phone.</b> Asks instead of guessing, in the passenger's language, with pictures.</sub></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="62%" valign="top"><img src="docs/images/crew.jpg" alt="Crew tablet in Japanese: an urgent unwell card for seat 34K pinned at the top, water and blanket cards for seat 33H with one-tap replies, and the cabin map" /><br /><sub><b>Crew tablet, in Japanese.</b> Urgent requests jump the queue before the passenger has even confirmed.</sub></td>
+    <td width="38%" valign="top"><img src="docs/images/cabin-map.jpg" alt="Crew cabin map with a colour key: red for urgent, violet for accessibility, amber for an open request, grey for no request" /><br /><sub><b>Cabin map, at a glance.</b> A seat with an accessibility profile on file is shown in violet, distinct from a plain open request.</sub></td>
   </tr>
   <tr>
-    <td width="32%" valign="top"><img src="docs/images/passenger.jpg" alt="Passenger phone in Hindi asking 'Did you mean: water?' with a yes/no button and an icon grid" /><br /><sub><b>Passenger phone.</b> Asks instead of guessing, in the passenger's language, with pictures.</sub></td>
-    <td width="32%" valign="top"><img src="docs/images/crew.jpg" alt="Crew tablet in Japanese with an urgent possible-medical card for seat 34K, water and blanket request cards, safety briefing seat map and live PA captions" /><br /><sub><b>Crew tablet, in Japanese.</b> Urgent requests jump the queue before the passenger has even confirmed.</sub></td>
-    <td width="32%" valign="top"><img src="docs/images/cabin-map.jpg" alt="Crew cabin map with a colour key: red for urgent, violet for accessibility, amber for an open request, grey for no request" /><br /><sub><b>Cabin map, at a glance.</b> A seat with an accessibility profile on file is shown in violet, distinct from a plain open request.</sub></td>
-  </tr>
-  <tr>
-    <td colspan="3"><img src="docs/images/judge.png" alt="Under-the-hood view: the sentence, the words that matter, the split rule, and a scored bar for each candidate intent with the t1 threshold" /><br /><sub><b>Under the hood (the jury screen).</b> Every decision in the open: which words mattered, which rule fired, and how each request was scored against the thresholds.</sub></td>
+    <td colspan="2"><img src="docs/images/judge.jpg" alt="Under-the-hood view: the sentence, the words that matter, the split rule, and a scored bar for each candidate intent with the t1 threshold" /><br /><sub><b>Under the hood (the jury screen).</b> Every decision in the open: which words mattered, which rule fired, and how each request was scored against the thresholds.</sub></td>
   </tr>
 </table>
 
@@ -62,7 +90,7 @@ Every sentence a passenger or crew member reads comes from a reviewed template.
 - [How it works](#how-it-works) · [Results](#results) · [Features](#features)
 - [Run it](#run-it) · [On phones](#on-phones) · [Testing and CI](#testing-and-ci)
 - [Feature guide](#feature-guide) · [Deploying a live demo](#deploying-a-live-demo)
-- [For developers](#for-developers) · [Evaluation](#evaluation)
+- [For developers](#for-developers) · [Evaluation](#evaluation) · [Team](#team-shinobi-systems)
 
 ## How it works
 
@@ -641,4 +669,4 @@ a smoke test, not results; Member B's recordings replace them.
 
 ## License
 
-[MIT](LICENSE) © 2026 The Auralink team. Screenshots in this README are real captures of the running app.
+[MIT](LICENSE) © 2026 Team Shinobi Systems (Asmita Roy, Nishtha Goyal, Vikas Verma). Screenshots in this README are real captures of the running app.
