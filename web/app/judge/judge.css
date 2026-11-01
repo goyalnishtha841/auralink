@@ -1,7 +1,8 @@
 .j-live { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--muted); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line-strong); }
 .j-live i { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
 .j-live.on i { background: var(--ok); box-shadow: 0 0 0 4px rgba(95, 211, 155, 0.15); animation: breathe 2.4s infinite; }
-.j-try { display: flex; gap: 8px; flex: 1 1 440px; max-width: 680px; margin-left: auto; }
+.j-try { display: flex; gap: 8px; flex: 1 1 440px; max-width: 680px; margin-left: auto; min-width: 0; }
+@media (max-width: 760px) { .j-try { flex-basis: 100%; max-width: none; flex-wrap: wrap; } .j-try input { flex: 1 1 100%; } .j-try select { flex: 1; } }
 .j-try input, .j-try select { border-radius: 999px; }
 .j-try input { flex: 1; min-width: 0; }
 .j-try button { border-radius: 999px; }
